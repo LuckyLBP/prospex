@@ -9,6 +9,11 @@ const EMAIL = /^\S+@\S+\.\S+$/;
 export { slugify } from "./slug";
 import { slugify } from "./slug";
 
+/** Öppnar eller stänger Företagsprofil för ett bolag. Redan skapade profiler ligger kvar men syns inte. */
+export async function setProfileAccess(orgId: string, on: boolean): Promise<void> {
+  await pool.query(`update organizations set profile_access = $2 where id = $1`, [orgId, on]);
+}
+
 export async function listMembers(orgId: string) {
   const { rows } = await pool.query(
     `select m.user_id, p.email, p.full_name, m.role, m.created_at,

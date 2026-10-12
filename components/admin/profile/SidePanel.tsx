@@ -15,7 +15,7 @@ const sourceHref = (slug: string, kind: "supplier" | "list") => `/admin/${kind =
 
 export type AgencyState = { id: string; slug: string; published: boolean; customers: number; profiling: boolean; lastRun: { status: string; error: string | null; note: string | null } | null };
 
-export default function SidePanel({ profile, presence, agency, returnTo }: { profile: CompanyProfile; presence: PresenceItem[]; agency?: AgencyState | null; returnTo?: string }) {
+export default function SidePanel({ profile, presence, agency, returnTo, tenant = false }: { profile: CompanyProfile; presence: PresenceItem[]; agency?: AgencyState | null; returnTo?: string; /** Bolagets vy: ingen uppgift om hur vi hittat något, inga kataloglänkar och inga adminverktyg. */ tenant?: boolean }) {
   const creator = resolveCreator(profile);
   const facts = new Map(profile.facts.map((f) => [f.id, f]));
   const builder = creator ? presence.find((p) => p.kind === "supplier" && sameAgency(creator.name, p)) ?? null : null;
@@ -35,15 +35,15 @@ export default function SidePanel({ profile, presence, agency, returnTo }: { pro
           <div className="flex items-center gap-3.5">
             <SupplierLogo name={creator.name} logo={creatorLogo ?? undefined} size={40} className="!h-14 !w-14 !rounded-2xl" />
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-[#14161F]">{creator.name}<Evidence ids={creator.evidence} facts={facts} /></p>
-              {creator.basis === "same-server" && <p className="text-[12px] text-gray-400">Samma server som byråns kunder</p>}
-              {creator.basis === "agency-source" && <p className="text-[12px] text-gray-400">Finns i byråns kundlista</p>}
+              <p className="truncate text-[15px] font-semibold text-[#14161F]">{creator.name}{!tenant && <Evidence ids={creator.evidence} facts={facts} />}</p>
+              {!tenant && creator.basis === "same-server" && <p className="text-[12px] text-gray-400">Samma server som byråns kunder</p>}
+              {!tenant && creator.basis === "agency-source" && <p className="text-[12px] text-gray-400">Finns i byråns kundlista</p>}
               {creator.url && <a href={creator.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[13px] text-gray-500 hover:text-[#14161F]">{creator.domain ?? creator.url}<ArrowUpRight size={12} /></a>}
-              {creatorSlug && <p className="mt-1"><Link href={sourceHref(creatorSlug, "supplier")} className="text-[12px] font-medium text-[#C2490C] underline underline-offset-4">Finns i vår katalog</Link></p>}
+              {!tenant && creatorSlug && <p className="mt-1"><Link href={sourceHref(creatorSlug, "supplier")} className="text-[12px] font-medium text-[#C2490C] underline underline-offset-4">Finns i vår katalog</Link></p>}
             </div>
           </div>
         ) : <Muted>Ingen byrå anges på webbplatsen.</Muted>}
-        {creator && agency && (
+        {!tenant && creator && agency && (
           <div className="mt-4 flex flex-col gap-1.5 border-t border-gray-100 pt-3 text-[13px] text-gray-500">
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
               {agency.profiling && <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#F26522]" />Byrån profileras</span>}
@@ -64,7 +64,7 @@ export default function SidePanel({ profile, presence, agency, returnTo }: { pro
             {agency.lastRun?.status !== "error" && agency.lastRun?.note && <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-800">{agency.lastRun.note}</p>}
           </div>
         )}
-        {creator && creator.domain && (
+        {!tenant && creator && creator.domain && (
           <details className="group mt-3 text-[12px] text-gray-400">
             <summary className="cursor-pointer list-none underline-offset-4 hover:text-gray-600 hover:underline [&::-webkit-details-marker]:hidden">Fel byrå?</summary>
             <form action={setCreditKindAction} className="mt-2 flex flex-wrap gap-2">
@@ -76,7 +76,7 @@ export default function SidePanel({ profile, presence, agency, returnTo }: { pro
         )}
       </Card>
 
-      <Card title="Finns även hos" note={presence.length > 0 ? `${presence.length} ${presence.length === 1 ? "källa" : "källor"}` : undefined}>
+      {!tenant && <Card title="Finns även hos" note={presence.length > 0 ? `${presence.length} ${presence.length === 1 ? "källa" : "källor"}` : undefined}>
         {presence.length === 0 ? <Muted>Företaget finns inte hos någon av våra källor än.</Muted> : (
           <ul className="flex flex-col gap-3">
             {presence.map((p) => (
@@ -92,7 +92,7 @@ export default function SidePanel({ profile, presence, agency, returnTo }: { pro
           </ul>
         )}
         {disclaimer && <p className="mt-4 text-[12px] text-gray-400">{disclaimer}</p>}
-      </Card>
+      </Card>}
 
       {links.length > 0 && (
         <Card title="Webbplatsen länkar till">

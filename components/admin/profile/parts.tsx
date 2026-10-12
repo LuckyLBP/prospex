@@ -22,7 +22,7 @@ export const Label = ({ children }: { children: React.ReactNode }) => <p classNa
 /** Källetiketter för ett påstående. Titeln visar vad beläget är och varifrån det kommer, och leder till Källor. */
 export function Evidence({ ids, facts }: { ids: string[]; facts: Map<string, Fact> }) {
   return (
-    <span className="ml-1.5 inline-flex flex-wrap gap-1 align-middle">
+    <span className="ml-1.5 inline-flex flex-wrap gap-1 align-middle group-data-[viewer=tenant]/pv:hidden">
       {ids.map((id) => {
         const f = facts.get(id);
         return (

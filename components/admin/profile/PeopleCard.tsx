@@ -7,7 +7,7 @@ import { Card } from "./parts";
 const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
 /** Personerna som företaget själv anger på sin webbplats, med titel och direkta uppgifter. Källan visas för varje person. */
-export default function PeopleCard({ people, profileId, photoUrls }: { people: Person[]; profileId: string; photoUrls?: Record<string, string> }) {
+export default function PeopleCard({ people, profileId, photoUrls, readOnly = false }: { people: Person[]; profileId?: string; photoUrls?: Record<string, string>; /** Bolagets vy: personerna kan inte tas bort. */ readOnly?: boolean }) {
   if (people.length === 0) return null;
   return (
     <Card title="Kontaktpersoner" note={`${people.length} ${people.length === 1 ? "person" : "personer"} · från företagets webbplats`}>
@@ -33,11 +33,11 @@ export default function PeopleCard({ people, profileId, photoUrls }: { people: P
                 </div>
                 <a href={p.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-0.5 text-[12px] text-gray-400 hover:text-gray-600">Källa<ArrowUpRight size={11} /></a>
               </div>
-              <form action={removePersonAction} className="absolute right-2.5 top-2.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+              {!readOnly && profileId && <form action={removePersonAction} className="absolute right-2.5 top-2.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                 <input type="hidden" name="profile_id" value={profileId} />
                 <input type="hidden" name="key" value={key} />
                 <button aria-label={`Ta bort ${p.name}`} title="Ta bort personen" className="rounded-full p-1.5 text-gray-400 hover:bg-white hover:text-rose-700"><Trash2 size={14} /></button>
-              </form>
+              </form>}
             </li>
           );
         })}

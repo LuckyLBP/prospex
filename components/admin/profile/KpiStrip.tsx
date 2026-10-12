@@ -13,7 +13,7 @@ function Tile({ icon, label, value, sub, negative, delta }: { icon: React.ReactN
 }
 
 /** Sex nyckeltal under företagskortet. Tomma värden visas som "saknas" i dämpad färg. */
-export default function KpiStrip({ profile, techTotal, sources, presenceCount }: { profile: CompanyProfile; techTotal: number; sources: number; presenceCount: number }) {
+export default function KpiStrip({ profile, techTotal, sources, presenceCount, hideSources = false }: { profile: CompanyProfile; techTotal: number; sources: number; presenceCount: number; hideSources?: boolean }) {
   const f = profile.registry.figures;
   const year = f?.periodEnd?.slice(0, 4);
   const margin = ratioPercent(f?.profit, f?.revenue);
@@ -28,7 +28,7 @@ export default function KpiStrip({ profile, techTotal, sources, presenceCount }:
       <Tile icon={<Users size={15} />} label="Anställda" value={f?.employees === null || f?.employees === undefined ? null : sv(f.employees)} sub={f?.employees !== null && f?.employees !== undefined ? "Medeltal" : null} />
       <Tile icon={<Star size={15} />} label="Google-betyg" value={place?.rating != null ? place.rating.toLocaleString("sv-SE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : null} sub={place?.rating != null ? (place.ratingCount ? `${place.ratingCount.toLocaleString("sv-SE")} omdömen` : "Inga omdömen") : "Ingen träff på Google"} />
       <Tile icon={<Layers size={15} />} label="Tekniker och spår" value={techTotal > 0 ? String(techTotal) : null} sub={techTotal > 0 ? "Hittade på webbplatsen och i DNS" : null} />
-      <Tile icon={<Share2 size={15} />} label="Kopplingar" value={sources > 0 ? String(sources) : null} sub={sources > 0 ? `${presenceCount} ${presenceCount === 1 ? "källa" : "källor"}, ${sources - presenceCount} ${sources - presenceCount === 1 ? "plattform" : "plattformar"}` : "Ingen känd än"} />
+      <Tile icon={<Share2 size={15} />} label={hideSources ? "Plattformar" : "Kopplingar"} value={sources > 0 ? String(sources) : null} sub={hideSources ? (sources > 0 ? "Webbplatsen länkar till" : "Ingen känd än") : sources > 0 ? `${presenceCount} ${presenceCount === 1 ? "källa" : "källor"}, ${sources - presenceCount} ${sources - presenceCount === 1 ? "plattform" : "plattformar"}` : "Ingen känd än"} />
     </div>
   );
 }

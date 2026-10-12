@@ -122,6 +122,19 @@ export async function requireOwner(): Promise<Member> {
   return m;
 }
 
+/** Har bolaget fått Företagsprofil öppnad av en admin? */
+export async function orgHasProfileAccess(orgId: string): Promise<boolean> {
+  const { rows } = await pool.query(`select profile_access from organizations where id = $1 and active`, [orgId]);
+  return rows[0]?.profile_access === true;
+}
+
+/** Företagsprofilen för bolag: kräver medlemskap i ett bolag som en admin öppnat den för. */
+export async function requireProfileAccess(): Promise<Member> {
+  const m = await requireMember();
+  if (!(await orgHasProfileAccess(m.org.id))) redirect("/app");
+  return m;
+}
+
 export async function requireAdmin(): Promise<Access> {
   const a = await getAccess();
   if (!a.isAdmin) redirect(a.org ? "/app" : "/no-access");

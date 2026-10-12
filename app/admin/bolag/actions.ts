@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { pool } from "@/lib/db";
 import { baseUrl } from "@/lib/url";
-import { cancelInvite, createOrganization, inviteMember, OrgError, removeMember, setMemberRole, setOrgActive } from "@/lib/orgs";
+import { cancelInvite, createOrganization, inviteMember, OrgError, removeMember, setMemberRole, setOrgActive, setProfileAccess } from "@/lib/orgs";
 import { slugify } from "@/lib/slug";
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -57,6 +57,15 @@ export async function toggleOrgAction(f: FormData) {
   await onOrg(f, active ? "Bolaget är aktiverat." : "Bolaget är avstängt.", async (o) => {
     await setOrgActive(o.id, active);
     await audit(a.user, active ? "org.activate" : "org.deactivate", "org", { id: o.slug, name: o.name });
+  });
+}
+
+export async function toggleProfileAccessAction(f: FormData) {
+  const a = await requireAdmin();
+  const on = f.get("on") === "1";
+  await onOrg(f, on ? "Företagsprofil är öppnad för bolaget." : "Företagsprofil är stängd för bolaget.", async (o) => {
+    await setProfileAccess(o.id, on);
+    await audit(a.user, on ? "org.profile_access_on" : "org.profile_access_off", "org", { id: o.slug, name: o.name });
   });
 }
 

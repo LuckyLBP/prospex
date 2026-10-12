@@ -62,7 +62,7 @@ type Parsed = Extract<ProfileInput, { kind: "orgnr" | "url" }>;
  * Skapar en profil i kö, eller ger tillbaka en som redan byggs eller nyss blev klar för samma webbplats eller
  * företag. En enskild firma slås inte ihop med andra: det maskade numret delas av alla med samma födelsedatum.
  */
-export async function startProfile(input: Parsed, by: { id: string | null }): Promise<{ id: string; reused: boolean }> {
+export async function startProfile(input: Parsed, by: { id: string | null; orgId?: string | null }): Promise<{ id: string; reused: boolean }> {
   await sweepDeadProfiles();
   const domain = input.kind === "url" ? input.domain : null;
   const orgnr = input.kind === "orgnr" ? input.display : null;
@@ -77,7 +77,10 @@ export async function startProfile(input: Parsed, by: { id: string | null }): Pr
        order by created_at desc limit 1`,
       [domain, orgnr, String(REUSE_RUNNING_MS), String(REUSE_DONE_MS)],
     );
-    if (rows[0]) return { id: rows[0].id, reused: true };
+    if (rows[0]) {
+      await grantOrgAccess(rows[0].id, by.orgId);
+      return { id: rows[0].id, reused: true };
+    }
   }
 
   const busy = (await pool.query(`select count(*)::int n from company_profiles where status in ('queued','running')`)).rows[0].n as number;
@@ -89,7 +92,31 @@ export async function startProfile(input: Parsed, by: { id: string | null }): Pr
     `insert into company_profiles (input, input_kind, orgnr, sole_trader, domain, requested_by) values ($1,$2,$3,$4,$5,$6) returning id`,
     [input.kind === "url" ? input.domain : input.display, input.kind, orgnr, sole, domain, by.id],
   );
+  await grantOrgAccess(created.rows[0].id as string, by.orgId);
   return { id: created.rows[0].id as string, reused: false };
+}
+
+/** Gör en profil synlig för ett bolag. Admin har ingen bolagskoppling och behöver inget. */
+export async function grantOrgAccess(profileId: string, orgId: string | null | undefined): Promise<void> {
+  if (!orgId) return;
+  await pool.query(`insert into profile_org_access (profile_id, org_id) values ($1, $2) on conflict do nothing`, [profileId, orgId]);
+}
+
+/** Profilerna ett bolag ser, de senaste först. */
+export async function orgProfiles(orgId: string, limit = 50): Promise<Omit<ProfileRow, "profile" | "facts" | "pages">[]> {
+  const { rows } = await pool.query(
+    `select ${COLS.split(", ").filter((c) => !["profile", "facts", "pages"].includes(c)).map((c) => `p.${c}`).join(", ")}
+     from company_profiles p join profile_org_access a on a.profile_id = p.id
+     where a.org_id = $1 order by coalesce(p.finished_at, p.created_at) desc limit $2`,
+    [orgId, limit],
+  );
+  return rows.map(toRow) as Omit<ProfileRow, "profile" | "facts" | "pages">[];
+}
+
+/** En profil, bara om bolaget har fått den. */
+export async function getOrgProfile(id: string, orgId: string): Promise<ProfileRow | null> {
+  const { rows } = await pool.query(`select ${COLS.split(", ").map((c) => `p.${c}`).join(", ")} from company_profiles p join profile_org_access a on a.profile_id = p.id where p.id = $1 and a.org_id = $2`, [id, orgId]);
+  return rows[0] ? toRow(rows[0]) : null;
 }
 
 /** Sätter en färdig eller felad profil i kö igen (Uppdatera). Den gamla profilen ligger kvar tills den nya är klar. */

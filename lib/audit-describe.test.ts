@@ -32,6 +32,8 @@ describe("describeAudit", () => {
   });
   it("describes company profiles", () => {
     expect(describeAudit(row("profile.create", { input: "foretag.se" }, "Företaget AB"))).toBe("Lucas skapade en företagsprofil för Företaget AB");
+    expect(describeAudit(row("org.profile_access_on", null, "Test AB"))).toBe("Lucas öppnade Företagsprofil för bolaget Test AB");
+    expect(describeAudit(row("org.profile_access_off", null, "Test AB"))).toBe("Lucas stängde Företagsprofil för bolaget Test AB");
     expect(describeAudit(row("profile.refresh", null, "Företaget AB"))).toBe("Lucas uppdaterade företagsprofilen för Företaget AB");
   });
   it("falls back to something readable for an unknown action", () => {

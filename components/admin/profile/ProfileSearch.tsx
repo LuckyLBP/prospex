@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Database, Globe, Loader2, MapPin, Search, Star } from "lucide-react";
 import { STAGE_LABEL, STAGE_ORDER, type ProfileStage } from "@/lib/profile/stages";
-import { createProfileAction, profileProgressAction, searchCompaniesAction, type ProfileProgress } from "@/app/admin/foretagsprofil/actions";
+import * as adminActions from "@/app/admin/foretagsprofil/actions";
+import type { ProfileProgress, StartResult } from "@/app/admin/foretagsprofil/actions";
 import { kindOf } from "@/lib/profile/input-kind";
 import type { Candidate } from "@/lib/profile/name-search";
 
@@ -12,6 +13,14 @@ import type { Candidate } from "@/lib/profile/name-search";
 // (org.nr eller webbadress) och en rund sökknapp. När en profil byggs stannar man kvar här: fältet låses och
 // förloppet visas under det, och när bygget är klart går man vidare till profilen. Tolkningen av texten är bara
 // en ledtråd, servern avgör (lib/profile/input.ts).
+
+/** Åtgärderna sökfältet anropar. Admin använder de egna, bolag får egna med åtkomstkontroll. */
+export type SearchActions = {
+  create: (raw: string) => Promise<StartResult>;
+  progress: (id: string) => Promise<ProfileProgress | null>;
+  search: (query: string) => Promise<{ ok: true; candidates: Candidate[] } | { ok: false; error: string }>;
+};
+const ADMIN_ACTIONS: SearchActions = { create: adminActions.createProfileAction, progress: adminActions.profileProgressAction, search: adminActions.searchCompaniesAction };
 
 const EXAMPLES = ["ikea.se", "556677-8899"];
 const POLL_MS = 1200;
@@ -40,7 +49,7 @@ function Steps({ stage, done }: { stage: ProfileStage | null; done: boolean }) {
   );
 }
 
-export default function ProfileSearch() {
+export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/admin/foretagsprofil" }: { actions?: SearchActions; basePath?: string } = {}) {
   const router = useRouter();
   const ref = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
@@ -59,7 +68,7 @@ export default function ProfileSearch() {
     const tick = async () => {
       let p: ProfileProgress | null = null;
       let failed = false;
-      try { p = await profileProgressAction(buildId); } catch { failed = true; /* ett missat svar provas igen */ }
+      try { p = await actions.progress(buildId); } catch { failed = true; /* ett missat svar provas igen */ }
       if (stop) return;
       if (!failed && p === null) {
         setError("Profilen hittades inte.");
@@ -86,7 +95,7 @@ export default function ProfileSearch() {
   const doneId = phase.kind === "done" ? phase.id : null;
   useEffect(() => {
     if (!doneId) return;
-    const t = setTimeout(() => router.push(`/admin/foretagsprofil/${doneId}`), 700);
+    const t = setTimeout(() => router.push(`${basePath}/${doneId}`), 700);
     return () => clearTimeout(t);
   }, [doneId, router]);
 
@@ -98,7 +107,7 @@ export default function ProfileSearch() {
     if (kindOf(value) === "name") {
       setPhase({ kind: "searching" });
       try {
-        const r = await searchCompaniesAction(value);
+        const r = await actions.search(value);
         if (!r.ok) { setError(r.error); setPhase({ kind: "idle" }); return; }
         setPhase({ kind: "choosing", candidates: r.candidates });
       } catch {
@@ -114,7 +123,7 @@ export default function ProfileSearch() {
     setError(null);
     setPhase({ kind: "starting" });
     try {
-      const r = await createProfileAction(raw);
+      const r = await actions.create(raw);
       if (!r.ok) { setError(r.error); setPhase({ kind: "idle" }); return; }
       setPhase({ kind: "building", id: r.id, progress: null });
     } catch {

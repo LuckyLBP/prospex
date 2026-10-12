@@ -9,7 +9,7 @@ import FormSelect from "@/components/ui/FormSelect";
 import { getOrganizationBySlug } from "@/lib/admin-data";
 import { listInvites, listMembers } from "@/lib/orgs";
 import { formatDate, formatDateTime } from "@/lib/time";
-import { cancelInviteAction, inviteMemberAction, removeMemberAction, roleAction, toggleOrgAction } from "../actions";
+import { cancelInviteAction, inviteMemberAction, removeMemberAction, roleAction, toggleOrgAction, toggleProfileAccessAction } from "../actions";
 
 const ROLES = [{ value: "member", label: "Medlem" }, { value: "owner", label: "Ägare" }];
 
@@ -74,6 +74,14 @@ export default async function OrgDetailPage({ params, searchParams }: { params: 
               </ul>
             </div>
           )}
+        </FormSection>
+
+        <FormSection title="Företagsprofil" description="Låter bolagets medlemmar söka upp företag och bygga profiler själva, utan gräns. De ser profilen men inte hur vi hittat källorna, och bara de profiler bolaget själv skapat. Varje bygge kostar några kronor.">
+          <form action={toggleProfileAccessAction} className="flex items-center gap-3">
+            <input type="hidden" name="org_id" value={org.id} /><input type="hidden" name="on" value={org.profile_access ? "0" : "1"} />
+            <StatusPill tone={org.profile_access ? "green" : "gray"}>{org.profile_access ? "Öppen" : "Stängd"}</StatusPill>
+            {org.profile_access ? <ConfirmButton label="Stäng" confirmLabel="Ja, stäng" message="Stänga Företagsprofil för bolaget?" /> : <button className={btnPrimary}>Öppna för bolaget</button>}
+          </form>
         </FormSection>
 
         <FormSection title={org.active ? "Stäng av bolaget" : "Aktivera bolaget"} description={org.active ? "Ett avstängt bolag och dess medlemmar kommer inte in i portalen. Inget raderas." : "Medlemmarna kommer in i portalen igen."}>

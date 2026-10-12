@@ -23,7 +23,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
  * ekonomi, teknik och tjänster, och en sidopanel med byrå, kopplingar och kontakt. Äldre profiler saknar de nya
  * fälten och visas utan dem.
  */
-export default function ProfileView({ profile, pages, presence, fallbackName, actions, agency, returnTo, profileId, photoUrls }: { profile: CompanyProfile; pages: PageLog[]; presence: PresenceItem[]; fallbackName: string; actions?: React.ReactNode; agency?: AgencyState | null; returnTo?: string; profileId?: string; photoUrls?: Record<string, string> }) {
+export default function ProfileView({ profile, pages, presence, fallbackName, actions, agency, returnTo, profileId, photoUrls, tenant = false }: { profile: CompanyProfile; pages: PageLog[]; presence: PresenceItem[]; fallbackName: string; actions?: React.ReactNode; agency?: AgencyState | null; returnTo?: string; profileId?: string; photoUrls?: Record<string, string>; /** Bolagets vy: utan källor, kopplingar till vår katalog och adminverktyg. */ tenant?: boolean }) {
   const facts = new Map(profile.facts.map((f) => [f.id, f]));
   const reg = profile.registry;
   const org = reg.organisation;
@@ -31,16 +31,16 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
   const groups = techGroups(profile);
   const talking = profile.talkingPoints ?? [];
   const links = profile.platformLinks ?? [];
-  const sources = presence.length + links.length;
+  const sources = tenant ? links.length : presence.length + links.length;
   const solidity = figures ? (figures.solidity !== null ? Math.round(figures.solidity) : ratioPercent(figures.equity, figures.totalAssets)) : null;
   const margin = figures ? ratioPercent(figures.profit, figures.revenue) : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="group/pv flex flex-col gap-5" data-viewer={tenant ? "tenant" : "admin"}>
       <ProfileHero profile={profile} fallbackName={fallbackName} actions={actions} />
-      <KpiStrip profile={profile} techTotal={techCount(groups)} sources={sources} presenceCount={presence.length} />
+      <KpiStrip profile={profile} techTotal={techCount(groups)} sources={sources} presenceCount={presence.length} hideSources={tenant} />
 
-      {profile.meta.warnings.length > 0 && (
+      {!tenant && profile.meta.warnings.length > 0 && (
         <ul className="rounded-2xl bg-amber-50 px-5 py-3 text-[13px] text-amber-900">{profile.meta.warnings.map((w) => <li key={w} className="py-0.5">{w}</li>)}</ul>
       )}
 
@@ -60,7 +60,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
             </Card>
           )}
 
-          {profileId && <PeopleCard people={profile.contact.people ?? []} profileId={profileId} photoUrls={photoUrls} />}
+          {(profileId || tenant) && <PeopleCard people={profile.contact.people ?? []} profileId={profileId} photoUrls={photoUrls} readOnly={tenant} />}
 
           {talking.length > 0 && (
             <Card title="Samtalspunkter" tone="warm" note="Förslag på ingångar, byggda på belägg">
@@ -133,10 +133,10 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
           )}
         </div>
 
-        <SidePanel profile={profile} presence={presence} agency={agency} returnTo={returnTo} />
+        <SidePanel profile={profile} presence={tenant ? [] : presence} agency={tenant ? null : agency} returnTo={returnTo} tenant={tenant} />
       </div>
 
-      <details className="rounded-3xl bg-white p-6" id="kallor">
+      {!tenant && <details className="rounded-3xl bg-white p-6" id="kallor">
         <summary className="cursor-pointer text-[16px] font-semibold text-[#14161F]">Källor ({profile.facts.length} belägg, {pages.length} sidor)</summary>
         <div className="mt-4 flex flex-col gap-5">
           <ul className="divide-y divide-gray-50 text-[13px]">
@@ -154,7 +154,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
               <ul className="text-[13px] text-gray-600">{pages.map((p, i) => <li key={i} className="py-0.5">{p.status || "ingen kontakt"} {p.url} <span className="text-gray-400">({p.via === "model" ? "vald av AI" : "kod"}{p.problem ? `, ${p.problem}` : ""})</span></li>)}</ul></div>
           )}
         </div>
-      </details>
+      </details>}
     </div>
   );
 }

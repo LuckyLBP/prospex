@@ -28,11 +28,12 @@ function adminGroups(c: { invites: number; late: number }): { title: string | nu
   ];
 }
 
-export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts }: { isAdmin: boolean; isOwner: boolean; orgName: string | null; adminCounts?: { invites: number; late: number } }) {
+export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasProfiles = false }: { isAdmin: boolean; isOwner: boolean; orgName: string | null; adminCounts?: { invites: number; late: number }; hasProfiles?: boolean }) {
   const pathname = usePathname();
   const inAdmin = !!adminCounts && pathname.startsWith("/admin");
   const nav = [
     ...(orgName ? NAV : []),
+    ...(hasProfiles ? [{ href: "/app/foretagsprofil", label: "Företagsprofil", icon: ScanSearch }] : []),
     ...(isOwner && orgName ? [{ href: "/app/team", label: "Team", icon: Users }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
