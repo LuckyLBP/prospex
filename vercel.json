@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [{ "path": "/api/cron/refresh", "schedule": "0 4 * * *" }],
+  "functions": {
+    "app/api/queues/scrape-run/route.ts": {
+      "experimentalTriggers": [{ "type": "queue/v2beta", "topic": "scrape-run" }]
+    }
+  }
+}

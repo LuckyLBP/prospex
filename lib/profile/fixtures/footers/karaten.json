@@ -1,0 +1,5 @@
+{
+  "site": "karaten.com",
+  "agency": { "name": "Beegleton", "domain": "beegleton.com", "phrase": "made-by" },
+  "platforms": [{ "name": "Snowfire", "domain": "snowfire.se" }]
+}
