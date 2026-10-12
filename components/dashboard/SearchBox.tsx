@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
-type Result = { id: string; name: string | null; phone: string | null; orgnr: string | null; city: string | null; suppliers: string | null };
+type Result = { id: string; name: string | null; city: string | null; suppliers: string | null };
 
 export default function SearchBox() {
   const router = useRouter();
@@ -38,7 +38,8 @@ export default function SearchBox() {
   return (
     <div className="relative hidden md:block">
       <form
-        onSubmit={(e) => { e.preventDefault(); if (q.trim()) { setOpen(false); router.push(`/app/bygg-lista?q=${encodeURIComponent(q.trim())}`); } }}
+        // Enter öppnar första träffen. Det finns ingen träfflista att bläddra i, bara företagen ett i taget.
+        onSubmit={(e) => { e.preventDefault(); const first = results[0]; if (first) { setOpen(false); router.push(`/app/foretag/${first.id}`); } }}
         className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5"
       >
         <Search size={15} className="text-gray-400" />
@@ -57,7 +58,7 @@ export default function SearchBox() {
           {results.map((r) => (
             <Link key={r.id} href={`/app/foretag/${r.id}`} onClick={() => setOpen(false)} className="block px-4 py-2.5 hover:bg-[#F4F4F1]">
               <span className="block truncate text-[14px] font-medium text-[#14161F]">{r.name ?? "Okänt företag"}</span>
-              <span className="block truncate text-[12px] text-gray-500">{[r.phone, r.city, r.suppliers].filter(Boolean).join(" · ")}</span>
+              <span className="block truncate text-[12px] text-gray-500">{[r.city, r.suppliers].filter(Boolean).join(" · ")}</span>
             </Link>
           ))}
         </div>

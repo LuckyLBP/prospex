@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, LayoutDashboard, LayoutGrid, LibraryBig, ListFilter, LogOut, Menu, PhoneCall, Radar, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, Eye, LayoutDashboard, LayoutGrid, LibraryBig, LogOut, Menu, PhoneCall, Radar, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 
 const NAV = [
@@ -11,7 +11,6 @@ const NAV = [
   { href: "/app/ring", label: "Ringläge", icon: PhoneCall },
   { href: "/app/kontakter", label: "Mina kontakter", icon: Contact },
   { href: "/app/kalender", label: "Kalender", icon: CalendarDays },
-  { href: "/app/bygg-lista", label: "Bygg lista", icon: ListFilter },
   { href: "/app/leverantorer", label: "Leverantörer", icon: Building2 },
   { href: "/app/listor", label: "Listor", icon: LibraryBig },
 ];
@@ -24,7 +23,7 @@ function adminGroups(c: { invites: number; late: number }): { title: string | nu
     { title: null, items: [{ href: "/admin", label: "Översikt", icon: LayoutDashboard }] },
     { title: "Kunder", items: [{ href: "/admin/bolag", label: "Bolag", icon: Building2 }, { href: "/admin/anvandare", label: "Användare", icon: Users, badge: c.invites }] },
     { title: "Katalog", items: [{ href: "/admin/leverantorer", label: "Leverantörer", icon: Shapes }, { href: "/admin/listor", label: "Listor", icon: LibraryBig }, { href: "/admin/kategorier", label: "Kategorier", icon: Tags }, { href: "/admin/foretagsprofil", label: "Företagsprofil", icon: ScanSearch }] },
-    { title: "System", items: [{ href: "/admin/insamling", label: "Insamling", icon: DatabaseZap, badge: c.late }, { href: "/admin/logg", label: "Aktivitetslogg", icon: ScrollText }] },
+    { title: "System", items: [{ href: "/admin/insamling", label: "Insamling", icon: DatabaseZap, badge: c.late }, { href: "/admin/logg", label: "Aktivitetslogg", icon: ScrollText }, { href: "/admin/atkomst", label: "Åtkomst", icon: Eye }] },
   ];
 }
 

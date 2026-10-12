@@ -4,7 +4,7 @@ import { useState } from "react";
 import Select from "@/components/ui/Select";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 
-/** Leverantörsvalet i formuläret på Bygg lista. Skickas som fältet `supplier` när formuläret skickas in. */
+/** Leverantörsvalet i listformuläret. Skickas som fältet `supplier` när formuläret skickas in. */
 export default function SupplierFilter({ value, suppliers }: { value: string; suppliers: { slug: string; name: string; n: number; logo: string | null; kind: "supplier" | "list"; category: string | null }[] }) {
   const [v, setV] = useState(value);
   return (

@@ -184,12 +184,12 @@ export async function getSupplierName(slug: string) {
   return (await getSource(slug))?.name ?? null;
 }
 
-/** Global sök (⌘K): namn, org.nr, domän, e-post, telefon. Telefonnummer skrivs om till lagrat format. */
+/** Global sök (⌘K): matchar på namn, org.nr, domän, e-post och telefon, men svaret har aldrig telefon eller org.nr. Numren visas bara på företagets egen sida, där gränserna gäller. */
 export async function globalSearch(q: string, limit = 8) {
   const needle = buildSearchNeedle(q);
   if (!needle) return [];
   const { rows } = await pool.query(
-    `select c.id, c.name, c.phone, c.orgnr, c.registry->'organisation'->'address'->>'city' as city,
+    `select c.id, c.name, c.registry->'organisation'->'address'->>'city' as city,
             (select string_agg(s.name, ', ' order by s.name) from company_signals cs
                join suppliers s on s.id = cs.supplier_id and s.published where cs.company_id = c.id) as suppliers
      from companies c
@@ -198,5 +198,5 @@ export async function globalSearch(q: string, limit = 8) {
      limit $2`,
     [needle, limit],
   );
-  return rows as { id: string; name: string | null; phone: string | null; orgnr: string | null; city: string | null; suppliers: string | null }[];
+  return rows as { id: string; name: string | null; city: string | null; suppliers: string | null }[];
 }

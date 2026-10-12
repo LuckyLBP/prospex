@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronLeft, ClipboardCheck, PartyPopper, Undo2, X } from "lucide-react";
 import CompanyPanel from "./CompanyPanel";
@@ -68,6 +67,8 @@ export default function Dialer({ init }: { init: DialerInit }) {
   // Utkast till anteckning, ett per företag, så att inget går förlorat när man hoppar fram och tillbaka.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
+  /** Gränsen för hur många företag som släpps är nådd. Visas i stället för kortet. */
+  const [limitMsg, setLimitMsg] = useState<string | null>(init.limit);
   const [session, setSession] = useState({ calls: 0, meetings: 0 });
 
   const dir = useRef<"fwd" | "back">("fwd");
@@ -75,6 +76,8 @@ export default function Dialer({ init }: { init: DialerInit }) {
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const meetingRef = useRef<HTMLInputElement>(null);
   const toastSeq = useRef(0);
+
+  const tokenOf = useCallback((id: string) => `${id}.${init.macs[id] ?? ""}`, [init.macs]);
 
   const currentId = ids[index];
   const card = currentId ? cards[currentId] : undefined;
@@ -101,19 +104,22 @@ export default function Dialer({ init }: { init: DialerInit }) {
     const need = missingIds(ids, index, new Set(Object.keys(cards))).filter((id) => !inflight.current.has(id));
     if (need.length === 0) return;
     need.forEach((id) => inflight.current.add(id));
-    fetch(`/api/dialer/cards?ids=${need.join(",")}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: { cards: DialerCard[] }) => setCards((prev) => ({ ...prev, ...Object.fromEntries(d.cards.map((c) => [c.id, c])) })))
+    fetch(`/api/dialer/cards?ids=${need.map(tokenOf).join(",")}`)
+      .then(async (r) => {
+        if (r.status === 429) { const d = (await r.json().catch(() => null)) as { message?: string } | null; setLimitMsg(d?.message ?? "Du har nått gränsen för hur många företag som visas just nu."); return null; }
+        return r.ok ? ((await r.json()) as { cards: DialerCard[] }) : Promise.reject(new Error(String(r.status)));
+      })
+      .then((d) => { if (d) { setLimitMsg(null); setCards((prev) => ({ ...prev, ...Object.fromEntries(d.cards.map((c) => [c.id, c])) })); } })
       .catch(() => say("error", "Kunde inte hämta fler företag. Kontrollera uppkopplingen."))
       .finally(() => need.forEach((id) => inflight.current.delete(id)));
-  }, [ids, index, cards, say]);
+  }, [ids, index, cards, say, tokenOf]);
 
   const refreshCard = useCallback((id: string) => {
-    fetch(`/api/dialer/cards?ids=${id}`)
+    fetch(`/api/dialer/cards?ids=${tokenOf(id)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { cards: DialerCard[] } | null) => d && setCards((prev) => ({ ...prev, ...Object.fromEntries(d.cards.map((c) => [c.id, c])) })))
       .catch(() => {});
-  }, []);
+  }, [tokenOf]);
 
   // Reservera företaget medan kortet är öppet, och hoppa över det om en kollega har det eller nyss ringt.
   useEffect(() => {
@@ -288,7 +294,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button onClick={refreshQueue} className="rounded-full bg-[#14161F] px-5 py-3 text-[14px] font-semibold text-white">Uppdatera kön</button>
-            <Link href="/app/bygg-lista" className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Ändra filter</Link>
+            <button onClick={() => setFiltersOpen(true)} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Ändra filter</button>
             {index > 0 && <button onClick={() => go(index - 1, "back")} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Gå tillbaka</button>}
           </div>
         </div>
@@ -298,6 +304,12 @@ export default function Dialer({ init }: { init: DialerInit }) {
           {card ? (
             <div key={card.id} className="dialer-in flex flex-col">
               <CompanyPanel card={card} mode={init.scope.mode} me={init.me} copied={copied} onCopy={copy} draft={draft} onDraft={(v) => setDraft(card.id, v)} onSendNote={sendNote} composerRef={composerRef} onShowRegistry={() => setRegistryOpen(true)} onScanDone={() => refreshCard(card.id)} onNotice={say} outcome={<CallPanel form={form} onChange={patch} onClear={() => setForm(EMPTY)} onChangeOutcome={() => setMenuOpen(true)} meetingRef={meetingRef} />} />
+            </div>
+          ) : limitMsg ? (
+            <div className="py-6 text-center" role="status">
+              <p className="text-[16px] font-semibold text-[#14161F]">Det går inte att visa fler företag just nu</p>
+              <p className="mx-auto mt-2 max-w-md text-[14px] text-gray-600">{limitMsg}</p>
+              <button onClick={() => setLimitMsg(null)} className="mt-5 rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Försök igen</button>
             </div>
           ) : (
             <div className="space-y-4" aria-busy="true" aria-label="Laddar företaget">

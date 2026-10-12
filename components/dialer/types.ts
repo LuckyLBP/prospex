@@ -16,4 +16,8 @@ export type DialerInit = {
   capped: boolean;
   /** Den inloggades e-post, för att skilja mina inlägg från kollegornas i tråden. */
   me: string;
+  /** Signatur per företags-id (lib/access/tokens). Ett kort går bara att hämta med den. */
+  macs: Record<string, string>;
+  /** Gränsen för hur många företag som släpps är nådd redan vid inladdningen. */
+  limit: string | null;
 };

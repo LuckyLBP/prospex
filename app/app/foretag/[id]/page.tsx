@@ -6,6 +6,8 @@ import CompanyCard from "@/components/dashboard/CompanyCard";
 import CallForm from "@/components/dashboard/CallForm";
 import OutcomePill from "@/components/dashboard/OutcomePill";
 import { requireMember } from "@/lib/auth";
+import { releaseCompanies } from "@/lib/access/meter";
+import { LIMIT_MESSAGE } from "@/lib/access/limits";
 import { getCallLogs, getCompany, getContact, getUpcomingForCompany } from "@/lib/workflow";
 import { outcomeLabel } from "@/lib/calls/outcomes";
 import { kindMeta } from "@/lib/status";
@@ -16,6 +18,16 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const m = await requireMember();
+  // Uppgifterna släpps bara inom gränserna för hur många företag en användare tar del av (lib/access).
+  const released = await releaseCompanies({ userId: m.user.id, orgId: m.org.id, isAdmin: m.isAdmin }, [id]);
+  if (released.allowed.length === 0) {
+    return (
+      <>
+        <Header title="Det går inte att visa företaget just nu" subtitle="Gränsen för hur många företag som visas är nådd" />
+        <div className="rounded-3xl bg-white p-6 text-[14px] text-gray-700">{LIMIT_MESSAGE[released.reason ?? "minute"]}</div>
+      </>
+    );
+  }
   const company = await getCompany(id);
   if (!company) notFound();
   const [contact, logs, events] = await Promise.all([getContact(m.org.id, id), getCallLogs(m.org.id, id), getUpcomingForCompany(m.org.id, id)]);

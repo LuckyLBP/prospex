@@ -3,7 +3,8 @@ import { requireMember } from "@/lib/auth";
 import { getSources } from "@/lib/queries";
 import { homeStats } from "@/lib/workflow";
 import { getQueueIds, getQueueOrder } from "@/lib/dialer/queue";
-import { getCards } from "@/lib/dialer/cards";
+import { getCardsMetered } from "@/lib/access/release";
+import { signCompanyId } from "@/lib/access/tokens";
 import { CARD_BATCH_MAX } from "@/lib/dialer/card-types";
 import { QUEUE_LIMIT } from "@/lib/dialer/constants";
 import { parseOutdatedOnly, parseQueueMode } from "@/lib/dialer/scope";
@@ -32,7 +33,8 @@ export default async function RingPage({ searchParams }: { searchParams: Promise
   const at = sp.c ? ids.indexOf(sp.c) : -1;
   const startIndex = at >= 0 ? at : 0;
   const first = ids.slice(Math.max(0, startIndex - BEHIND), startIndex + AHEAD).slice(0, CARD_BATCH_MAX);
-  const cards = await getCards(m.org.id, first);
+  const { cards, limited } = await getCardsMetered({ userId: m.user.id, orgId: m.org.id, isAdmin: m.isAdmin }, first);
+  const macs = Object.fromEntries(ids.map((id) => [id, signCompanyId(m.user.id, id)]));
 
   const builtAt = Date.now();
   return (
@@ -49,6 +51,8 @@ export default async function RingPage({ searchParams }: { searchParams: Promise
         queueBuiltAt: builtAt,
         capped: ids.length >= QUEUE_LIMIT,
         me: m.user.email,
+        macs,
+        limit: limited?.message ?? null,
       }}
     />
   );
