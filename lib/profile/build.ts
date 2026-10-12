@@ -1,7 +1,7 @@
 import { pool } from "@/lib/db";
 import { isBolagsverketTest } from "@/lib/bolagsverket/client";
 import type { CompanyRegistry } from "@/lib/bolagsverket/types";
-import { upsertCompany } from "@/lib/companies/upsert";
+import { findCompanyById, upsertCompany } from "@/lib/companies/upsert";
 import { agencyModel, agencyModelId, estimateCostSek, isAiConfigured, isAnthropicConfigured } from "@/lib/ai/model";
 import { maybeStartAgency } from "@/lib/agencies/auto";
 import { getAgencyByDomain } from "@/lib/agencies/store";
@@ -89,6 +89,15 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
     await setStage(id, "resolve");
     const resolved: Resolved = await deps.resolveInput(parsed);
     if (note) resolved.warnings.push(note);
+    // En skanning från Ringläge gäller ett utpekat katalogföretag: det väljs framför det som ingången annars hittar,
+    // så att resultatet hamnar på just den raden och inte på en ny.
+    if (row.target_company_id) {
+      const target = await findCompanyById(row.target_company_id);
+      if (target) {
+        resolved.catalog = target;
+        resolved.name = resolved.name ?? target.name;
+      }
+    }
 
     // 2. Lägg in företaget i katalogen. En enskild firma får aldrig ett nummer där.
     const soleTrader = resolved.soleTrader;
@@ -109,7 +118,7 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
 
     // En webbplats som visat sig höra till ett annat företag används inte: ta bort den ur katalogens post.
     if (gathered.site.status === "mismatch") await pool.query(`update companies set domain = null, website = null where id = $1 and domain = $2`, [companyId, resolved.domain]);
-    if (gathered.orgnr && !soleTrader && gathered.orgnr !== resolved.orgnr) await upsertCompany({ dedupeKey: key, domain: resolved.domain, name, orgnr: gathered.orgnr });
+    if (gathered.orgnr && !soleTrader && gathered.orgnr !== resolved.orgnr) await upsertCompany({ dedupeKey: resolved.catalog?.dedupe_key ?? key, domain: resolved.domain, name, orgnr: gathered.orgnr });
 
     // 3b. Kontaktpersoner ur sidorna som hämtades. Ett fel här ger inga personer och aldrig ett misslyckat bygge.
     await setStage(id, "people");

@@ -33,6 +33,11 @@ describe("findOrgNumber", () => {
     expect(findOrgNumber(text)).toBe("556677-8899");
   });
 
+  it("never takes a phone number, even a Luhn-valid one", () => {
+    expect(findOrgNumber("511 68 Hyssna 0730414760 info@hallahund.se")).toBeNull();
+    expect(findOrgNumber("Food KAM +4642178141 mattias@example.se")).toBeNull();
+  });
+
   it("never returns a personnummer", () => {
     // Third digit is a month (0-1 leading), so this is a personal identity
     // number even though it is Luhn-valid -- and a sole trader's org number.

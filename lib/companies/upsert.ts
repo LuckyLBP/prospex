@@ -48,6 +48,12 @@ export interface CatalogCompany {
 
 const COLS = `id, name, orgnr, domain, website, registry, dedupe_key`;
 
+export async function findCompanyById(id: string): Promise<CatalogCompany | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const { rows } = await pool.query(`select ${COLS} from companies where id = $1`, [id]);
+  return (rows[0] as CatalogCompany | undefined) ?? null;
+}
+
 /** Ett företag på org.nr. Finns flera väljs det som har en webbplats, och därefter det äldsta. */
 export async function findCompanyByOrgnr(orgnr: string): Promise<CatalogCompany | null> {
   const { rows } = await pool.query(`select ${COLS} from companies where orgnr = $1 order by (domain is null), first_seen_at limit 1`, [orgnr]);

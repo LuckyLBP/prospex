@@ -57,6 +57,14 @@
   to { opacity: 1; transform: none; }
 }
 .dialer-toast { animation: dialer-toast 180ms ease-out both; }
+@keyframes dialer-sheet {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+.dialer-sheet { animation: dialer-sheet 200ms ease-out both; width: 100%; }
+@media (min-width: 640px) {
+  .dialer-sheet { max-width: 480px; box-shadow: 0 24px 60px -12px rgba(20, 22, 31, 0.35); }
+}
 
 /* Profilsökningen: ett glöd som driver bakom fältet i fokus, och ett streck som rör sig medan sökningen pågår. */
 @keyframes profile-glow {
@@ -71,5 +79,5 @@
 }
 .profile-shimmer { animation: profile-shimmer 1.1s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .dialer-in, .dialer-toast, .profile-glow, .profile-shimmer { animation: none; }
+  .dialer-in, .dialer-toast, .dialer-sheet, .profile-glow, .profile-shimmer { animation: none; }
 }

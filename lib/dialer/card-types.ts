@@ -50,6 +50,18 @@ export type CardRegistry = {
   advertisingBlocked: boolean;
 };
 
+/** Det ur en skannad företagsprofil som ringläget visar. Själva profilen följer inte med kortet. */
+export type CardProfile = {
+  id: string;
+  status: "queued" | "running" | "done" | "error";
+  /** Steget en pågående skanning är på, på svenska. */
+  stageLabel: string | null;
+  finishedAt: string | null;
+  summary: string | null;
+  people: { key: string; name: string; role: string | null; phone: string | null; email: string | null; photoUrl: string | null }[];
+  figures: { revenue: number | null; profit: number | null; employees: number | null; year: string | null } | null;
+};
+
 export type DialerCard = {
   id: string;
   name: string | null;
@@ -64,6 +76,10 @@ export type DialerCard = {
   notes: CardNote[];
   site: CardSite;
   registry: CardRegistry | null;
+  /** Bolaget har Företagsprofil och kan skanna företaget härifrån. */
+  canScan: boolean;
+  /** Företagets profil, om bolaget har skannat det eller fått den. */
+  profile: CardProfile | null;
 };
 
 /** Hur många kort som hämtas per anrop. */

@@ -14,6 +14,8 @@ export const DEAD_AFTER_MS = 5 * 60_000;
 /** En körning som just startats, eller en profil som just blev klar, används igen i stället för att byggas om. */
 export const REUSE_RUNNING_MS = 2 * 60_000;
 export const REUSE_DONE_MS = 60_000;
+/** En skanning av ett utpekat katalogföretag byggs inte om så länge dess profil är yngre än så här. Det håller kostnaden nere. */
+export const REUSE_COMPANY_MS = 30 * 24 * 3600_000;
 export const MAX_RUNNING = 3;
 export const MAX_PER_ADMIN_PER_HOUR = 30;
 export const DEAD_ERROR = "Avbröts: ingen aktivitet på 5 minuter.";
@@ -40,6 +42,7 @@ export interface ProfileRow {
   warnings: string[];
   error: string | null;
   requested_by: string | null;
+  target_company_id: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -52,7 +55,7 @@ export class ProfileStartError extends Error {
   }
 }
 
-const COLS = `id, company_id, input, input_kind, orgnr, sole_trader, domain, name, status, stage, profile, facts, pages, model, input_tokens, output_tokens, steps, duration_ms, warnings, error, requested_by, created_at, started_at, finished_at`;
+const COLS = `id, company_id, input, input_kind, orgnr, sole_trader, domain, name, status, stage, profile, facts, pages, model, input_tokens, output_tokens, steps, duration_ms, warnings, error, requested_by, target_company_id, created_at, started_at, finished_at`;
 const iso = (v: unknown) => (v ? new Date(v as string).toISOString() : null);
 const toRow = (r: Record<string, unknown>): ProfileRow => ({ ...(r as unknown as ProfileRow), created_at: iso(r.created_at)!, started_at: iso(r.started_at), finished_at: iso(r.finished_at) });
 
@@ -62,8 +65,23 @@ type Parsed = Extract<ProfileInput, { kind: "orgnr" | "url" }>;
  * Skapar en profil i kö, eller ger tillbaka en som redan byggs eller nyss blev klar för samma webbplats eller
  * företag. En enskild firma slås inte ihop med andra: det maskade numret delas av alla med samma födelsedatum.
  */
-export async function startProfile(input: Parsed, by: { id: string | null; orgId?: string | null }): Promise<{ id: string; reused: boolean }> {
+export async function startProfile(input: Parsed, by: { id: string | null; orgId?: string | null }, opts: { targetCompanyId?: string | null } = {}): Promise<{ id: string; reused: boolean }> {
   await sweepDeadProfiles();
+  const target = opts.targetCompanyId ?? null;
+  if (target) {
+    // Företaget har redan en färsk profil, eller en som byggs just nu: använd den i stället för att bygga en till.
+    const { rows } = await pool.query(
+      `select id from company_profiles
+       where (company_id = $1 and status = 'done' and finished_at > now() - ($2 || ' milliseconds')::interval)
+          or (target_company_id = $1 and status in ('queued','running') and coalesce(heartbeat_at, created_at) > now() - ($3 || ' milliseconds')::interval)
+       order by (status = 'done') desc, coalesce(finished_at, created_at) desc limit 1`,
+      [target, String(REUSE_COMPANY_MS), String(REUSE_RUNNING_MS)],
+    );
+    if (rows[0]) {
+      await grantOrgAccess(rows[0].id, by.orgId);
+      return { id: rows[0].id, reused: true };
+    }
+  }
   const domain = input.kind === "url" ? input.domain : null;
   const orgnr = input.kind === "orgnr" ? input.display : null;
   const sole = input.kind === "orgnr" && input.soleTrader;
@@ -89,8 +107,8 @@ export async function startProfile(input: Parsed, by: { id: string | null; orgId
   if (recent >= MAX_PER_ADMIN_PER_HOUR) throw new ProfileStartError("RATE", `Du har skapat ${MAX_PER_ADMIN_PER_HOUR} profiler den senaste timmen. Vänta en stund.`);
 
   const created = await pool.query(
-    `insert into company_profiles (input, input_kind, orgnr, sole_trader, domain, requested_by) values ($1,$2,$3,$4,$5,$6) returning id`,
-    [input.kind === "url" ? input.domain : input.display, input.kind, orgnr, sole, domain, by.id],
+    `insert into company_profiles (input, input_kind, orgnr, sole_trader, domain, requested_by, target_company_id) values ($1,$2,$3,$4,$5,$6,$7) returning id`,
+    [input.kind === "url" ? input.domain : input.display, input.kind, orgnr, sole, domain, by.id, target],
   );
   await grantOrgAccess(created.rows[0].id as string, by.orgId);
   return { id: created.rows[0].id as string, reused: false };
@@ -175,7 +193,14 @@ export async function finishProfile(id: string, d: FinishData): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query("begin");
-    if (d.companyId) await client.query(`delete from company_profiles where company_id = $1 and id <> $2`, [d.companyId, id]);
+    if (d.companyId) {
+      // Bolagen som såg den äldre profilen ser den nya i stället för att tappa åtkomsten när den gamla tas bort.
+      await client.query(
+        `insert into profile_org_access (profile_id, org_id) select $2, a.org_id from profile_org_access a join company_profiles p on p.id = a.profile_id where p.company_id = $1 and p.id <> $2 on conflict do nothing`,
+        [d.companyId, id],
+      );
+      await client.query(`delete from company_profiles where company_id = $1 and id <> $2`, [d.companyId, id]);
+    }
     await client.query(
       `update company_profiles set status = 'done', stage = null, company_id = $2, name = coalesce($3, name), orgnr = coalesce($4, orgnr), domain = coalesce($5, domain),
          profile = $6::jsonb, facts = $7::jsonb, pages = $8::jsonb, model = $9, input_tokens = $10, output_tokens = $11, steps = $12, duration_ms = $13,

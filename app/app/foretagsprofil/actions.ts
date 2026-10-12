@@ -8,6 +8,8 @@ import { parseProfileInput } from "@/lib/profile/input";
 import { failProfile, getOrgProfile, grantOrgAccess, ProfileStartError, requeueProfile, startProfile, sweepDeadProfiles } from "@/lib/profile/store";
 import { triggerProfileBuild } from "@/lib/profile/trigger";
 import { searchCompanies, type Candidate } from "@/lib/profile/name-search";
+import { findCompanyById } from "@/lib/companies/upsert";
+import { normalizeDomain } from "@/lib/scrapers/domain";
 import type { ProfileProgress, StartResult } from "@/app/admin/foretagsprofil/actions";
 
 // Företagsprofilen för bolag som en admin öppnat den för. Samma bygge som adminens, men varje anrop kräver att
@@ -77,4 +79,38 @@ export async function refreshProfileAction(f: FormData) {
   }
   revalidatePath(`/app/foretagsprofil/${id}`);
   redirect(`/app/foretagsprofil/${id}`);
+}
+
+export type ScanResult = { ok: true; id: string; reused: boolean } | { ok: false; error: string; needsSearch?: boolean };
+
+/**
+ * Skannar ett katalogföretag från Ringläge. Resultatet hamnar på just det företaget, även om det bara har namn och
+ * telefon. Webbadressen kommer från företaget, annars org.nr, annars från kandidaten som den som ringer valt; saknas
+ * allt tre är svaret `needsSearch` så att Ringläge kan söka på namnet.
+ */
+export async function scanCompanyAction(companyId: string, pick?: { buildFrom: string | null }): Promise<ScanResult> {
+  const m = await requireProfileAccess();
+  const company = await findCompanyById(companyId);
+  if (!company) return { ok: false, error: "Företaget finns inte." };
+
+  const raw = pick?.buildFrom?.trim() || normalizeDomain(company.domain ?? company.website) || company.orgnr;
+  if (!raw) return { ok: false, error: "Företaget har ingen webbplats eller organisationsnummer i katalogen.", needsSearch: true };
+  const parsed = parseProfileInput(raw);
+  if (parsed.kind === "error") return { ok: false, error: parsed.message, needsSearch: !pick };
+
+  try {
+    const started = await startProfile(parsed, { id: m.user.id, orgId: m.org.id }, { targetCompanyId: company.id });
+    if (!started.reused) {
+      try {
+        await triggerProfileBuild(started.id, { orgnr: parsed.kind === "orgnr" && parsed.soleTrader ? parsed.orgnr : null });
+      } catch (e) {
+        await failProfile(started.id, `Kunde inte starta bygget: ${e instanceof Error ? e.message : "okänt fel"}`);
+      }
+      await audit(m.user, "profile.create", "company", { id: started.id, name: company.name ?? raw, details: { input: parsed.kind === "url" ? parsed.domain : parsed.display, kind: parsed.kind, org: m.org.slug, source: "ringlage" } });
+    }
+    return { ok: true, id: started.id, reused: started.reused };
+  } catch (e) {
+    if (e instanceof ProfileStartError) return { ok: false, error: e.message };
+    throw e;
+  }
 }

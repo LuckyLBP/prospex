@@ -2,6 +2,8 @@ import { pool } from "../db";
 import { readSiteAudit, siteIssues } from "../enrich/audit";
 import { seoImprovements } from "../enrich/seo";
 import type { CallOutcome } from "../calls/outcomes";
+import { signPhotoUrls } from "../storage-people";
+import { cardProfile, type ProfileRowForCard } from "./card-profile";
 import type { DialerCard, CardRegistry, CardSite } from "./card-types";
 
 const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : null);
@@ -53,11 +55,21 @@ export async function getCards(orgId: string, ids: string[]): Promise<DialerCard
                where org_id = $1 and company_id = c.id order by called_at desc limit 40) l), '[]') as logs,
             coalesce((select json_agg(n order by n.created_at desc) from (
                select id, body, created_at, user_email from company_notes
-               where org_id = $1 and company_id = c.id order by created_at desc limit 40) n), '[]') as notes
+               where org_id = $1 and company_id = c.id order by created_at desc limit 40) n), '[]') as notes,
+            (select row_to_json(x) from (
+               select p.id, p.status, p.stage, p.finished_at, p.profile->'overview'->>'summary' as summary,
+                      p.profile->'contact'->'people' as people, p.profile->'registry'->'figures' as figures
+               from company_profiles p join profile_org_access a on a.profile_id = p.id and a.org_id = $1
+               where p.company_id = c.id or p.target_company_id = c.id
+               order by (p.status in ('queued','running')) desc, coalesce(p.finished_at, p.created_at) desc limit 1) x) as profile
      from companies c where c.id = any($2::uuid[])`,
     [orgId, ids],
   );
   const byId = new Map(rows.map((r) => [r.id as string, r]));
+  const canScan = ((await pool.query(`select profile_access from organizations where id = $1 and active`, [orgId])).rows[0]?.profile_access as boolean | undefined) === true;
+  // Porträtten ligger i en privat bucket och visas via signerade länkar som gäller en timme.
+  const paths = rows.flatMap((r) => ((r.profile?.people ?? []) as { photoPath?: string }[]).map((p) => p.photoPath).filter((x): x is string => !!x));
+  const signed = canScan && paths.length ? await signPhotoUrls(paths) : new Map<string, string>();
   return ids.flatMap((id): DialerCard[] => {
     const r = byId.get(id);
     if (!r) return [];
@@ -90,6 +102,8 @@ export async function getCards(orgId: string, ids: string[]): Promise<DialerCard
       notes: (r.notes as Record<string, unknown>[]).map((n) => ({ id: n.id as string, body: n.body as string, createdAt: iso(n.created_at as string)!, userEmail: n.user_email as string })),
       site: buildSite(r.site_audit, r.site_outdated),
       registry: buildRegistry(r.org),
+      canScan,
+      profile: canScan && r.profile ? cardProfile(r.profile as ProfileRowForCard, signed) : null,
     }];
   });
 }

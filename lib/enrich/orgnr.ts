@@ -45,7 +45,7 @@ function luhnCheck(digits: string): boolean {
 // ---------------------------------------------------------------------------
 // FINDING an org number in a page, as opposed to validating one someone typed.
 //
-// Three filters, and all three are needed. Luhn alone accepts far too much: a
+// Four filters, and all four are needed. Luhn alone accepts far too much: a
 // ten-digit run of characters passes it one time in ten, and a page footer is
 // full of them -- bankgiro numbers, dates, phone numbers, VAT numbers.
 //
@@ -55,7 +55,13 @@ function luhnCheck(digits: string): boolean {
 //      personal identity numbers, which is both a correctness rule and a data
 //      protection one: a sole trader's org number IS their personnummer, and
 //      this app has no business storing one.
-//   3. A keyword nearby, unless the page has exactly one candidate. "Org.nr
+//   3. First digit is a legal-form group that exists and that Bolagsverket
+//      answers for: 2 (state), 3 (foreign), 5 (aktiebolag), 7 (ekonomisk
+//      förening), 8 (ideell förening), 9 (handelsbolag). A Swedish phone
+//      number starts with 0 or with 46 once the + is gone, so this is what
+//      keeps "0730414760" and "+4642178141" out. Before this rule, every
+//      stored number starting 0, 1, 4 or 6 failed the registry lookup.
+//   4. A keyword nearby, unless the page has exactly one candidate. "Org.nr
 //      556677-8899" is an org number; the same digits in a list of twelve
 //      reference numbers probably are not.
 // ---------------------------------------------------------------------------
@@ -63,6 +69,8 @@ function luhnCheck(digits: string): boolean {
 const CANDIDATE = /\b(\d{6})[\s-]?(\d{4})\b/g;
 const KEYWORD = /(organisationsnummer|orgnr|org\.?\s*nr|org\.?nummer|momsreg|vat)/i;
 const KEYWORD_WINDOW = 60;
+/** Legal-form groups (first digit) that real organisation numbers use. */
+export const ORG_GROUP = /^[235789]/;
 
 /** The org number a page states about itself, or null. */
 export function findOrgNumber(text: string): string | null {
@@ -75,6 +83,7 @@ export function findOrgNumber(text: string): string | null {
     if (!isValidOrgNumber(digits)) continue;
     // Third digit is the month field in a personnummer.
     if (Number(digits[2]) < 2) continue;
+    if (!ORG_GROUP.test(digits)) continue;
     candidates.push({
       value: `${match[1]}-${match[2]}`,
       start: match.index,
