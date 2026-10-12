@@ -36,7 +36,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const weekLabel = `${new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short" }).format(new Date(`${monday}T12:00:00Z`))} - ${new Intl.DateTimeFormat("sv-SE", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${keys[6]}T12:00:00Z`))}`;
   const hours = Array.from({ length: LAST_H - FIRST_H }, (_, i) => FIRST_H + i);
   const nav = "flex h-9 w-9 items-center justify-center rounded-full bg-white hover:bg-gray-100";
-  const input = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-[#F26522]";
+  const input = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-accent";
 
   return (
     <>
@@ -53,7 +53,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <div className="grid grid-cols-[48px_repeat(7,1fr)] border-b border-gray-100 pb-2 text-center text-[12px] text-gray-500">
             <span />
             {keys.map((k, i) => (
-              <span key={k} className={k === today ? "font-semibold text-[#F26522]" : ""}>{DAYS[i]} {Number(k.slice(8))}</span>
+              <span key={k} className={k === today ? "font-semibold text-accent-text" : ""}>{DAYS[i]} {Number(k.slice(8))}</span>
             ))}
           </div>
           <div className="relative grid grid-cols-[48px_repeat(7,1fr)]" style={{ height: hours.length * HOUR_PX }}>
@@ -63,7 +63,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               ))}
             </div>
             {keys.map((k) => (
-              <div key={k} className={`relative border-l border-gray-100 ${k === today ? "bg-[#FFF6F0]" : ""}`}>
+              <div key={k} className={`relative border-l border-gray-100 ${k === today ? "bg-accent-wash" : ""}`}>
                 {hours.map((hr) => <div key={hr} style={{ height: HOUR_PX }} className="border-b border-gray-50" />)}
                 {events.filter((e) => dateKey(e.starts_at) === k).map((e) => {
                   const { h: hh, m } = hourMinute(e.starts_at);
@@ -87,7 +87,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="rounded-3xl bg-white p-6">
-          <h2 className="mb-4 text-[18px] font-semibold text-[#14161F]">Ny händelse</h2>
+          <h2 className="mb-4 text-[18px] font-semibold text-ink">Ny händelse</h2>
           <form action={createEvent} className="grid grid-cols-2 gap-3">
             <label className="col-span-2 text-[12px] font-medium text-gray-500">Titel<input name="title" required className={input} /></label>
             <label className="text-[12px] font-medium text-gray-500">Typ
@@ -97,10 +97,10 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             <label className="col-span-2 text-[12px] font-medium text-gray-500">Start
               <input name="start" type="datetime-local" required defaultValue={toLocalInput(new Date(Date.now() + 3600_000)).slice(0, 14) + "00"} className={input} />
             </label>
-            <button className="col-span-2 rounded-full bg-[#14161F] px-6 py-3 text-[14px] font-semibold text-white">Lägg till</button>
+            <button className="col-span-2 rounded-full bg-ink px-6 py-3 text-[14px] font-semibold text-white">Lägg till</button>
           </form>
 
-          <h3 className="mb-2 mt-6 text-[14px] font-semibold text-[#14161F]">Den här veckan</h3>
+          <h3 className="mb-2 mt-6 text-[14px] font-semibold text-ink">Den här veckan</h3>
           {events.length === 0 ? (
             <p className="text-[13px] text-gray-500">Inga händelser.</p>
           ) : (
@@ -125,9 +125,9 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         </div>
 
         <div className="rounded-3xl bg-white p-6">
-          <h2 className="mb-1 text-[18px] font-semibold text-[#14161F]">Synka med din kalender</h2>
+          <h2 className="mb-1 text-[18px] font-semibold text-ink">Synka med din kalender</h2>
           <p className="mb-4 text-[13px] text-gray-600">Prenumerera på länken nedan i Apple, Outlook eller Google. Händelser från Prospex dyker upp i din kalender.</p>
-          <div className="mb-3 break-all rounded-xl bg-[#F4F4F1] px-4 py-3 font-mono text-[12px] text-gray-800">{https}</div>
+          <div className="mb-3 break-all rounded-xl bg-canvas px-4 py-3 font-mono text-[12px] text-gray-800">{https}</div>
           <div className="mb-5 flex flex-wrap gap-2">
             <CopyButton text={https} />
             <a href={webcal} className="rounded-full border border-gray-300 px-4 py-2 text-[13px] font-medium hover:border-gray-500">Öppna i Apple Kalender</a>

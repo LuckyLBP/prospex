@@ -26,7 +26,7 @@ export default function FilterBar({ basePath, q, filters = [], total, noun }: { 
         <div key={f.key} role="group" aria-label={f.label} className="flex max-w-full gap-1 overflow-x-auto rounded-full bg-white p-1">
           {[{ value: "", label: "Alla" }, ...f.options].map((o) => {
             const on = (f.value ?? "") === o.value;
-            return <Link key={o.value || "alla"} href={href(f.key, o.value)} aria-current={on ? "true" : undefined} className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium ${on ? "bg-[#14161F] text-white" : "text-gray-600 hover:bg-[#F4F4F1]"}`}>{o.label}</Link>;
+            return <Link key={o.value || "alla"} href={href(f.key, o.value)} aria-current={on ? "true" : undefined} className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium ${on ? "bg-ink text-white" : "text-gray-600 hover:bg-canvas"}`}>{o.label}</Link>;
           })}
         </div>
       ))}

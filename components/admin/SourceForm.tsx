@@ -38,7 +38,7 @@ export default function SourceForm({ formId, action, source, categories, kind, r
         <div className="flex items-center gap-4">
           {source && <SupplierLogo name={source.name} logo={source.logo_path} size={40} className="!h-16 !w-16 !rounded-2xl !text-[18px]" />}
           <div className="flex-1">
-            <input name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-[13px] file:mr-3 file:rounded-full file:border-0 file:bg-[#F4F4F1] file:px-4 file:py-2 file:text-[13px] file:font-medium" />
+            <input name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-[13px] file:mr-3 file:rounded-full file:border-0 file:bg-canvas file:px-4 file:py-2 file:text-[13px] file:font-medium" />
             {source?.logo_path && <div className="mt-2"><Checkbox name="remove_logo" label="Ta bort nuvarande logotyp" /></div>}
           </div>
         </div>

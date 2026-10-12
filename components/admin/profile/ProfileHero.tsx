@@ -28,7 +28,7 @@ export default function ProfileHero({ profile, fallbackName, actions }: { profil
         <div className="flex min-w-0 items-center gap-5">
           <SupplierLogo name={name} logo={profile.companyLogoPath ?? undefined} size={40} className="!h-[72px] !w-[72px] !rounded-2xl !text-[24px]" />
           <div className="min-w-0">
-            <h1 className="break-words text-[26px] font-semibold leading-tight tracking-[-0.02em] text-[#14161F] sm:text-[30px]">{name}</h1>
+            <h1 className="break-words text-[26px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[30px]">{name}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {org?.legalForm && <StatusPill>{org.legalForm.label}</StatusPill>}
               {status?.kind === "active" && <StatusPill tone="green">Verksamt</StatusPill>}
@@ -49,7 +49,7 @@ export default function ProfileHero({ profile, fallbackName, actions }: { profil
         </ul>
       )}
 
-      <p className={`mt-5 border-t border-gray-100 pt-4 text-[15px] leading-relaxed ${profile.overview.summary ? "text-[#14161F]" : "text-gray-400"}`}>
+      <p className={`mt-5 border-t border-gray-100 pt-4 text-[15px] leading-relaxed ${profile.overview.summary ? "text-ink" : "text-gray-400"}`}>
         {profile.overview.summary ?? "Ingen sammanfattning. Det kan bero på att AI inte är konfigurerat eller att det inte fanns något att sammanfatta."}
       </p>
     </section>

@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Varumärkets färger som CSS-variabler, för det som inte går via Tailwind (inline-stilar, skuggor, e-post-förhandsvisning). */
+:root {
+  --ink: #0e1116;
+  --accent: #ff6a1a;
+  --accent-tint: #ffede0;
+  --canvas: #f5f4f0;
+  --line: #e7e5df;
+  color-scheme: light;
+}
+html { -webkit-tap-highlight-color: transparent; text-rendering: optimizeLegibility; }
+body { background: var(--canvas); color: var(--ink); -webkit-font-smoothing: antialiased; }
+/* Siffror i tabeller och nyckeltal står i rad. */
+table, .tabular { font-variant-numeric: tabular-nums; }
+::selection { background: var(--accent-tint); color: var(--ink); }
+
 .liquid-glass {
   background: rgba(255, 255, 255, 0.01);
   background-blend-mode: luminosity;
@@ -63,7 +78,7 @@
 }
 .dialer-sheet { animation: dialer-sheet 200ms ease-out both; width: 100%; }
 @media (min-width: 640px) {
-  .dialer-sheet { max-width: 480px; box-shadow: 0 24px 60px -12px rgba(20, 22, 31, 0.35); }
+  .dialer-sheet { max-width: 480px; box-shadow: 0 24px 60px -12px rgb(14 17 22 / 0.35); }
 }
 
 /* Profilsökningen: ett glöd som driver bakom fältet i fokus, och ett streck som rör sig medan sökningen pågår. */

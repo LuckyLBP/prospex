@@ -18,7 +18,7 @@ type Props = {
   meetingRef: RefObject<HTMLInputElement>;
 };
 
-const FIELD = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-[#F26522] focus-visible:ring-2 focus-visible:ring-[#F26522]/20";
+const FIELD = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/20";
 
 /**
  * Samtalsstatusen på sidan: vilket utfall som är valt och det som hör till det (ring igen, mötestid, arkivera).
@@ -30,14 +30,14 @@ export default function CallPanel({ form, onChange, onClear, onChangeOutcome, me
   if (!info) return null;
 
   return (
-    <section className="dialer-in flex flex-col gap-3 rounded-2xl bg-[#F7F7F4] p-4" aria-label="Samtalsstatus">
+    <section className="dialer-in flex flex-col gap-3 rounded-2xl bg-canvas p-4" aria-label="Samtalsstatus">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[12px] font-medium text-gray-500">Så här gick samtalet</p>
-          <p className="truncate text-[16px] font-semibold text-[#14161F]">{info.label}</p>
+          <p className="truncate text-[16px] font-semibold text-ink">{info.label}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
-          <button type="button" onClick={onChangeOutcome} className="rounded-full px-3 py-2 text-[13px] font-medium text-[#C2490C] hover:bg-white">Ändra</button>
+          <button type="button" onClick={onChangeOutcome} className="rounded-full px-3 py-2 text-[13px] font-medium text-accent-text hover:bg-white">Ändra</button>
           <button type="button" onClick={onClear} aria-label="Ta bort valet" className="rounded-full p-2 text-gray-500 hover:bg-white"><X size={16} /></button>
         </div>
       </div>
@@ -52,7 +52,7 @@ export default function CallPanel({ form, onChange, onClear, onChangeOutcome, me
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => onChange({ cbDate: form.cbDate === q.date ? "" : q.date })}
-                className={`rounded-full px-3 py-2 text-[13px] font-medium ${form.cbDate === q.date ? "bg-[#14161F] text-white" : "bg-[#F4F4F1] text-gray-800 hover:bg-gray-200"}`}
+                className={`rounded-full px-3 py-2 text-[13px] font-medium ${form.cbDate === q.date ? "bg-ink text-white" : "bg-canvas text-gray-800 hover:bg-gray-200"}`}
               >
                 {q.label}
               </button>
@@ -75,7 +75,7 @@ export default function CallPanel({ form, onChange, onClear, onChangeOutcome, me
 
       {info.terminal && (
         <label className="flex items-center gap-2 text-[13px] text-gray-700">
-          <input type="checkbox" checked={form.archive} onChange={(e) => onChange({ archive: e.target.checked })} className="h-4 w-4 accent-[#F26522]" />
+          <input type="checkbox" checked={form.archive} onChange={(e) => onChange({ archive: e.target.checked })} className="h-4 w-4 accent-accent" />
           Arkivera företaget (klart, ringa inte igen)
         </label>
       )}

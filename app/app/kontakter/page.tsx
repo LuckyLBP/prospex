@@ -18,7 +18,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const [rows, counts] = await Promise.all([listContacts(m.org.id, m.user.id, { scope, outcome, q }), contactCounts(m.org.id, m.user.id, scope)]);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const href = (o?: string, s = scope) => `/app/kontakter?${new URLSearchParams({ ...(o ? { outcome: o } : {}), ...(q ? { q } : {}), scope: s })}`;
-  const tab = (active: boolean) => `rounded-full px-4 py-1.5 text-[13px] font-medium ${active ? "bg-[#14161F] text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`;
+  const tab = (active: boolean) => `rounded-full px-4 py-1.5 text-[13px] font-medium ${active ? "bg-ink text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`;
 
   return (
     <>
@@ -52,8 +52,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-gray-50 last:border-0 hover:bg-[#FAFAF8]">
-                <td className="max-w-[240px] truncate px-5 py-3 font-medium text-[#14161F]"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "Okänt företag"}</Link></td>
+              <tr key={r.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                <td className="max-w-[240px] truncate px-5 py-3 font-medium text-ink"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "Okänt företag"}</Link></td>
                 <td className="px-5 py-3 text-gray-600">{r.phone ? <a href={`tel:${r.phone}`} className="hover:underline">{r.phone}</a> : "-"}</td>
                 <td className="px-5 py-3"><OutcomePill outcome={r.outcome} /></td>
                 <td className="max-w-[160px] truncate px-5 py-3 text-gray-600">{r.last_called_by_email ?? "-"}</td>
@@ -66,7 +66,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             ))}
             {rows.length === 0 && (
               <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-500">
-                Inga kontakter här. <Link href="/app/ring" className="font-medium text-[#F26522] underline underline-offset-4">Börja ringa</Link> så hamnar de du når här.
+                Inga kontakter här. <Link href="/app/ring" className="font-medium text-accent-text underline underline-offset-4">Börja ringa</Link> så hamnar de du når här.
               </td></tr>
             )}
           </tbody>

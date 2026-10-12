@@ -34,7 +34,7 @@ export default async function OrgDetailPage({ params, searchParams }: { params: 
               {members.map((m) => (
                 <li key={m.user_id} className="flex flex-wrap items-center gap-3 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium text-[#14161F]">{m.email}</p>
+                    <p className="truncate text-[14px] font-medium text-ink">{m.email}</p>
                     <p className="text-[12px] text-gray-500">{m.last_call ? `Senaste samtal ${formatDateTime(new Date(m.last_call))}` : "Har inte ringt än"}</p>
                   </div>
                   <form action={roleAction} className="flex items-center gap-2">

@@ -13,7 +13,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const days = parseTeamPeriod(sp.days);
   const [members, invites, { stats, suppliers }] = await Promise.all([listMembers(m.org.id), listInvites(m.org.id), teamStats(m.org.id, days)]);
-  const field = "rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-[#F26522]";
+  const field = "rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
   const th = "px-5 py-3 font-medium";
 
   return (
@@ -23,7 +23,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
 
       <div className="mb-3 flex gap-2">
         {TEAM_PERIODS.map((d) => (
-          <Link key={d} href={`/app/team?days=${d}`} className={`rounded-full px-4 py-1.5 text-[13px] font-medium ${d === days ? "bg-[#14161F] text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}>{d} dagar</Link>
+          <Link key={d} href={`/app/team?days=${d}`} className={`rounded-full px-4 py-1.5 text-[13px] font-medium ${d === days ? "bg-ink text-white" : "bg-white text-gray-700 hover:bg-gray-100"}`}>{d} dagar</Link>
         ))}
       </div>
 
@@ -36,7 +36,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           ["Kunder", stats.total.customers],
         ].map(([l, v]) => (
           <div key={l as string} className="rounded-3xl bg-white p-6">
-            <p className="text-[28px] font-semibold leading-none tracking-[-0.02em] text-[#14161F]">{v}</p>
+            <p className="text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink">{v}</p>
             <p className="mt-3 text-[13px] text-gray-500">{l}</p>
           </div>
         ))}
@@ -44,13 +44,13 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
 
       <div className="mb-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
         <div className="overflow-x-auto rounded-3xl bg-white">
-          <h2 className="px-6 pt-5 text-[16px] font-semibold text-[#14161F]">Per säljare</h2>
+          <h2 className="px-6 pt-5 text-[16px] font-semibold text-ink">Per säljare</h2>
           <table className="w-full text-left text-[13px]">
             <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500"><th className={th}>Säljare</th><th className={th}>Samtal</th><th className={th}>Nådda</th><th className={th}>Möten</th><th className={th}>Kunder</th></tr></thead>
             <tbody>
               {stats.sellers.map((s) => (
                 <tr key={s.userId} className="border-t border-gray-50">
-                  <td className="max-w-[200px] truncate px-5 py-2.5 font-medium text-[#14161F]">{s.email}</td>
+                  <td className="max-w-[200px] truncate px-5 py-2.5 font-medium text-ink">{s.email}</td>
                   <td className="px-5 py-2.5">{s.calls}</td><td className="px-5 py-2.5">{formatRate(s.reached, s.calls)}</td><td className="px-5 py-2.5">{s.meetings}</td><td className="px-5 py-2.5">{s.customers}</td>
                 </tr>
               ))}
@@ -59,13 +59,13 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           </table>
         </div>
         <div className="overflow-x-auto rounded-3xl bg-white">
-          <h2 className="px-6 pt-5 text-[16px] font-semibold text-[#14161F]">Per leverantör</h2>
+          <h2 className="px-6 pt-5 text-[16px] font-semibold text-ink">Per leverantör</h2>
           <table className="w-full text-left text-[13px]">
             <thead><tr className="text-[11px] uppercase tracking-wide text-gray-500"><th className={th}>Leverantör</th><th className={th}>Samtal</th><th className={th}>Nådda</th><th className={th}>Möten</th><th className={th}>Kunder</th></tr></thead>
             <tbody>
               {stats.sources.map((s) => (
                 <tr key={s.profileId} className="border-t border-gray-50">
-                  <td className="max-w-[200px] truncate px-5 py-2.5 font-medium text-[#14161F]">{suppliers.get(s.profileId) ?? "-"}</td>
+                  <td className="max-w-[200px] truncate px-5 py-2.5 font-medium text-ink">{suppliers.get(s.profileId) ?? "-"}</td>
                   <td className="px-5 py-2.5">{s.calls}</td><td className="px-5 py-2.5">{formatRate(s.reached, s.calls)}</td><td className="px-5 py-2.5">{s.meetings}</td><td className="px-5 py-2.5">{s.customers}</td>
                 </tr>
               ))}
@@ -76,18 +76,18 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
       </div>
 
       <div className="rounded-3xl bg-white p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-[18px] font-semibold text-[#14161F]"><UserPlus size={18} /> Medlemmar</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-[18px] font-semibold text-ink"><UserPlus size={18} /> Medlemmar</h2>
         <form action={inviteAction} className="mb-5 flex flex-wrap gap-3">
           <input type="email" name="email" required placeholder="namn@foretag.se" className={`${field} min-w-[260px] flex-1`} />
           <select name="role" className={field}><option value="member">Medlem</option><option value="owner">Ägare</option></select>
-          <button className="rounded-full bg-[#14161F] px-6 py-2.5 text-[14px] font-semibold text-white">Bjud in</button>
+          <button className="rounded-full bg-ink px-6 py-2.5 text-[14px] font-semibold text-white">Bjud in</button>
         </form>
         <table className="w-full text-left text-[14px]">
           <thead><tr className="text-[12px] uppercase tracking-wide text-gray-500"><th className="py-2 font-medium">E-post</th><th className="py-2 font-medium">Roll</th><th className="py-2 font-medium">Senaste samtal</th><th /></tr></thead>
           <tbody>
             {members.map((u) => (
               <tr key={u.user_id} className="border-t border-gray-50">
-                <td className="py-2.5 font-medium text-[#14161F]">{u.email}{u.user_id === m.user.id && <span className="ml-2 text-[12px] text-gray-400">(du)</span>}</td>
+                <td className="py-2.5 font-medium text-ink">{u.email}{u.user_id === m.user.id && <span className="ml-2 text-[12px] text-gray-400">(du)</span>}</td>
                 <td className="py-2.5">
                   <form action={roleAction} className="flex items-center gap-2">
                     <input type="hidden" name="user_id" value={u.user_id} />

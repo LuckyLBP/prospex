@@ -33,14 +33,14 @@ export default function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         className="dialer-toast w-full max-w-[440px] rounded-3xl bg-white p-6 shadow-xl outline-none"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[18px] font-semibold text-[#14161F]">Tangentbordsgenvägar</h2>
+          <h2 className="text-[18px] font-semibold text-ink">Tangentbordsgenvägar</h2>
           <button onClick={onClose} aria-label="Stäng" className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100"><X size={18} /></button>
         </div>
         <dl className="flex flex-col gap-2.5 text-[14px]">
           {ROWS.map(([k, v]) => (
             <div key={k} className="flex items-center justify-between gap-4">
               <dt className="text-gray-700">{v}</dt>
-              <dd><kbd className="whitespace-nowrap rounded-lg bg-[#F4F4F1] px-2 py-1 text-[12px] font-medium text-[#14161F]">{k}</kbd></dd>
+              <dd><kbd className="whitespace-nowrap rounded-lg bg-canvas px-2 py-1 text-[12px] font-medium text-ink">{k}</kbd></dd>
             </div>
           ))}
         </dl>

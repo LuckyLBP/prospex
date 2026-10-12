@@ -26,7 +26,7 @@ export default async function RunPanel({ source, returnTo, lastSeen }: { source:
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h2 className="text-[16px] font-semibold text-[#14161F]">Körningar</h2>
+            <h2 className="text-[16px] font-semibold text-ink">Körningar</h2>
             <StatusPill tone={TONE[status]}>{status === "never" && lastSeen ? "Hämtad före Prospex" : STATUS_LABELS[status]}</StatusPill>
             {next?.late && <StatusPill tone="red">Försenad</StatusPill>}
           </div>

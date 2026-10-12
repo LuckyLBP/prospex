@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, ClipboardCheck, PartyPopper, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ClipboardCheck, PartyPopper, Undo2, X } from "lucide-react";
 import CompanyPanel from "./CompanyPanel";
 import CallPanel from "./CallPanel";
 import { canSaveForm, EMPTY_FORM as EMPTY, menuChoice, withOutcome, type CallFormState } from "@/lib/dialer/outcome-form";
@@ -38,7 +38,7 @@ const targetKind = (el: EventTarget | null): KeyInput["target"] => {
 
 function ToastView({ toast, onUndo, onClose, className }: { toast: Toast; onUndo: () => void; onClose: () => void; className?: string }) {
   return (
-    <div key={toast.key} className={`dialer-toast flex items-center gap-2 rounded-2xl bg-[#14161F] py-2 pl-4 pr-2 text-[13px] text-white ${className ?? ""}`}>
+    <div key={toast.key} className={`dialer-toast flex items-center gap-2 rounded-2xl bg-ink py-2 pl-4 pr-2 text-[13px] text-white ${className ?? ""}`}>
       <span className="min-w-0 flex-1 truncate">{toast.kind === "undo" ? `Sparat: ${toast.text}` : toast.text}</span>
       {toast.kind === "undo" && (
         <button onClick={onUndo} disabled={!toast.logId} className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 font-medium hover:bg-white/25 disabled:opacity-50">
@@ -131,7 +131,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
         if (!res.ok || !alive) return;
         const s = parseClaim(await res.json());
         setClaim(s);
-        const why = dir.current === "fwd" ? skipReason(s, init.queueBuiltAt) : null; // bakåt hoppar vi aldrig
+        const why = dir.current === "fwd" && !init.single ? skipReason(s, init.queueBuiltAt) : null; // bakåt hoppar vi aldrig
         if (why && alive) {
           alive = false;
           const name = cards[currentId]?.name ?? "Företaget";
@@ -149,6 +149,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
 
   // Adressen speglar aktuellt företag, så en omladdning hamnar på samma kort.
   useEffect(() => {
+    if (init.single) return;
     const url = new URL(window.location.href);
     if (currentId) url.searchParams.set("c", currentId); else url.searchParams.delete("c");
     window.history.replaceState(window.history.state, "", url);
@@ -242,6 +243,11 @@ export default function Dialer({ init }: { init: DialerInit }) {
     if (card?.phone) window.location.href = `tel:${card.phone}`;
   }, [card]);
 
+  // Tillbaka dit man kom från (sök, en lista, kontakter). Utan historik går det till ringläget.
+  const goBack = useCallback(() => {
+    if (window.history.length > 1) router.back(); else router.push("/app/ring");
+  }, [router]);
+
   const refreshQueue = useCallback(() => { setRefreshing(true); router.refresh(); }, [router]);
 
   // En global tangentlyssnare. Själva reglerna ligger i lib/dialer/keys.ts och är testade.
@@ -258,9 +264,10 @@ export default function Dialer({ init }: { init: DialerInit }) {
         // Nästa-tangenten öppnar menyn med utfall och Hoppa över. Trycks den igen går det vidare till nästa företag.
         case "skip":
           if (done) break;
-          if (menuOpen) { setMenuOpen(false); go(index + 1, "fwd"); } else setMenuOpen(true);
+          if (init.single) setMenuOpen((o) => !o);
+          else if (menuOpen) { setMenuOpen(false); go(index + 1, "fwd"); } else setMenuOpen(true);
           break;
-        case "back": if (index > 0) go(index - 1, "back"); break;
+        case "back": if (index > 0 && !init.single) go(index - 1, "back"); break;
         case "note": composerRef.current?.focus(); break;
         case "call": call(); break;
         case "copy": copy(); break;
@@ -281,19 +288,32 @@ export default function Dialer({ init }: { init: DialerInit }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3">
-      <QueueBar init={init} callsToday={callsToday} left={left} onHelp={() => setHelp(true)} onRefresh={refreshQueue} refreshing={refreshing} onFilters={() => setFiltersOpen(true)} />
+      {init.single ? (
+        <button type="button" onClick={goBack} className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50"><ArrowLeft size={15} />Tillbaka</button>
+      ) : (
+        <QueueBar init={init} callsToday={callsToday} left={left} onHelp={() => setHelp(true)} onRefresh={refreshQueue} refreshing={refreshing} onFilters={() => setFiltersOpen(true)} />
+      )}
 
-      {done ? (
+      {done && init.single ? (
         <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-6 py-16 text-center">
-          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFE3D2] text-[#F26522]"><PartyPopper size={26} /></span>
-          <h2 className="text-[22px] font-semibold text-[#14161F]">{ids.length === 0 ? "Kön är tom" : "Kön är slut"}</h2>
+          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-tint text-accent"><Check size={26} /></span>
+          <h2 className="text-[22px] font-semibold text-ink">Samtalet är sparat</h2>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button onClick={goBack} className="rounded-full bg-ink px-5 py-3 text-[14px] font-semibold text-white">Tillbaka</button>
+            <button onClick={() => go(0, "back")} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Visa företaget igen</button>
+          </div>
+        </div>
+      ) : done ? (
+        <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-6 py-16 text-center">
+          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-tint text-accent"><PartyPopper size={26} /></span>
+          <h2 className="text-[22px] font-semibold text-ink">{ids.length === 0 ? "Kön är tom" : "Kön är slut"}</h2>
           <p className="mt-2 max-w-md text-[14px] text-gray-600">
             {session.calls > 0
               ? `Du ringde ${session.calls} samtal${session.meetings > 0 ? ` och bokade ${session.meetings} möte${session.meetings === 1 ? "" : "n"}` : ""} den här omgången. Bra jobbat.`
               : init.scope.mode === "callbacks" ? "Du har inga återringningar för i dag." : "Det finns inga fler företag med telefonnummer som matchar filtret och som inte redan är ringda eller omhändertagna."}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button onClick={refreshQueue} className="rounded-full bg-[#14161F] px-5 py-3 text-[14px] font-semibold text-white">Uppdatera kön</button>
+            <button onClick={refreshQueue} className="rounded-full bg-ink px-5 py-3 text-[14px] font-semibold text-white">Uppdatera kön</button>
             <button onClick={() => setFiltersOpen(true)} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Ändra filter</button>
             {index > 0 && <button onClick={() => go(index - 1, "back")} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Gå tillbaka</button>}
           </div>
@@ -307,13 +327,13 @@ export default function Dialer({ init }: { init: DialerInit }) {
             </div>
           ) : limitMsg ? (
             <div className="py-6 text-center" role="status">
-              <p className="text-[16px] font-semibold text-[#14161F]">Det går inte att visa fler företag just nu</p>
+              <p className="text-[16px] font-semibold text-ink">Det går inte att visa fler företag just nu</p>
               <p className="mx-auto mt-2 max-w-md text-[14px] text-gray-600">{limitMsg}</p>
               <button onClick={() => setLimitMsg(null)} className="mt-5 rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Försök igen</button>
             </div>
           ) : (
             <div className="space-y-4" aria-busy="true" aria-label="Laddar företaget">
-              <div className="h-6 w-1/3 animate-pulse rounded-full bg-[#F4F4F1]" /><div className="h-10 w-2/3 animate-pulse rounded-2xl bg-[#F4F4F1]" /><div className="h-14 w-full animate-pulse rounded-2xl bg-[#F4F4F1]" /><div className="h-32 animate-pulse rounded-2xl bg-[#F4F4F1]" />
+              <div className="h-6 w-1/3 animate-pulse rounded-full bg-canvas" /><div className="h-10 w-2/3 animate-pulse rounded-2xl bg-canvas" /><div className="h-14 w-full animate-pulse rounded-2xl bg-canvas" /><div className="h-32 animate-pulse rounded-2xl bg-canvas" />
             </div>
           )}
         </div>
@@ -321,20 +341,20 @@ export default function Dialer({ init }: { init: DialerInit }) {
 
       {/* Alltid inom räckhåll: sparat/ångra, spara och knapparna för att gå vidare. Fäst längst ned i det rullande området. */}
       {!done && (
-        <div className="sticky bottom-0 z-30 -mx-1 flex flex-col gap-2 bg-gradient-to-t from-[#F4F4F1] from-70% to-transparent px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4">
+        <div className="sticky bottom-0 z-30 -mx-1 flex flex-col gap-2 bg-gradient-to-t from-canvas from-70% to-transparent px-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-4">
           {toast && <div aria-live="polite"><ToastView toast={toast} onUndo={undo} onClose={() => setToast(null)} className="shadow-lg" /></div>}
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => go(index - 1, "back")} disabled={index === 0} aria-label="Förra företaget" title="Förra (←)" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm disabled:opacity-40"><ChevronLeft size={20} /></button>
+            {!init.single && <button type="button" onClick={() => go(index - 1, "back")} disabled={index === 0} aria-label="Förra företaget" title="Förra (←)" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow-sm disabled:opacity-40"><ChevronLeft size={20} /></button>}
 
             {/* Delad knapp: huvuddelen sparar (eller öppnar menyn när inget utfall är valt), pilen öppnar menyn med utfall och Hoppa över. */}
             <div className="relative flex h-14 min-w-0 flex-1">
-              {menuOpen && <OutcomeMenu selected={form.outcome} onPick={choose} onSkip={() => { setMenuOpen(false); go(index + 1, "fwd"); }} onClose={() => setMenuOpen(false)} />}
+              {menuOpen && <OutcomeMenu selected={form.outcome} onPick={choose} onSkip={init.single ? undefined : () => { setMenuOpen(false); go(index + 1, "fwd"); }} onClose={() => setMenuOpen(false)} />}
               <button
                 type="button"
                 disabled={!card}
                 onClick={() => (canSave ? submit() : setMenuOpen((o) => !o))}
                 title={canSave ? "Enter sparar. ⌘ Enter sparar även från anteckningen." : undefined}
-                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-l-full px-5 text-[16px] font-semibold text-white shadow-sm transition-colors disabled:opacity-40 ${canSave ? "bg-[#F26522]" : "bg-[#14161F]"}`}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-l-full px-5 text-[16px] font-semibold shadow-sm transition-colors disabled:opacity-40 ${canSave ? "bg-accent text-ink" : "bg-ink text-white"}`}
               >
                 {canSave ? <Check size={18} className="shrink-0" /> : <ClipboardCheck size={18} className="shrink-0" />}
                 <span className="truncate">{!card ? "Laddar…" : !form.outcome ? "Logga samtal" : !canSave ? "Ange mötets tid" : `Spara: ${outcomeLabel(form.outcome)}`}</span>
@@ -345,8 +365,8 @@ export default function Dialer({ init }: { init: DialerInit }) {
                 onClick={() => setMenuOpen((o) => !o)}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
-                aria-label="Välj hur samtalet gick, eller hoppa över"
-                className={`flex w-12 shrink-0 items-center justify-center rounded-r-full border-l border-white/25 text-white shadow-sm disabled:opacity-40 ${canSave ? "bg-[#F26522]" : "bg-[#14161F]"}`}
+                aria-label={init.single ? "Välj hur samtalet gick" : "Välj hur samtalet gick, eller hoppa över"}
+                className={`flex w-12 shrink-0 items-center justify-center rounded-r-full border-l shadow-sm disabled:opacity-40 ${canSave ? "border-ink/20 bg-accent text-ink" : "border-white/25 bg-ink text-white"}`}
               >
                 <ChevronDown size={18} className={`transition-transform ${menuOpen ? "rotate-180" : ""}`} />
               </button>

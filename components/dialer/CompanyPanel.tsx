@@ -13,8 +13,8 @@ import type { DialerCard } from "@/lib/dialer/card-types";
 const when = (iso: string) => formatDateTime(new Date(iso));
 
 // Knapparna på kortet: stora nog att träffa med tummen, och samma form överallt.
-const SHAPE = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F26522]";
-const PILL = `${SHAPE} border-gray-200 bg-white text-[#14161F] hover:border-gray-400`;
+const SHAPE = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const PILL = `${SHAPE} border-gray-200 bg-white text-ink hover:border-gray-400`;
 
 function Kbd({ children }: { children: React.ReactNode }) {
   // Tangenttips visas bara där det finns ett tangentbord.
@@ -24,9 +24,9 @@ function Kbd({ children }: { children: React.ReactNode }) {
 /** Sektionerna är platta: bara en linje emellan, utom samtalspunkterna som får en ljus ton eftersom de är det viktigaste. */
 function Section({ title, badge, tone = "plain", children }: { title: string; badge?: React.ReactNode; tone?: "plain" | "warm"; children: React.ReactNode }) {
   return (
-    <section className={tone === "warm" ? "rounded-2xl bg-[#FFF6F0] p-4 ring-1 ring-[#F26522]/15" : "border-t border-gray-100 pt-4"}>
+    <section className={tone === "warm" ? "rounded-2xl bg-accent-wash p-4 ring-1 ring-accent/15" : "border-t border-gray-100 pt-4"}>
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="text-[13px] font-semibold text-[#14161F]">{title}</h3>
+        <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
         {badge}
       </div>
       <div className="text-[14px] leading-relaxed text-gray-700">{children}</div>
@@ -35,7 +35,7 @@ function Section({ title, badge, tone = "plain", children }: { title: string; ba
 }
 
 function Dot({ hot }: { hot: boolean }) {
-  return <span className={`mt-[8px] h-1.5 w-1.5 shrink-0 rounded-full ${hot ? "bg-[#F26522]" : "bg-gray-400"}`} />;
+  return <span className={`mt-[8px] h-1.5 w-1.5 shrink-0 rounded-full ${hot ? "bg-accent" : "bg-gray-400"}`} />;
 }
 
 function CallPoints({ card }: { card: DialerCard }) {
@@ -48,15 +48,15 @@ function CallPoints({ card }: { card: DialerCard }) {
   const all = [
     ...reasons.map((i) => ({ key: i.label, hot: true, node: <>{i.label}</> })),
     ...notes.map((i) => ({ key: i.label, hot: false, node: <>{i.label}</> })),
-    ...s.seo.map((x) => ({ key: x.label, hot: false, node: <><span className="font-medium text-[#14161F]">{x.label}.</span> {x.detail}</> })),
+    ...s.seo.map((x) => ({ key: x.label, hot: false, node: <><span className="font-medium text-ink">{x.label}.</span> {x.detail}</> })),
   ];
   const SHOW = 3;
   const row = (i: (typeof all)[number]) => (
-    <li key={i.key} className={`flex items-start gap-2 ${i.hot ? "font-medium text-[#14161F]" : ""}`}><Dot hot={i.hot} /><span>{i.node}</span></li>
+    <li key={i.key} className={`flex items-start gap-2 ${i.hot ? "font-medium text-ink" : ""}`}><Dot hot={i.hot} /><span>{i.node}</span></li>
   );
 
   return (
-    <Section title="Samtalspunkter" tone="warm" badge={s.outdated ? <span className="rounded-full bg-[#F26522] px-2.5 py-0.5 text-[11px] font-semibold text-white">Föråldrad webbplats</span> : undefined}>
+    <Section title="Samtalspunkter" tone="warm" badge={s.outdated ? <span className="rounded-full bg-accent px-2.5 py-0.5 text-[11px] font-semibold text-ink">Föråldrad webbplats</span> : undefined}>
       {all.length === 0 ? (
         <p className="flex items-center gap-2"><Check size={16} className="text-emerald-600" /> Inget uppenbart att ta upp på webbplatsen.</p>
       ) : (
@@ -64,7 +64,7 @@ function CallPoints({ card }: { card: DialerCard }) {
           <ul className="flex flex-col gap-1.5">{all.slice(0, SHOW).map(row)}</ul>
           {all.length > SHOW && (
             <details className="mt-1.5">
-              <summary className="cursor-pointer text-[13px] font-medium text-[#F26522] hover:underline">Visa {all.length - SHOW} till</summary>
+              <summary className="cursor-pointer text-[13px] font-medium text-accent-text hover:underline">Visa {all.length - SHOW} till</summary>
               <ul className="mt-1.5 flex flex-col gap-1.5">{all.slice(SHOW).map(row)}</ul>
             </details>
           )}
@@ -82,7 +82,7 @@ function AboutCompany({ card, onShow }: { card: DialerCard; onShow: () => void }
   return (
     <section className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
       <div className="min-w-0 flex-1">
-        <h3 className="text-[13px] font-semibold text-[#14161F]">Om bolaget</h3>
+        <h3 className="text-[13px] font-semibold text-ink">Om bolaget</h3>
         <p className="truncate text-[13px] text-gray-500">{summary || card.orgnr || "Organisationsnummer saknas"}</p>
       </div>
       <button type="button" onClick={onShow} onMouseDown={(e) => e.preventDefault()} className={PILL}>
@@ -126,10 +126,10 @@ export default function CompanyPanel({ card, mode, me, copied, onCopy, draft, on
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-center gap-1.5">
         {suppliers.slice(0, MAX_SOURCES).map((s) => (
-          <span key={s.supplier} className="inline-flex items-center gap-1.5 rounded-full bg-[#F4F4F1] py-0.5 pl-1 pr-2.5 text-[12px] font-medium text-gray-700">
+          <span key={s.supplier} className="inline-flex items-center gap-1.5 rounded-full bg-canvas py-0.5 pl-1 pr-2.5 text-[12px] font-medium text-gray-700">
             <SupplierLogo name={s.supplier} logo={s.logo} size={20} fallback={s.kind === "list" ? <CategoryIcon icon={s.icon} size={12} /> : undefined} />
             {s.supplier}
-            {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer" aria-label={`Källa för ${s.supplier}`} className="text-[#F26522]"><ArrowUpRight size={12} /></a>}
+            {s.source_url && <a href={s.source_url} target="_blank" rel="noreferrer" aria-label={`Källa för ${s.supplier}`} className="text-accent"><ArrowUpRight size={12} /></a>}
           </span>
         ))}
         {suppliers.length > MAX_SOURCES && <span className="text-[12px] text-gray-400">+{suppliers.length - MAX_SOURCES}</span>}
@@ -143,7 +143,7 @@ export default function CompanyPanel({ card, mode, me, copied, onCopy, draft, on
       </div>
 
       <div>
-        <h2 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.02em] text-[#14161F] sm:text-[32px]">{card.name ?? "Okänt företag"}</h2>
+        <h2 className="text-[28px] font-semibold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[32px]">{card.name ?? "Okänt företag"}</h2>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-gray-500">
           {card.city && <span className="inline-flex items-center gap-1"><MapPin size={14} />{card.city}</span>}
           {r?.active === true && <span className="inline-flex items-center gap-1 text-emerald-700"><Check size={14} />Aktivt bolag</span>}
@@ -155,15 +155,15 @@ export default function CompanyPanel({ card, mode, me, copied, onCopy, draft, on
 
       {card.phone ? (
         <div className="flex gap-2">
-          <a href={`tel:${card.phone}`} className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl bg-[#14161F] px-4 text-[17px] font-semibold text-white hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F26522]">
-            <Phone size={18} className="text-[#F26522]" />{formatSwedishPhone(card.phone)} <Kbd>V</Kbd>
+          <a href={`tel:${card.phone}`} className="flex h-14 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl bg-ink px-4 text-[17px] font-semibold text-white hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            <Phone size={18} className="text-accent" />{formatSwedishPhone(card.phone)} <Kbd>V</Kbd>
           </a>
           <button type="button" onClick={onCopy} onMouseDown={(e) => e.preventDefault()} title="Kopiera numret (C)" aria-label="Kopiera numret" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-700 hover:border-gray-400">
             {copied ? <Check size={18} className="text-emerald-600" /> : <Copy size={18} />}
           </button>
         </div>
       ) : (
-        <p className="rounded-2xl bg-[#F4F4F1] px-4 py-3.5 text-[14px] text-gray-500">Inget telefonnummer.</p>
+        <p className="rounded-2xl bg-canvas px-4 py-3.5 text-[14px] text-gray-500">Inget telefonnummer.</p>
       )}
 
       <div className="flex flex-wrap items-center gap-2">

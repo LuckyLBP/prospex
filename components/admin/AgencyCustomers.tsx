@@ -50,8 +50,8 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
       description={published ? "Byrån är publicerad, så kunderna syns för användarna." : "Granska kunderna innan du publicerar byrån. Ta bort dem som inte stämmer, så läggs de inte tillbaka."}
     >
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
-        <Link href={href(slug, { tab: "kunder" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "kunder" ? "bg-[#14161F] text-white" : "bg-[#F4F4F1] text-gray-600 hover:text-[#14161F]"}`}>Kunder ({all})</Link>
-        <Link href={href(slug, { tab: "tidigare" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "tidigare" ? "bg-[#14161F] text-white" : "bg-[#F4F4F1] text-gray-600 hover:text-[#14161F]"}`}>Tidigare kunder ({view.events.length})</Link>
+        <Link href={href(slug, { tab: "kunder" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "kunder" ? "bg-ink text-white" : "bg-canvas text-gray-600 hover:text-ink"}`}>Kunder ({all})</Link>
+        <Link href={href(slug, { tab: "tidigare" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "tidigare" ? "bg-ink text-white" : "bg-canvas text-gray-600 hover:text-ink"}`}>Tidigare kunder ({view.events.length})</Link>
       </div>
 
       {view.tab === "tidigare" ? (
@@ -62,7 +62,7 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
               <tbody className="divide-y divide-gray-50">
                 {view.events.map((e) => (
                   <tr key={`${e.domain}-${e.at}`}>
-                    <td className="py-2.5 pr-4"><p className="font-medium text-[#14161F]">{e.companyName ?? e.domain}</p>{e.companyName && <p className="text-[12px] text-gray-400">{e.domain}</p>}</td>
+                    <td className="py-2.5 pr-4"><p className="font-medium text-ink">{e.companyName ?? e.domain}</p>{e.companyName && <p className="text-[12px] text-gray-400">{e.domain}</p>}</td>
                     <td className="py-2.5 pr-4">{e.kind === "switched" ? <StatusPill tone="amber">{`Bytte byrå${e.toName ? ` till ${e.toName}` : ""}`}</StatusPill> : <StatusPill>Visar inte byrån längre</StatusPill>}</td>
                     <td className="py-2.5 text-gray-600">{formatDate(new Date(e.at))}</td>
                   </tr>
@@ -74,11 +74,11 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2 text-[12px]">
-            <Link href={href(slug, { q: view.q })} className={`rounded-full px-2.5 py-1 ${!view.tier ? "bg-[#FFF1E8] font-medium text-[#C2490C]" : "bg-[#F4F4F1] text-gray-600"}`}>Alla</Link>
-            {tiers.map(([t, n]) => <Link key={t} href={href(slug, { tier: t, q: view.q })} className={`rounded-full px-2.5 py-1 ${view.tier === t ? "bg-[#FFF1E8] font-medium text-[#C2490C]" : "bg-[#F4F4F1] text-gray-600"}`}>{CONFIDENCE[t]?.label ?? t} ({n})</Link>)}
+            <Link href={href(slug, { q: view.q })} className={`rounded-full px-2.5 py-1 ${!view.tier ? "bg-accent-tint font-medium text-accent-text" : "bg-canvas text-gray-600"}`}>Alla</Link>
+            {tiers.map(([t, n]) => <Link key={t} href={href(slug, { tier: t, q: view.q })} className={`rounded-full px-2.5 py-1 ${view.tier === t ? "bg-accent-tint font-medium text-accent-text" : "bg-canvas text-gray-600"}`}>{CONFIDENCE[t]?.label ?? t} ({n})</Link>)}
             <form className="ml-auto" action={`/admin/leverantorer/${slug}`}>
               {view.tier && <input type="hidden" name="bevis" value={view.tier} />}
-              <input name="q" defaultValue={view.q ?? ""} placeholder="Sök företag" aria-label="Sök kund" className="rounded-full border border-gray-200 px-3 py-1 text-[12px] outline-none focus:border-[#F26522]" />
+              <input name="q" defaultValue={view.q ?? ""} placeholder="Sök företag" aria-label="Sök kund" className="rounded-full border border-gray-200 px-3 py-1 text-[12px] outline-none focus:border-accent" />
             </form>
           </div>
 
@@ -103,11 +103,11 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
                     const conf = c.confidence ? CONFIDENCE[c.confidence] : null;
                     return (
                       <tr key={c.companyId} className="align-top">
-                        <td className="py-2.5 pr-4"><p className="font-medium text-[#14161F]">{c.name ?? c.domain}</p>{c.name && c.domain && <p className="text-[12px] text-gray-400">{c.domain}</p>}</td>
+                        <td className="py-2.5 pr-4"><p className="font-medium text-ink">{c.name ?? c.domain}</p>{c.name && c.domain && <p className="text-[12px] text-gray-400">{c.domain}</p>}</td>
                         <td className="py-2.5 pr-4">
                           <div className="flex flex-wrap items-center gap-2">
                             {conf && <StatusPill tone={conf.tone}>{conf.label}</StatusPill>}
-                            {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-gray-600 underline underline-offset-4 hover:text-[#14161F]">Visa sidan<ArrowUpRight size={12} /></a>}
+                            {c.sourceUrl && <a href={c.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 text-gray-600 underline underline-offset-4 hover:text-ink">Visa sidan<ArrowUpRight size={12} /></a>}
                           </div>
                           {c.evidence && <p className="mt-1 text-[12px] text-gray-400">{c.evidence}</p>}
                         </td>
@@ -132,8 +132,8 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
             <nav className="flex items-center justify-between text-[13px] text-gray-500" aria-label="Sidor">
               <span>Sida {view.page} av {pages} · {view.total} kunder</span>
               <span className="flex gap-3">
-                {view.page > 1 && <Link href={href(slug, { page: view.page - 1, tier: view.tier, q: view.q })} className="font-medium text-[#C2490C] underline underline-offset-4">Föregående</Link>}
-                {view.page < pages && <Link href={href(slug, { page: view.page + 1, tier: view.tier, q: view.q })} className="font-medium text-[#C2490C] underline underline-offset-4">Nästa</Link>}
+                {view.page > 1 && <Link href={href(slug, { page: view.page - 1, tier: view.tier, q: view.q })} className="font-medium text-accent-text underline underline-offset-4">Föregående</Link>}
+                {view.page < pages && <Link href={href(slug, { page: view.page + 1, tier: view.tier, q: view.q })} className="font-medium text-accent-text underline underline-offset-4">Nästa</Link>}
               </span>
             </nav>
           )}

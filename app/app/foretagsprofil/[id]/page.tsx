@@ -41,20 +41,20 @@ export default async function TenantProfilePage({ params, searchParams }: { para
   return (
     <>
       <RunPoller active={active} />
-      <Link href="/app/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-[#14161F]"><ChevronLeft size={15} />Företagsprofil</Link>
+      <Link href="/app/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Företagsprofil</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
 
       {active && !profile && (
         <div className="rounded-3xl bg-white px-6 py-14 text-center">
-          <p className="text-[18px] font-semibold text-[#14161F]">{title}</p>
-          <p className="mt-2 text-[15px] text-[#C2490C]">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"}</p>
+          <p className="text-[18px] font-semibold text-ink">{title}</p>
+          <p className="mt-2 text-[15px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"}</p>
           <p className="mt-1 text-[14px] text-gray-500">Det tar oftast mellan 5 och 30 sekunder. Sidan uppdateras av sig själv.</p>
         </div>
       )}
-      {active && profile && <p className="mb-4 rounded-2xl bg-[#FFF6F0] px-5 py-3 text-[13px] text-[#C2490C]">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra profilen tills den nya är klar.</p>}
+      {active && profile && <p className="mb-4 rounded-2xl bg-accent-wash px-5 py-3 text-[13px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra profilen tills den nya är klar.</p>}
       {!active && !profile && (
-        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-[#14161F]">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen profil att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
+        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-ink">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen profil att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
       )}
 
       {profile && <ProfileView profile={profile} pages={[]} presence={[]} fallbackName={title} actions={actions} tenant photoUrls={photoUrls} />}

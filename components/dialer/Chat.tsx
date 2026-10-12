@@ -50,7 +50,7 @@ export default function Chat({ card, me, draft, onDraft, onSend, composerRef }: 
 
   let lastDay = "";
   return (
-    <section aria-label="Anteckningar och samtal" className="flex min-h-[260px] flex-1 flex-col rounded-2xl bg-[#F7F7F4]">
+    <section aria-label="Anteckningar och samtal" className="flex min-h-[260px] flex-1 flex-col rounded-2xl bg-canvas">
       <div ref={list} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-4 pb-2 pt-4">
         {items.length === 0 && (
           <p className="m-auto max-w-[260px] text-center text-[13px] leading-relaxed text-gray-500">Inga samtal eller anteckningar än. Det du skriver här ser alla i bolaget.</p>
@@ -86,7 +86,7 @@ export default function Chat({ card, me, draft, onDraft, onSend, composerRef }: 
       </div>
 
       <div className="shrink-0 px-3 pb-3 pt-1">
-        <div className="flex items-end gap-2 rounded-2xl bg-white p-2 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-[#F26522]/40">
+        <div className="flex items-end gap-2 rounded-2xl bg-white p-2 ring-1 ring-black/[0.06] focus-within:ring-2 focus-within:ring-accent/40">
           <textarea
             ref={composerRef}
             rows={1}
@@ -100,7 +100,7 @@ export default function Chat({ card, me, draft, onDraft, onSend, composerRef }: 
             aria-label="Skriv en anteckning"
             className="max-h-[104px] min-h-[36px] flex-1 resize-none bg-transparent px-2 py-2 text-[14px] leading-snug outline-none placeholder:text-gray-400"
           />
-          <button type="button" onClick={onSend} disabled={!draft.trim()} aria-label="Skicka anteckning" onMouseDown={(e) => e.preventDefault()} className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#14161F] text-white disabled:bg-gray-200 disabled:text-gray-400">
+          <button type="button" onClick={onSend} disabled={!draft.trim()} aria-label="Skicka anteckning" onMouseDown={(e) => e.preventDefault()} className="mb-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-white disabled:bg-gray-200 disabled:text-gray-400">
             <ArrowUp size={16} />
           </button>
         </div>
@@ -113,7 +113,7 @@ export default function Chat({ card, me, draft, onDraft, onSend, composerRef }: 
 function Bubble({ mine, who, at, text, pending }: { mine: boolean; who: string; at: string; text: string; pending?: boolean }) {
   return (
     <div className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
-      <div className={`max-w-[88%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[14px] leading-snug ${mine ? "rounded-br-md bg-[#14161F] text-white" : "rounded-bl-md bg-white text-gray-900 ring-1 ring-black/[0.05]"} ${pending ? "opacity-60" : ""}`}>{text}</div>
+      <div className={`max-w-[88%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-[14px] leading-snug ${mine ? "rounded-br-md bg-ink text-white" : "rounded-bl-md bg-white text-gray-900 ring-1 ring-black/[0.05]"} ${pending ? "opacity-60" : ""}`}>{text}</div>
       <span className="mt-0.5 px-1 text-[11px] text-gray-400">{mine ? "Du" : who} · {time(at)}</span>
     </div>
   );

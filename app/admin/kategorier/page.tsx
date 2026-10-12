@@ -13,7 +13,7 @@ export default async function CategoriesPage({ searchParams }: { searchParams: P
   const sp = await searchParams;
   const rows = await listCategories();
   const cols: Column<Row>[] = [
-    { key: "name", header: "Namn", primary: true, cell: (c) => <span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#14161F] text-white"><CategoryIcon icon={c.icon} size={16} /></span>{c.name}</span> },
+    { key: "name", header: "Namn", primary: true, cell: (c) => <span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink text-white"><CategoryIcon icon={c.icon} size={16} /></span>{c.name}</span> },
     { key: "desc", header: "Beskrivning", cell: (c) => <span className="text-gray-500">{c.description ?? "–"}</span> },
     { key: "lists", header: "Listor", align: "right", cell: (c) => c.lists },
     { key: "brand", header: "Texter", cell: (c) => (c.names_brand ? <StatusPill tone="orange">Namnger varumärken</StatusPill> : <span className="text-gray-400">Vanliga</span>) },

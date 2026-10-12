@@ -24,9 +24,9 @@ export default async function ListsPage() {
         {categories.map((c) => (
           <section key={c.slug} aria-labelledby={`cat-${c.slug}`}>
             <div className="mb-3 flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#14161F] text-white"><CategoryIcon icon={c.icon} size={18} /></span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-white"><CategoryIcon icon={c.icon} size={18} /></span>
               <div>
-                <h2 id={`cat-${c.slug}`} className="text-[18px] font-semibold text-[#14161F]">{c.name}</h2>
+                <h2 id={`cat-${c.slug}`} className="text-[18px] font-semibold text-ink">{c.name}</h2>
                 {c.description && <p className="text-[13px] text-gray-500">{c.description}</p>}
               </div>
             </div>
@@ -35,9 +35,9 @@ export default async function ListsPage() {
                 <Link key={l.slug} href={`/app/listor/${l.slug}`} className="group flex items-start gap-4 rounded-3xl bg-white p-5 transition-shadow hover:shadow-md">
                   <SupplierLogo name={l.name} logo={l.logo} size={40} fallback={<CategoryIcon icon={c.icon} size={20} />} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[15px] font-semibold text-[#14161F] group-hover:underline">{l.name}</h3>
+                    <h3 className="truncate text-[15px] font-semibold text-ink group-hover:underline">{l.name}</h3>
                     {l.description && <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-gray-500">{l.description}</p>}
-                    <p className="mt-2 text-[12px] text-gray-500"><span className="font-semibold text-[#14161F]">{sv(l.n)}</span> företag · {sv(l.with_phone)} med telefon</p>
+                    <p className="mt-2 text-[12px] text-gray-500"><span className="font-semibold text-ink">{sv(l.n)}</span> företag · {sv(l.with_phone)} med telefon</p>
                   </div>
                 </Link>
               ))}

@@ -18,7 +18,7 @@ export default function SupplierLogo({ name, logo, size = 32, className = "", fa
       </span>
     );
   }
-  if (fallback) return <span aria-hidden className={`${box} bg-[#F0EFEA] text-gray-500`}>{fallback}</span>;
+  if (fallback) return <span aria-hidden className={`${box} bg-gray-100 text-gray-500`}>{fallback}</span>;
   const initials = name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
-  return <span aria-hidden className={`${box} bg-[#F0EFEA] font-semibold text-gray-500`}>{initials}</span>;
+  return <span aria-hidden className={`${box} bg-gray-100 font-semibold text-gray-500`}>{initials}</span>;
 }

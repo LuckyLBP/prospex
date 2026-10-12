@@ -23,7 +23,7 @@ export default async function SuppliersPage() {
           <tbody>
             {suppliers.map((s) => (
               <tr key={s.slug} className="border-b border-gray-50 last:border-0">
-                <td className="px-6 py-2.5 font-medium text-[#14161F]"><Link href={`/app/leverantorer/${s.slug}`} className="flex items-center gap-3 hover:underline"><SupplierLogo name={s.name} logo={s.logo} size={32} />{s.name}</Link></td>
+                <td className="px-6 py-2.5 font-medium text-ink"><Link href={`/app/leverantorer/${s.slug}`} className="flex items-center gap-3 hover:underline"><SupplierLogo name={s.name} logo={s.logo} size={32} />{s.name}</Link></td>
                 <td className="px-6 py-3 text-gray-700">{s.n.toLocaleString("sv-SE")}</td>
                 <td className="px-6 py-3 text-gray-700">{s.with_phone.toLocaleString("sv-SE")}</td>
                 <td className="px-6 py-3 text-right">

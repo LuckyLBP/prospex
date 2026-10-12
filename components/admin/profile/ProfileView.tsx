@@ -51,7 +51,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
               <div className="flex flex-col gap-4">
                 {profile.overview.offering.length > 0 && (
                   <div><Label>Vad de erbjuder</Label>
-                    <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2">{profile.overview.offering.map((c, i) => <li key={i} className="rounded-2xl bg-[#F4F4F1] px-4 py-3 text-[14px] leading-snug text-gray-800"><ClaimText claim={c} facts={facts} /></li>)}</ul></div>
+                    <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2">{profile.overview.offering.map((c, i) => <li key={i} className="rounded-2xl bg-canvas px-4 py-3 text-[14px] leading-snug text-gray-800"><ClaimText claim={c} facts={facts} /></li>)}</ul></div>
                 )}
                 {profile.overview.audience && (
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-2xl border border-gray-100 px-4 py-3 text-[14px]"><span className="text-[13px] font-medium text-gray-500">Säljer till</span><ClaimText claim={profile.overview.audience} facts={facts} /></div>
@@ -66,7 +66,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
             <Card title="Samtalspunkter" tone="warm" note="Förslag på ingångar, byggda på belägg">
               <ol className="flex flex-col gap-3">
                 {talking.map((c, i) => (
-                  <li key={i} className="flex gap-3.5"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F26522] text-[12px] font-semibold text-white">{i + 1}</span><span className="pt-0.5 text-[14px] leading-snug text-[#14161F]"><ClaimText claim={c} facts={facts} /></span></li>
+                  <li key={i} className="flex gap-3.5"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[12px] font-semibold text-ink">{i + 1}</span><span className="pt-0.5 text-[14px] leading-snug text-ink"><ClaimText claim={c} facts={facts} /></span></li>
                 ))}
               </ol>
             </Card>
@@ -99,7 +99,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
               <ul className="divide-y divide-gray-50">
                 {profile.jobs.ads.map((ad) => (
                   <li key={ad.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-[14px]">
-                    <a href={ad.url} target="_blank" rel="noreferrer" className="min-w-0 font-medium text-[#14161F] hover:underline">{ad.title}</a>
+                    <a href={ad.url} target="_blank" rel="noreferrer" className="min-w-0 font-medium text-ink hover:underline">{ad.title}</a>
                     <span className="text-[12px] text-gray-400">{[ad.city, ad.published ? `publicerad ${ad.published}` : null].filter(Boolean).join(" · ")}</span>
                   </li>
                 ))}
@@ -116,7 +116,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
               <ul className="divide-y divide-gray-50">
                 {profile.services.map((s: ServiceItem) => (
                   <li key={`${s.name}-${s.category}`} className="flex flex-wrap items-baseline gap-x-4 gap-y-1.5 py-3 text-[14px]">
-                    <span className="w-full shrink-0 font-medium sm:w-52 text-[#14161F]">{s.name}{s.origin === "ai" && <span className="ml-2 align-middle"><StatusPill>AI</StatusPill></span>}</span>
+                    <span className="w-full shrink-0 font-medium sm:w-52 text-ink">{s.name}{s.origin === "ai" && <span className="ml-2 align-middle"><StatusPill>AI</StatusPill></span>}</span>
                     <span className="w-24 shrink-0"><StatusPill>{s.category.charAt(0).toUpperCase() + s.category.slice(1)}</StatusPill></span>
                     <span className="w-24 shrink-0"><ConfidenceMeter level={s.confidence} /></span>
                     <span className="min-w-0 flex-1 text-gray-600">{s.basis}<Evidence ids={s.evidence} facts={facts} /></span>
@@ -128,7 +128,7 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
 
           {profile.observations.length > 0 && (
             <Card title="Observationer">
-              <ul className="flex flex-col gap-2 text-[14px] text-gray-800">{profile.observations.map((c, i) => <li key={i} className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#F26522]" /><ClaimText claim={c} facts={facts} /></li>)}</ul>
+              <ul className="flex flex-col gap-2 text-[14px] text-gray-800">{profile.observations.map((c, i) => <li key={i} className="flex gap-2.5"><span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" /><ClaimText claim={c} facts={facts} /></li>)}</ul>
             </Card>
           )}
         </div>
@@ -137,11 +137,11 @@ export default function ProfileView({ profile, pages, presence, fallbackName, ac
       </div>
 
       {!tenant && <details className="rounded-3xl bg-white p-6" id="kallor">
-        <summary className="cursor-pointer text-[16px] font-semibold text-[#14161F]">Källor ({profile.facts.length} belägg, {pages.length} sidor)</summary>
+        <summary className="cursor-pointer text-[16px] font-semibold text-ink">Källor ({profile.facts.length} belägg, {pages.length} sidor)</summary>
         <div className="mt-4 flex flex-col gap-5">
           <ul className="divide-y divide-gray-50 text-[13px]">
             {profile.facts.map((f) => (
-              <li key={f.id} id={`fakta-${f.id}`} className="flex flex-wrap gap-x-3 py-2 target:bg-[#FFF6F0]">
+              <li key={f.id} id={`fakta-${f.id}`} className="flex flex-wrap gap-x-3 py-2 target:bg-accent-wash">
                 <span className="w-10 shrink-0 font-medium text-gray-400">{f.id}</span>
                 <span className="w-56 shrink-0 text-gray-800">{f.label}</span>
                 <span className="min-w-0 flex-1 text-gray-700">{f.value}{f.match && <span className="block truncate text-[12px] text-gray-400" title={f.match}>Träff: {f.match}</span>}</span>

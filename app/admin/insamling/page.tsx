@@ -44,7 +44,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
       return (
         <form action={runNowAction}>
           <input type="hidden" name="supplier_id" value={s.id} /><input type="hidden" name="return_to" value="/admin/insamling" />
-          <button disabled={t.disabled} title={t.reason ?? "Kör nu"} aria-label={`Kör ${s.name} nu`} className="rounded-full border border-gray-300 p-2 text-gray-600 hover:border-gray-500 hover:text-[#14161F] disabled:opacity-30"><Play size={14} /></button>
+          <button disabled={t.disabled} title={t.reason ?? "Kör nu"} aria-label={`Kör ${s.name} nu`} className="rounded-full border border-gray-300 p-2 text-gray-600 hover:border-gray-500 hover:text-ink disabled:opacity-30"><Play size={14} /></button>
         </form>
       );
     } },
@@ -62,7 +62,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
           { l: "Senaste körning misslyckades", v: failed },
           { l: `Schemalagda i dag, av ${MAX_PER_DAY} (PublicWWW ${today.publicwww} av ${MAX_PUBLICWWW_PER_DAY})`, v: today.total },
         ].map((k) => (
-          <div key={k.l} className="rounded-3xl bg-white p-5"><p className="text-[28px] font-semibold leading-none text-[#14161F]">{k.v}</p><p className="mt-2 text-[13px] text-gray-500">{k.l}</p></div>
+          <div key={k.l} className="rounded-3xl bg-white p-5"><p className="text-[28px] font-semibold leading-none text-ink">{k.v}</p><p className="mt-2 text-[13px] text-gray-500">{k.l}</p></div>
         ))}
       </div>
       <p className="mb-4 text-[13px] text-gray-500">Varje källa hämtas var 7:e dag, Google Places var 30:e, klockan 04 svensk tid. Öppna en källa för inställningar och körhistorik.</p>

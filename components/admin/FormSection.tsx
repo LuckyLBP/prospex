@@ -5,7 +5,7 @@ export function FormSection({ title, description, children, footer }: { title: s
   return (
     <section className="grid grid-cols-1 gap-x-10 gap-y-4 rounded-3xl bg-white p-6 lg:grid-cols-[240px_1fr]">
       <div>
-        <h2 className="text-[16px] font-semibold text-[#14161F]">{title}</h2>
+        <h2 className="text-[16px] font-semibold text-ink">{title}</h2>
         {description && <p className="mt-1 text-[13px] leading-relaxed text-gray-500">{description}</p>}
       </div>
       <div className="flex flex-col gap-4">
@@ -32,7 +32,7 @@ export const Textarea = (p: React.TextareaHTMLAttributes<HTMLTextAreaElement>) =
 export function Checkbox({ label, ...p }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <label className="flex items-center gap-2.5 text-[14px] text-gray-800">
-      <input type="checkbox" {...p} className="h-4 w-4 accent-[#F26522]" />
+      <input type="checkbox" {...p} className="h-4 w-4 accent-accent" />
       {label}
     </label>
   );

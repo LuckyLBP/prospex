@@ -15,10 +15,10 @@ export default function FinanceHistory({ figures }: { figures: AnnualFigures }) 
         {years.map((y) => (
           <li key={y.periodEnd} className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 text-[13px]">
             <span className="text-gray-500">{y.periodEnd.slice(0, 4)}</span>
-            <div className="h-2 rounded-full bg-[#F4F4F1]" role="img" aria-label={`Omsättning ${y.periodEnd.slice(0, 4)}: ${compactKr(y.revenue)}`}>
-              <div className="h-2 rounded-full bg-[#F26522]" style={{ width: `${Math.max(2, (Math.abs(y.revenue ?? 0) / max) * 100)}%` }} />
+            <div className="h-2 rounded-full bg-canvas" role="img" aria-label={`Omsättning ${y.periodEnd.slice(0, 4)}: ${compactKr(y.revenue)}`}>
+              <div className="h-2 rounded-full bg-accent" style={{ width: `${Math.max(2, (Math.abs(y.revenue ?? 0) / max) * 100)}%` }} />
             </div>
-            <span className="text-right text-[#14161F]"><span className="font-semibold">{compactKr(y.revenue)}</span>{y.profit !== null && <span className={`ml-2 ${y.profit < 0 ? "text-rose-700" : "text-gray-400"}`}>{compactKr(y.profit)}</span>}</span>
+            <span className="text-right text-ink"><span className="font-semibold">{compactKr(y.revenue)}</span>{y.profit !== null && <span className={`ml-2 ${y.profit < 0 ? "text-rose-700" : "text-gray-400"}`}>{compactKr(y.profit)}</span>}</span>
           </li>
         ))}
       </ul>

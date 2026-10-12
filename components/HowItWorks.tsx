@@ -49,7 +49,7 @@ export default function HowItWorks() {
         </div>
       </section>
 
-      <section id="exempel" className="bg-[#F5F5F5] pb-16 pt-16 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-28">
+      <section id="exempel" className="bg-gray-100 pb-16 pt-16 sm:pb-20 sm:pt-20 lg:pb-28 lg:pt-28">
         <div className="mx-auto max-w-[1440px]">
           <div className="mb-6 flex items-center gap-3 px-5 sm:mb-8 sm:px-8 lg:px-12">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-[11px] font-semibold text-white sm:h-7 sm:w-7 sm:text-[12px]">

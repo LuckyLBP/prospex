@@ -34,7 +34,7 @@ export default async function AdminHome() {
       <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
         {kpis.map((k) => (
           <Link key={k.label} href={k.href} className="rounded-3xl bg-white p-5 transition-shadow hover:shadow-md">
-            <p className="text-[30px] font-semibold leading-none tracking-[-0.02em] text-[#14161F]">{sv(k.value)}</p>
+            <p className="text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink">{sv(k.value)}</p>
             <p className="mt-2.5 text-[13px] text-gray-500">{k.label}</p>
           </Link>
         ))}
@@ -42,15 +42,15 @@ export default async function AdminHome() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <section className="rounded-3xl bg-white p-6">
-          <h2 className="mb-4 text-[16px] font-semibold text-[#14161F]">Behöver åtgärd</h2>
+          <h2 className="mb-4 text-[16px] font-semibold text-ink">Behöver åtgärd</h2>
           {todo.length === 0 ? (
             <p className="flex items-center gap-2 text-[14px] text-gray-600"><Check size={16} className="text-emerald-600" />Allt ser bra ut.</p>
           ) : (
             <ul className="flex flex-col divide-y divide-gray-100">
               {todo.map((t) => (
                 <li key={t.href}>
-                  <Link href={t.href} className="group flex items-center justify-between gap-3 py-3 text-[14px] text-gray-800 hover:text-[#14161F]">
-                    <span><span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[#FFE3D2] px-1.5 text-[12px] font-semibold text-[#C2490C]">{t.n}</span>{t.text(t.n).replace(/^\d+ /, "")}</span>
+                  <Link href={t.href} className="group flex items-center justify-between gap-3 py-3 text-[14px] text-gray-800 hover:text-ink">
+                    <span><span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-accent-tint px-1.5 text-[12px] font-semibold text-accent-text">{t.n}</span>{t.text(t.n).replace(/^\d+ /, "")}</span>
                     <ArrowRight size={15} className="text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500" />
                   </Link>
                 </li>
@@ -61,8 +61,8 @@ export default async function AdminHome() {
 
         <section className="rounded-3xl bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[16px] font-semibold text-[#14161F]">Senaste aktivitet</h2>
-            <Link href="/admin/logg" className="text-[13px] font-medium text-gray-500 underline underline-offset-4 hover:text-[#14161F]">Hela loggen</Link>
+            <h2 className="text-[16px] font-semibold text-ink">Senaste aktivitet</h2>
+            <Link href="/admin/logg" className="text-[13px] font-medium text-gray-500 underline underline-offset-4 hover:text-ink">Hela loggen</Link>
           </div>
           {log.length === 0 ? (
             <p className="text-[14px] text-gray-500">Ingen aktivitet än. Det som görs i admin visas här.</p>

@@ -22,7 +22,7 @@ export default async function ListPage({ params, searchParams }: { params: Promi
         subtitle={source.category ? `${source.category.name}${source.description ? ` · ${source.description}` : ""}` : (source.description ?? "Lista")}
       />
       <div className="mb-4 flex gap-2 text-[13px]">
-        <span className="rounded-full bg-[#14161F] px-4 py-1.5 font-medium text-white">Lista</span>
+        <span className="rounded-full bg-ink px-4 py-1.5 font-medium text-white">Lista</span>
         <Link href={`/app/listor/${slug}/arkiv`} className="rounded-full bg-white px-4 py-1.5 font-medium text-gray-700 hover:bg-gray-100">Arkiv</Link>
         <Link href="/app/listor" className="ml-auto rounded-full px-4 py-1.5 font-medium text-gray-500 hover:bg-white">Alla listor</Link>
       </div>

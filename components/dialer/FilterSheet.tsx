@@ -11,7 +11,7 @@ import CategoryIcon from "@/components/ui/CategoryIcon";
 import Sheet from "./Sheet";
 import type { DialerInit } from "./types";
 
-const FIELD = "h-11 w-full rounded-full border border-gray-200 bg-white px-4 text-[14px] outline-none transition-colors hover:border-gray-300 focus:border-[#F26522] placeholder:text-gray-400";
+const FIELD = "h-11 w-full rounded-full border border-gray-200 bg-white px-4 text-[14px] outline-none transition-colors hover:border-gray-300 focus:border-accent placeholder:text-gray-400";
 
 /** Källa, ort och ordning på kön. Ligger i ett blad så att kön själv får plats i det smala läget. */
 export default function FilterSheet({ init, here, onClose }: { init: DialerInit; here: string; onClose: () => void }) {
@@ -40,7 +40,7 @@ export default function FilterSheet({ init, here, onClose }: { init: DialerInit;
           <label className="block text-[12px] font-medium text-gray-500">Ort
             <div className="mt-1 flex gap-2">
               <input aria-label="Ort" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Till exempel Malmö" className={FIELD} />
-              <button className="h-11 shrink-0 rounded-full bg-[#14161F] px-5 text-[14px] font-semibold text-white">Använd</button>
+              <button className="h-11 shrink-0 rounded-full bg-ink px-5 text-[14px] font-semibold text-white">Använd</button>
             </div>
           </label>
         </form>
@@ -60,7 +60,7 @@ export default function FilterSheet({ init, here, onClose }: { init: DialerInit;
         )}
 
         {(scope.profileSlug || scope.city) && (
-          <button type="button" onClick={() => go(dialerHref({ ...scope, profileSlug: null, city: undefined }))} className="self-start text-[13px] font-medium text-[#C2490C] underline underline-offset-4">Rensa filter</button>
+          <button type="button" onClick={() => go(dialerHref({ ...scope, profileSlug: null, city: undefined }))} className="self-start text-[13px] font-medium text-accent-text underline underline-offset-4">Rensa filter</button>
         )}
       </div>
     </Sheet>

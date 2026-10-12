@@ -58,7 +58,10 @@ export async function getCards(orgId: string, ids: string[]): Promise<DialerCard
                where org_id = $1 and company_id = c.id order by created_at desc limit 40) n), '[]') as notes,
             (select row_to_json(x) from (
                select p.id, p.status, p.stage, p.finished_at, p.profile->'overview'->>'summary' as summary,
-                      p.profile->'contact'->'people' as people, p.profile->'registry'->'figures' as figures
+                      p.profile->'contact'->'people' as people, p.profile->'registry'->'figures' as figures,
+                      jsonb_build_object('offering', p.profile->'overview'->'offering', 'audience', p.profile->'overview'->'audience', 'talkingPoints', p.profile->'talkingPoints',
+                        'services', p.profile->'services', 'place', p.profile->'contact'->'place', 'address', p.profile->'contact'->'address', 'jobs', p.profile->'jobs',
+                        'social', p.profile->'marketing'->'social', 'org', p.profile->'registry'->'organisation', 'creator', p.profile->'creator') as extra
                from company_profiles p join profile_org_access a on a.profile_id = p.id and a.org_id = $1
                where p.company_id = c.id or p.target_company_id = c.id
                order by (p.status in ('queued','running')) desc, coalesce(p.finished_at, p.created_at) desc limit 1) x) as profile

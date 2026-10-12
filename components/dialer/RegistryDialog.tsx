@@ -19,8 +19,8 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl bg-[#F7F7F4] p-4">
-      <h3 className="mb-1.5 text-[13px] font-semibold text-[#14161F]">{title}</h3>
+    <section className="rounded-2xl bg-canvas p-4">
+      <h3 className="mb-1.5 text-[13px] font-semibold text-ink">{title}</h3>
       {children}
     </section>
   );
@@ -111,7 +111,7 @@ export default function RegistryDialog({ companyId, name, onClose, onOrgnrSaved 
         <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-6 py-4">
           <div className="min-w-0">
             <p className="mb-0.5 flex items-center gap-1.5 text-[12px] font-medium text-gray-500"><Building2 size={14} />Företagsuppgifter</p>
-            <h2 className="truncate text-[20px] font-semibold tracking-[-0.01em] text-[#14161F]">{org?.name ?? name ?? "Okänt företag"}</h2>
+            <h2 className="truncate text-[20px] font-semibold tracking-[-0.01em] text-ink">{org?.name ?? name ?? "Okänt företag"}</h2>
             {org && <div className="mt-2"><Status org={org} /></div>}
           </div>
           <button onClick={onClose} aria-label="Stäng" className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100"><X size={18} /></button>
@@ -120,7 +120,7 @@ export default function RegistryDialog({ companyId, name, onClose, onOrgnrSaved 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {loading && (
             <div className="space-y-3" aria-busy="true" aria-label="Hämtar från Bolagsverket">
-              {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-[#F4F4F1]" />)}
+              {[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-2xl bg-canvas" />)}
               <p className="text-center text-[12px] text-gray-500">Hämtar från Bolagsverket</p>
             </div>
           )}
@@ -136,9 +136,9 @@ export default function RegistryDialog({ companyId, name, onClose, onOrgnrSaved 
                   inputMode="numeric"
                   autoFocus
                   aria-label="Organisationsnummer"
-                  className="h-10 flex-1 rounded-full border border-gray-200 px-4 text-[14px] outline-none focus:border-[#F26522]"
+                  className="h-10 flex-1 rounded-full border border-gray-200 px-4 text-[14px] outline-none focus:border-accent"
                 />
-                <button disabled={saving || orgnr.replace(/\D/g, "").length < 10} className="h-10 rounded-full bg-[#14161F] px-5 text-[13px] font-semibold text-white disabled:opacity-40">
+                <button disabled={saving || orgnr.replace(/\D/g, "").length < 10} className="h-10 rounded-full bg-ink px-5 text-[13px] font-semibold text-white disabled:opacity-40">
                   {saving ? "Kontrollerar" : "Hämta uppgifter"}
                 </button>
               </form>
@@ -152,7 +152,7 @@ export default function RegistryDialog({ companyId, name, onClose, onOrgnrSaved 
               {orgnr !== "" || res.message.includes("organisationsnummer") ? (
                 <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="mt-3 flex gap-2">
                   <input value={orgnr} onChange={(e) => setOrgnr(e.target.value)} placeholder="556677-8899" aria-label="Organisationsnummer" className="h-10 flex-1 rounded-full border border-rose-200 bg-white px-4 text-[14px] outline-none" />
-                  <button disabled={saving} className="h-10 rounded-full bg-[#14161F] px-5 text-[13px] font-semibold text-white disabled:opacity-40">Försök igen</button>
+                  <button disabled={saving} className="h-10 rounded-full bg-ink px-5 text-[13px] font-semibold text-white disabled:opacity-40">Försök igen</button>
                 </form>
               ) : null}
             </div>

@@ -1,4 +1,5 @@
-import { KeyRound, Mail, Radar } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
+import { KeyRound, Mail } from "lucide-react";
 import CodeInput from "@/components/CodeInput";
 import { sendCode, verifyCode } from "./actions";
 
@@ -24,28 +25,26 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     : sp.error === "rate-verify"
       ? `Du har provat flera felaktiga koder. Vänta ${waitText} och försök igen.`
       : sp.error ? (ERRORS[sp.error] ?? sp.error) : null;
-  const input = "rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] outline-none focus:border-[#F26522]";
+  const input = "rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] outline-none focus:border-accent";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#14161F] p-4">
-      <div className="w-full max-w-[420px] rounded-[28px] bg-[#F4F4F1] p-8">
-        <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F26522] text-white">
-          <Radar size={26} />
-        </span>
-        <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-[#14161F]">Logga in på Prospex</h1>
+    <main className="flex min-h-screen items-center justify-center bg-ink p-4">
+      <div className="w-full max-w-[420px] rounded-[28px] bg-canvas p-8">
+        <Logo height={40} className="mb-6" />
+        <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink">Logga in på Prospex</h1>
 
         {sp.email ? (
           <form action={verifyCode} className="mt-5 flex flex-col gap-3">
             <div className="flex gap-3 rounded-2xl bg-white p-4 text-[14px] text-gray-700">
-              <Mail size={20} className="mt-0.5 shrink-0 text-[#F26522]" />
+              <Mail size={20} className="mt-0.5 shrink-0 text-accent" />
               <p>
-                Om <span className="font-semibold text-[#14161F]">{sp.email}</span> har åtkomst har vi skickat en kod med sex siffror.
+                Om <span className="font-semibold text-ink">{sp.email}</span> har åtkomst har vi skickat en kod med sex siffror.
               </p>
             </div>
             <input type="hidden" name="email" value={sp.email} />
             <CodeInput className={`${input} text-center text-[26px] tracking-[0.3em] placeholder:text-gray-300`} />
             {error && <p className={`rounded-xl px-4 py-3 text-[13px] ${info ? "bg-amber-50 text-amber-900" : "bg-rose-50 text-rose-800"}`}>{error}</p>}
-            <button className="flex items-center justify-center gap-2 rounded-full bg-[#14161F] px-6 py-3 text-[14px] font-semibold text-white">
+            <button className="flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3 text-[14px] font-semibold text-white">
               <KeyRound size={16} /> Logga in
             </button>
           </form>
@@ -64,7 +63,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-[14px] text-gray-600">Ange din e-post så skickar vi en kod. Inget lösenord behövs.</p>
             <input type="email" name="email" required autoFocus placeholder="namn@foretag.se" className={input} />
             {error && <p className="text-[13px] text-red-600">{error}</p>}
-            <button className="rounded-full bg-[#14161F] px-6 py-3 text-[14px] font-semibold text-white">Skicka kod</button>
+            <button className="rounded-full bg-ink px-6 py-3 text-[14px] font-semibold text-white">Skicka kod</button>
           </form>
         )}
       </div>

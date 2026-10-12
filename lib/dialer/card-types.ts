@@ -60,6 +60,25 @@ export type CardProfile = {
   summary: string | null;
   people: { key: string; name: string; role: string | null; phone: string | null; email: string | null; photoUrl: string | null }[];
   figures: { revenue: number | null; profit: number | null; employees: number | null; year: string | null } | null;
+  /** Omsättningens förändring mot förra året, i procent. */
+  growth: number | null;
+  /** Året bolaget registrerades. */
+  founded: number | null;
+  /** Det en säljare kan ta upp i samtalet, skrivet av profilen. Varje punkt stöds av ett belägg i profilen. */
+  talkingPoints: string[];
+  rating: { value: number; count: number | null } | null;
+  /** Öppna platsannonser: ett tecken på att företaget växer. */
+  jobs: { total: number; ads: { title: string; city: string | null; url: string }[] } | null;
+  offering: string[];
+  audience: string | null;
+  /** Tekniker och verktyg på webbplatsen, till exempel bokning, e-handel och annonsering. */
+  tech: { name: string; category: string }[];
+  hours: string[];
+  address: string | null;
+  mapsUrl: string | null;
+  social: { network: string; url: string }[];
+  /** Byrån som byggt webbplatsen, när profilen vet det. */
+  builtBy: string | null;
 };
 
 export type DialerCard = {

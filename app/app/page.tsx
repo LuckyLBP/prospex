@@ -38,12 +38,12 @@ export default async function StartPage() {
     <>
       <Header title={`Hej, ${m.user.name}`} subtitle={`${date.charAt(0).toUpperCase() + date.slice(1)} · ${m.org.name}`} />
 
-      <div className="mb-5 rounded-full bg-[#14161F] px-6 py-4 text-[15px] text-white">{banner}</div>
+      <div className="mb-5 rounded-full bg-ink px-6 py-4 text-[15px] text-white">{banner}</div>
 
       <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((x) => (
           <div key={x.label} className="rounded-3xl bg-white p-6">
-            <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] text-[#14161F]">{x.value}</p>
+            <p className="text-[34px] font-semibold leading-none tracking-[-0.02em] text-ink">{x.value}</p>
             <p className="mt-3 text-[13px] text-gray-500">{x.label}</p>
           </div>
         ))}
@@ -52,13 +52,13 @@ export default async function StartPage() {
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_380px]">
         <div className="flex flex-col gap-5">
           <div className="rounded-3xl bg-white p-6">
-            <h2 className="mb-5 text-[18px] font-semibold text-[#14161F]">Dina samtal, senaste veckan</h2>
+            <h2 className="mb-5 text-[18px] font-semibold text-ink">Dina samtal, senaste veckan</h2>
             <div className="flex h-32 items-end gap-3">
               {week.week.map((d) => (
                 <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
                   <span className="text-[12px] text-gray-500">{d.count}</span>
-                  <div className={`w-full rounded-lg ${d.isToday ? "bg-[#F26522]" : "bg-[#14161F]"}`} style={{ height: `${Math.max(4, (d.count / peak) * 80)}px` }} />
-                  <span className={`text-[12px] ${d.isToday ? "font-semibold text-[#F26522]" : "text-gray-500"}`}>{d.weekday}</span>
+                  <div className={`w-full rounded-lg ${d.isToday ? "bg-accent" : "bg-ink"}`} style={{ height: `${Math.max(4, (d.count / peak) * 80)}px` }} />
+                  <span className={`text-[12px] ${d.isToday ? "font-semibold text-accent-text" : "text-gray-500"}`}>{d.weekday}</span>
                 </div>
               ))}
             </div>
@@ -66,7 +66,7 @@ export default async function StartPage() {
 
           <div className="rounded-3xl bg-white p-6">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-[18px] font-semibold text-[#14161F]">Kommande</h2>
+              <h2 className="text-[18px] font-semibold text-ink">Kommande</h2>
               <Link href="/app/kalender" className="text-[13px] font-medium underline underline-offset-4">Se kalendern</Link>
             </div>
             {events.length === 0 ? (
@@ -88,18 +88,18 @@ export default async function StartPage() {
 
           <div className="rounded-3xl bg-white p-6">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-[18px] font-semibold text-[#14161F]">Största leverantörerna</h2>
+              <h2 className="text-[18px] font-semibold text-ink">Största leverantörerna</h2>
               <Link href="/app/leverantorer" className="text-[13px] font-medium underline underline-offset-4">Se alla</Link>
             </div>
             <div className="flex flex-col gap-4">
               {top.map((x) => (
                 <Link key={x.slug} href={`/app/leverantorer/${x.slug}`} className="group block">
                   <div className="mb-1.5 flex justify-between text-[14px]">
-                    <span className="flex items-center gap-2.5 font-medium text-[#14161F] group-hover:underline"><SupplierLogo name={x.name} logo={x.logo} size={24} />{x.name}</span>
+                    <span className="flex items-center gap-2.5 font-medium text-ink group-hover:underline"><SupplierLogo name={x.name} logo={x.logo} size={24} />{x.name}</span>
                     <span className="text-gray-500">{sv(x.n)} företag</span>
                   </div>
-                  <div className="h-2 rounded-full bg-[#F4F4F1]">
-                    <div className="h-2 rounded-full bg-[#F26522]" style={{ width: `${Math.max(2, (x.n / max) * 100)}%` }} />
+                  <div className="h-2 rounded-full bg-canvas">
+                    <div className="h-2 rounded-full bg-accent" style={{ width: `${Math.max(2, (x.n / max) * 100)}%` }} />
                   </div>
                 </Link>
               ))}
@@ -111,17 +111,17 @@ export default async function StartPage() {
         </div>
 
         <div className="flex flex-col gap-5">
-          <Link href="/app/ring" className="group flex min-h-[200px] items-center gap-4 rounded-3xl bg-[#14161F] p-6 text-white">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F26522]"><PhoneCall size={26} /></span>
+          <Link href="/app/ring" className="group flex min-h-[200px] items-center gap-4 rounded-3xl bg-ink p-6 text-white">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent"><PhoneCall size={26} /></span>
             <span className="flex-1">
               <span className="block text-[12px] text-white/60">Ringläge</span>
               <span className="block text-[18px] font-semibold leading-snug">Börja ringa</span>
             </span>
-            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#14161F] transition-transform group-hover:rotate-45"><ArrowUpRight size={18} /></span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink transition-transform group-hover:rotate-45"><ArrowUpRight size={18} /></span>
           </Link>
 
           <div className="rounded-3xl bg-white p-6">
-            <h2 className="mb-2 flex items-center gap-2 text-[18px] font-semibold text-[#14161F]"><CalendarDays size={18} /> Synka kalendern</h2>
+            <h2 className="mb-2 flex items-center gap-2 text-[18px] font-semibold text-ink"><CalendarDays size={18} /> Synka kalendern</h2>
             <p className="mb-4 text-[13px] text-gray-600">Få återringningar och möten i Outlook, Apple och Google Kalender.</p>
             <Link href="/app/kalender" className="inline-block rounded-full border border-gray-300 px-4 py-2 text-[13px] font-medium hover:border-gray-500">Hämta kalenderlänk</Link>
           </div>

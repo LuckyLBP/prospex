@@ -85,8 +85,8 @@ export default function Select({ value, onChange, options, ariaLabel, name, plac
         aria-expanded={open}
         aria-controls={`${id}-list`}
         onClick={() => (open ? close() : setOpen(true))}
-        className={`inline-flex h-9 w-full items-center justify-between gap-2 rounded-full border bg-white pl-3.5 pr-2.5 text-left text-[13px] font-medium text-[#14161F] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#F26522]/30 ${
-          open ? "border-[#F26522]" : "border-gray-200 hover:border-gray-300"
+        className={`inline-flex h-9 w-full items-center justify-between gap-2 rounded-full border bg-white pl-3.5 pr-2.5 text-left text-[13px] font-medium text-ink outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/30 ${
+          open ? "border-accent" : "border-gray-200 hover:border-gray-300"
         } ${className ?? ""}`}
       >
         <span className={`flex min-w-0 items-center gap-2 ${selected ? "" : "text-gray-400"}`}>{selected?.icon}<span className="truncate">{selected?.label ?? placeholder ?? ""}</span></span>
@@ -122,10 +122,10 @@ export default function Select({ value, onChange, options, ariaLabel, name, plac
                     onMouseEnter={() => setActive(i)}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => pick(o.value)}
-                    className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl px-3 py-2 text-[13px] ${i === active ? "bg-[#F4F4F1]" : ""} ${on ? "font-semibold text-[#14161F]" : "text-gray-800"}`}
+                    className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl px-3 py-2 text-[13px] ${i === active ? "bg-canvas" : ""} ${on ? "font-semibold text-ink" : "text-gray-800"}`}
                   >
                     <span className="flex items-center gap-2 whitespace-nowrap">
-                      <Check size={14} className={on ? "text-[#F26522]" : "invisible"} />
+                      <Check size={14} className={on ? "text-accent" : "invisible"} />
                       {o.icon}
                       {o.label}
                     </span>

@@ -47,7 +47,7 @@ export default function CollectionFields({ method: m0, config, enrichSites }: { 
           </div>
           <div className="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
             <Field label="Sidor per sökning" hint="1 till 3, 20 företag per sida."><Input name="gp_pages" type="number" min={1} max={3} defaultValue={d.gp_pages} onChange={(e) => setGp((s) => ({ ...s, p: Number(e.target.value) }))} /></Field>
-            <p className="pb-6 text-[13px] text-gray-500">{cost.ok ? <>Cirka <span className="font-semibold text-[#14161F]">{sv(cost.requests)}</span> anrop per körning, av {sv(FREE_MONTHLY_REQUESTS)} gratis i månaden.</> : cost.error}</p>
+            <p className="pb-6 text-[13px] text-gray-500">{cost.ok ? <>Cirka <span className="font-semibold text-ink">{sv(cost.requests)}</span> anrop per körning, av {sv(FREE_MONTHLY_REQUESTS)} gratis i månaden.</> : cost.error}</p>
           </div>
         </>
       )}

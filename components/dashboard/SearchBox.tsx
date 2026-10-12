@@ -56,8 +56,8 @@ export default function SearchBox() {
       {open && results.length > 0 && (
         <div className="absolute right-0 top-full z-30 mt-2 w-[380px] overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-black/5">
           {results.map((r) => (
-            <Link key={r.id} href={`/app/foretag/${r.id}`} onClick={() => setOpen(false)} className="block px-4 py-2.5 hover:bg-[#F4F4F1]">
-              <span className="block truncate text-[14px] font-medium text-[#14161F]">{r.name ?? "Okänt företag"}</span>
+            <Link key={r.id} href={`/app/foretag/${r.id}`} onClick={() => setOpen(false)} className="block px-4 py-2.5 hover:bg-canvas">
+              <span className="block truncate text-[14px] font-medium text-ink">{r.name ?? "Okänt företag"}</span>
               <span className="block truncate text-[12px] text-gray-500">{[r.city, r.suppliers].filter(Boolean).join(" · ")}</span>
             </Link>
           ))}

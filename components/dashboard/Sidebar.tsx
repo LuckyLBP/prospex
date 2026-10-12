@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { Logo, LogoMark } from "@/components/brand/Logo";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, Eye, LayoutDashboard, LayoutGrid, LibraryBig, LogOut, Menu, PhoneCall, Radar, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, Eye, LayoutDashboard, LayoutGrid, LibraryBig, LogOut, Menu, Palette, PhoneCall, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 
 const NAV = [
@@ -23,7 +24,7 @@ function adminGroups(c: { invites: number; late: number }): { title: string | nu
     { title: null, items: [{ href: "/admin", label: "Översikt", icon: LayoutDashboard }] },
     { title: "Kunder", items: [{ href: "/admin/bolag", label: "Bolag", icon: Building2 }, { href: "/admin/anvandare", label: "Användare", icon: Users, badge: c.invites }] },
     { title: "Katalog", items: [{ href: "/admin/leverantorer", label: "Leverantörer", icon: Shapes }, { href: "/admin/listor", label: "Listor", icon: LibraryBig }, { href: "/admin/kategorier", label: "Kategorier", icon: Tags }, { href: "/admin/foretagsprofil", label: "Företagsprofil", icon: ScanSearch }] },
-    { title: "System", items: [{ href: "/admin/insamling", label: "Insamling", icon: DatabaseZap, badge: c.late }, { href: "/admin/logg", label: "Aktivitetslogg", icon: ScrollText }, { href: "/admin/atkomst", label: "Åtkomst", icon: Eye }] },
+    { title: "System", items: [{ href: "/admin/insamling", label: "Insamling", icon: DatabaseZap, badge: c.late }, { href: "/admin/logg", label: "Aktivitetslogg", icon: ScrollText }, { href: "/admin/atkomst", label: "Åtkomst", icon: Eye }, { href: "/admin/varumarke", label: "Varumärke", icon: Palette }] },
   ];
 }
 
@@ -42,8 +43,8 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
 
   const body = (narrow: boolean, mobile: boolean) => (
     <>
-      <Link href={orgName ? "/app" : "/admin"} className="mb-8 ml-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F26522] text-white">
-        <Radar size={26} />
+      <Link href={orgName ? "/app" : "/admin"} aria-label="Prospex" className="mb-8 ml-1 flex shrink-0 items-center">
+        {narrow ? <LogoMark size={48} /> : <Logo height={40} theme="dark" />}
       </Link>
       {!narrow && orgName && <p className="-mt-5 mb-6 ml-1 truncate text-[12px] text-white/50">{orgName}</p>}
       {inAdmin ? (
@@ -61,9 +62,9 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
                 return (
                   <Link key={href} href={href} title={label} aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] font-medium transition-colors ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}>
-                    <Icon size={20} className={active ? "text-[#F26522]" : ""} />
+                    <Icon size={20} className={active ? "text-accent" : ""} />
                     {!narrow && <span className="flex-1">{label}</span>}
-                    {!narrow && !!badge && badge > 0 && <span className="rounded-full bg-[#F26522] px-1.5 text-[11px] font-semibold leading-5 text-white">{badge}</span>}
+                    {!narrow && !!badge && badge > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-ink">{badge}</span>}
                   </Link>
                 );
               })}
@@ -83,7 +84,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
                 active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon size={20} className={active ? "text-[#F26522]" : ""} />
+              <Icon size={20} className={active ? "text-accent" : ""} />
               {!narrow && label}
             </Link>
           );
@@ -109,13 +110,13 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
     <>
       {/* Smal skärm: en liten överdel med menyknapp, och menyn som lägger sig över sidan. */}
       <div className="flex shrink-0 items-center justify-between pb-3 lg:hidden">
-        <Link href={orgName ? "/app" : "/admin"} className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F26522] text-white"><Radar size={20} /></Link>
+        <Link href={orgName ? "/app" : "/admin"} aria-label="Prospex" className="flex items-center"><Logo height={30} theme="dark" /></Link>
         <button onClick={() => setOpen(true)} aria-label="Öppna menyn" className="rounded-xl p-2 text-white/80 hover:bg-white/10"><Menu size={22} /></button>
       </div>
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Meny">
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[270px] flex-col bg-[#14161F] px-3 py-5">
+          <aside className="absolute inset-y-0 left-0 flex w-[270px] flex-col bg-ink px-3 py-5">
             <button onClick={() => setOpen(false)} aria-label="Stäng menyn" className="absolute right-3 top-4 rounded-xl p-2 text-white/70 hover:bg-white/10"><X size={20} /></button>
             {body(false, true)}
           </aside>

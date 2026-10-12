@@ -8,7 +8,7 @@ export default function PageHeader({ title, subtitle, back, actions, icon }: {
   return (
     <header className="mb-6">
       {back && (
-        <Link href={back.href} className="mb-2 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-[#14161F]">
+        <Link href={back.href} className="mb-2 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink">
           <ChevronLeft size={15} />{back.label}
         </Link>
       )}
@@ -16,7 +16,7 @@ export default function PageHeader({ title, subtitle, back, actions, icon }: {
         <div className="flex min-w-0 items-center gap-4">
           {icon}
           <div className="min-w-0">
-            <h1 className="truncate text-[28px] font-semibold leading-tight tracking-[-0.02em] text-[#14161F]">{title}</h1>
+            <h1 className="truncate text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink">{title}</h1>
             {subtitle && <p className="text-[14px] text-gray-500">{subtitle}</p>}
           </div>
         </div>

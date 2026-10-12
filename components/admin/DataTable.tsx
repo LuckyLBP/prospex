@@ -29,14 +29,14 @@ export default function DataTable<T>({ columns, rows, rowKey, rowHref, empty }: 
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={rowKey(r)} className={`relative border-b border-gray-50 last:border-0 [transform:translateZ(0)] ${rowHref ? "hover:bg-[#FAFAF8]" : ""}`}>
+            <tr key={rowKey(r)} className={`relative border-b border-gray-50 last:border-0 [transform:translateZ(0)] ${rowHref ? "hover:bg-gray-50" : ""}`}>
               {columns.map((c) => {
                 const content = c.cell(r);
                 const href = rowHref && c === primary ? rowHref(r) : "";
                 return (
                   <td key={c.key} className={`px-5 py-3 ${c.align === "right" ? "text-right" : ""} ${c.className ?? ""}`}>
                     {href ? (
-                      <Link href={href} className="font-medium text-[#14161F] after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-[#F26522]/50">{content}</Link>
+                      <Link href={href} className="font-medium text-ink after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-accent/50">{content}</Link>
                     ) : content}
                   </td>
                 );

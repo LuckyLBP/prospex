@@ -20,4 +20,6 @@ export type DialerInit = {
   macs: Record<string, string>;
   /** Gränsen för hur många företag som släpps är nådd redan vid inladdningen. */
   limit: string | null;
+  /** Ett enda företag, öppnat från sök eller en lista i stället för ur kön. Ingen kö, inget hoppa över. */
+  single?: boolean;
 };

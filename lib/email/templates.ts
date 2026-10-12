@@ -1,7 +1,13 @@
 // E-postmallar i kod. Ren HTML + text, inga beroenden. Inga tankstreck i texten.
 
-const INK = "#14161F";
-const ORANGE = "#F26522";
+// Samma färger som appen (brand/tokens.cjs). E-post går inte via Tailwind, så värdena står här.
+const INK = "#0E1116";
+const CANVAS = "#F5F4F0";
+const BODY = "#474B53";
+const MUTED = "#5B6068";
+
+/** Logotypen som bild: e-postprogram blockerar inbäddad SVG, så den ligger som PNG i public/brand. Utan bilden visas texten. */
+const logoUrl = () => `${(process.env.NEXT_PUBLIC_APP_URL ?? "https://prospex.se").replace(/\/$/, "")}/brand/email-logo.png`;
 
 export type Email = { subject: string; html: string; text: string };
 
@@ -11,13 +17,13 @@ export const escapeHtml = (s: string) =>
 function shell(preheader: string, inner: string): string {
   return `<!doctype html>
 <html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prospex</title></head>
-<body style="margin:0;background:#f4f4f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${INK};">
+<body style="margin:0;background:${CANVAS};font-family:'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${INK};">
 <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(preheader)}</span>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f1;padding:32px 16px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};padding:32px 16px;"><tr><td align="center">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
-    <tr><td style="padding:0 0 20px;"><span style="display:inline-block;background:${ORANGE};color:#fff;font-weight:700;font-size:15px;border-radius:12px;padding:10px 14px;">Prospex</span></td></tr>
+    <tr><td style="padding:0 0 20px;"><img src="${logoUrl()}" width="150" alt="Prospex" style="display:block;border:0;outline:none;height:auto;font-weight:700;font-size:20px;color:${INK};"></td></tr>
     <tr><td style="background:#fff;border-radius:24px;padding:32px;">${inner}</td></tr>
-    <tr><td style="padding:20px 8px 0;font-size:12px;line-height:1.6;color:#6b7280;">Du fick det här mejlet för att någon angav din adress hos Prospex. Känner du inte igen det kan du ignorera det.</td></tr>
+    <tr><td style="padding:20px 8px 0;font-size:12px;line-height:1.6;color:${MUTED};">Du fick det här mejlet för att någon angav din adress hos Prospex. Känner du inte igen det kan du ignorera det.</td></tr>
   </table>
 </td></tr></table></body></html>`;
 }
@@ -32,8 +38,8 @@ export function loginCodeEmail(code: string): Email {
     html: shell(
       `Din inloggningskod är ${code}`,
       `<h1 style="margin:0 0 12px;font-size:22px;letter-spacing:-0.02em;">Din inloggningskod</h1>
-       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#374151;">Skriv in koden i Prospex för att logga in. Den gäller i en timme och kan bara användas en gång.</p>
-       <div style="background:#f4f4f1;border-radius:16px;padding:20px;text-align:center;font-size:36px;font-weight:700;letter-spacing:0.18em;font-family:ui-monospace,Menlo,Consolas,monospace;">${escapeHtml(code)}</div>`,
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:${BODY};">Skriv in koden i Prospex för att logga in. Den gäller i en timme och kan bara användas en gång.</p>
+       <div style="background:${CANVAS};border-radius:16px;padding:20px;text-align:center;font-size:36px;font-weight:700;letter-spacing:0.18em;font-family:ui-monospace,Menlo,Consolas,monospace;">${escapeHtml(code)}</div>`,
     ),
     text: `Din inloggningskod är ${code}\n\nSkriv in koden i Prospex för att logga in. Den gäller i en timme och kan bara användas en gång.\n\nKänner du inte igen det här kan du ignorera mejlet.`,
   };
@@ -49,7 +55,7 @@ export function invitationEmail(o: { orgName: string; role: "owner" | "member"; 
     html: shell(
       `Du har bjudits in till ${o.orgName}`,
       `<h1 style="margin:0 0 12px;font-size:22px;letter-spacing:-0.02em;">Välkommen till ${org}</h1>
-       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#374151;">${who} till <strong>${org}</strong> i Prospex ${roleText}. Logga in med den här e-postadressen så får du en kod, ett lösenord behövs inte.</p>
+       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:${BODY};">${who} till <strong>${org}</strong> i Prospex ${roleText}. Logga in med den här e-postadressen så får du en kod, ett lösenord behövs inte.</p>
        <a href="${escapeHtml(o.loginUrl)}" style="display:inline-block;background:${INK};color:#fff;text-decoration:none;font-weight:600;font-size:14px;border-radius:999px;padding:13px 26px;">Logga in</a>`,
     ),
     text: `${o.inviter ? `${o.inviter} har bjudit in dig` : "Du har blivit inbjuden"} till ${o.orgName} i Prospex ${roleText}.\n\nLogga in med den här e-postadressen så får du en kod: ${o.loginUrl}`,

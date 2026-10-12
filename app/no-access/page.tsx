@@ -1,4 +1,4 @@
-import { ShieldOff } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 import { getAccessOrNull } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { signOut } from "../login/actions";
@@ -10,12 +10,12 @@ export default async function NoAccessPage() {
   if (a.isAdmin) redirect("/admin");
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#14161F] p-4">
-      <div className="w-full max-w-[460px] rounded-[28px] bg-[#F4F4F1] p-8">
-        <span className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFE3D2] text-[#F26522]"><ShieldOff size={26} /></span>
-        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-[#14161F]">Du har inte åtkomst än</h1>
+    <main className="flex min-h-screen items-center justify-center bg-ink p-4">
+      <div className="w-full max-w-[460px] rounded-[28px] bg-canvas p-8">
+        <Logo height={36} className="mb-6" />
+        <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-ink">Du har inte åtkomst än</h1>
         <p className="mt-3 text-[14px] leading-relaxed text-gray-600">
-          Du är inloggad som <span className="font-medium text-[#14161F]">{a.user.email}</span>, men kontot är inte kopplat till något bolag.
+          Du är inloggad som <span className="font-medium text-ink">{a.user.email}</span>, men kontot är inte kopplat till något bolag.
           Be ägaren av ert bolag i Prospex att bjuda in den här adressen.
         </p>
         <form action={signOut} className="mt-6">

@@ -31,7 +31,7 @@ export default async function ListView({
   const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, q: sp.q }).filter(([, v]) => v) as [string, string][];
   const qs = new URLSearchParams(params).toString();
   const ringQs = new URLSearchParams(params.filter(([k]) => k === "supplier" || k === "city")).toString();
-  const field = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-[#F26522]";
+  const field = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
   const here = `${basePath}${qs ? `?${qs}` : ""}`;
 
   return (
@@ -49,20 +49,20 @@ export default async function ListView({
           <input name="city" defaultValue={sp.city ?? ""} placeholder="t.ex. Göteborg" className={`mt-1 ${field}`} />
         </label>
         <label className="flex items-center gap-2 pb-2.5 text-[14px] text-gray-800">
-          <input type="checkbox" name="phone" value="1" defaultChecked={sp.phone === "1"} className="h-4 w-4 accent-[#F26522]" />
+          <input type="checkbox" name="phone" value="1" defaultChecked={sp.phone === "1"} className="h-4 w-4 accent-accent" />
           Bara med telefon
         </label>
-        <button className="rounded-full bg-[#14161F] px-6 py-3 text-[14px] font-semibold text-white">Filtrera</button>
+        <button className="rounded-full bg-ink px-6 py-3 text-[14px] font-semibold text-white">Filtrera</button>
       </form>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[15px] text-[#14161F]">
+        <p className="text-[15px] text-ink">
           <span className="font-semibold">{count.toLocaleString("sv-SE")}</span> företag{archived ? " i arkivet" : ""}
           {name ? (source!.kind === "supplier" ? <> med {name} som leverantör</> : <> i listan {name}</>) : null}
         </p>
         {!archived && (
           <div className="flex gap-2">
-            <Link href={`/app/ring${ringQs ? `?${ringQs}` : ""}`} className="inline-flex items-center gap-2 rounded-full bg-[#14161F] px-5 py-2.5 text-[14px] font-semibold text-white">
+            <Link href={`/app/ring${ringQs ? `?${ringQs}` : ""}`} className="inline-flex items-center gap-2 rounded-full bg-ink px-5 py-2.5 text-[14px] font-semibold text-white">
               <PhoneCall size={16} /> Starta ringläge
             </Link>
           </div>
@@ -80,7 +80,7 @@ export default async function ListView({
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.id}-${r.supplier}`} className="border-b border-gray-50 last:border-0">
-                <td className="max-w-[240px] truncate px-5 py-3 font-medium text-[#14161F]"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "-"}</Link></td>
+                <td className="max-w-[240px] truncate px-5 py-3 font-medium text-ink"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "-"}</Link></td>
                 <td className="px-5 py-3 text-gray-600">{r.city ?? "-"}</td>
                 <td className="px-5 py-3 text-gray-900"><span className="flex items-center gap-2"><SupplierLogo name={r.supplier} logo={r.supplier_logo} size={24} />{r.supplier}</span></td>
                 <td className="px-5 py-3"><OutcomePill outcome={r.outcome as never} /></td>
@@ -92,7 +92,7 @@ export default async function ListView({
                     <input type="hidden" name="company_id" value={r.id} />
                     <input type="hidden" name="archived" value={archived ? "0" : "1"} />
                     <input type="hidden" name="redirect_to" value={here} />
-                    <button title={archived ? "Återställ" : "Arkivera"} className="text-gray-400 hover:text-[#14161F]">
+                    <button title={archived ? "Återställ" : "Arkivera"} className="text-gray-400 hover:text-ink">
                       {archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
                     </button>
                   </form>

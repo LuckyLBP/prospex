@@ -29,7 +29,7 @@ export default function Audiences() {
         </h2>
         <div className="grid grid-cols-1 gap-5 px-5 sm:gap-6 sm:px-8 md:grid-cols-2 lg:px-12">
           {ITEMS.map((i) => (
-            <div key={i.title} className="rounded-2xl bg-[#F5F5F5] p-6 sm:p-8">
+            <div key={i.title} className="rounded-2xl bg-gray-100 p-6 sm:p-8">
               <h3 className="mb-3 text-[20px] font-semibold text-gray-900">{i.title}</h3>
               <p className="text-[14px] leading-[1.65] text-gray-600 sm:text-[15px]">{i.text}</p>
             </div>
@@ -39,9 +39,9 @@ export default function Audiences() {
           <RollButton
             label="Se exempellista"
             href="#exempel"
-            className="w-fit bg-[#F26522] py-2 pl-5 pr-2 text-[13px] text-white hover:bg-[#e05a1a] sm:pl-6 sm:text-[14px]"
+            className="w-fit bg-accent py-2 pl-5 pr-2 text-[13px] text-ink hover:bg-accent-hover sm:pl-6 sm:text-[14px]"
             circleClassName="h-7 w-7 sm:h-8 sm:w-8"
-            arrowClassName="text-[#F26522]"
+            arrowClassName="text-accent"
           />
         </div>
       </div>

@@ -55,21 +55,21 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   return (
     <>
       <RunPoller active={active} />
-      <Link href="/admin/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-[#14161F]"><ChevronLeft size={15} />Företagsprofil</Link>
+      <Link href="/admin/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Företagsprofil</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
 
       {active && !profile && (
         <div className="rounded-3xl bg-white px-6 py-14 text-center">
-          <p className="text-[18px] font-semibold text-[#14161F]">{title}</p>
-          <p className="mt-2 text-[15px] text-[#C2490C]">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"}</p>
+          <p className="text-[18px] font-semibold text-ink">{title}</p>
+          <p className="mt-2 text-[15px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"}</p>
           <p className="mt-1 text-[14px] text-gray-500">Det tar oftast mellan 5 och 30 sekunder. Sidan uppdateras av sig själv.</p>
           <div className="mt-6 flex justify-center">{actions}</div>
         </div>
       )}
-      {active && profile && <p className="mb-4 rounded-2xl bg-[#FFF6F0] px-5 py-3 text-[13px] text-[#C2490C]">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra profilen tills den nya är klar.</p>}
+      {active && profile && <p className="mb-4 rounded-2xl bg-accent-wash px-5 py-3 text-[13px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra profilen tills den nya är klar.</p>}
       {!active && !profile && (
-        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-[#14161F]">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen profil att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
+        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-ink">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen profil att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
       )}
 
       {profile && <ProfileView profile={profile} pages={pages} presence={presence} fallbackName={title} actions={actions} agency={creatorAgency} returnTo={`/admin/foretagsprofil/${row.id}`} profileId={row.id} photoUrls={photoUrls} />}
@@ -77,15 +77,15 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
       {agency && (
         <section className="mt-5 rounded-3xl bg-white p-6">
           <div className="mb-3 flex items-baseline justify-between gap-4">
-            <h2 className="text-[16px] font-semibold text-[#14161F]">Kunder vi hittat</h2>
-            <Link href={`/admin/leverantorer/${agency.slug}`} className="text-[13px] font-medium text-[#C2490C] underline underline-offset-4">Granska i källan</Link>
+            <h2 className="text-[16px] font-semibold text-ink">Kunder vi hittat</h2>
+            <Link href={`/admin/leverantorer/${agency.slug}`} className="text-[13px] font-medium text-accent-text underline underline-offset-4">Granska i källan</Link>
           </div>
           {customers.length === 0 ? (
             <p className="text-[14px] text-gray-500">Inga kunder än. Kör insamlingen på byråns källa.</p>
           ) : (
             <>
               <p className="mb-3 text-[13px] text-gray-500">{customers.length} {customers.length === 1 ? "kund" : "kunder"}{agency.published ? "" : ", ej publicerade än"}. De senaste:</p>
-              <ul className="flex flex-wrap gap-2">{customers.slice(0, 12).map((c) => <li key={c.companyId} className="rounded-full bg-[#F4F4F1] px-3 py-1 text-[13px] text-gray-700">{c.name ?? c.domain}</li>)}</ul>
+              <ul className="flex flex-wrap gap-2">{customers.slice(0, 12).map((c) => <li key={c.companyId} className="rounded-full bg-canvas px-3 py-1 text-[13px] text-gray-700">{c.name ?? c.domain}</li>)}</ul>
             </>
           )}
         </section>

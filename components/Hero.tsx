@@ -1,5 +1,6 @@
 "use client";
 
+import { Logo } from "@/components/brand/Logo";
 import { useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Shader, ChromaFlow, FilmGrain, FlutedGlass, Swirl } from "shaders/react";
@@ -17,16 +18,16 @@ export default function Hero() {
   const [open, setOpen] = useState(false);
 
   return (
-    <section className="relative flex min-h-screen flex-col bg-[#EFEFEF]">
+    <section className="relative flex min-h-screen flex-col bg-canvas">
       <div className="pointer-events-none absolute inset-0 z-10">
         <Shader>
           <Swirl colorA="#ffffff" colorB="#f0f0f0" detail={1.7} />
           <ChromaFlow
             baseColor="#ffffff"
-            downColor="#ff5f03"
-            leftColor="#ff5f03"
-            rightColor="#ff5f03"
-            upColor="#ff5f03"
+            downColor="#ff6a1a"
+            leftColor="#ff6a1a"
+            rightColor="#ff6a1a"
+            upColor="#ff6a1a"
             momentum={13}
             radius={3.5}
           />
@@ -50,9 +51,7 @@ export default function Hero() {
       <nav className="relative z-20 mx-auto w-full max-w-[1440px] p-2 sm:p-3">
         <div className="flex items-center justify-between rounded-full bg-white p-[5px]">
           <div className="flex items-center gap-6">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-[10px] font-bold tracking-tight text-white sm:h-10 sm:w-10 sm:text-[11px]">
-              PX
-            </div>
+            <a href="/" aria-label="Prospex" className="flex items-center"><Logo height={34} /></a>
             <div className="hidden items-center gap-6 md:flex">
               {NAV.map((n) => (
                 <a key={n.label} href={n.href} className="text-[14px] text-gray-900 transition-colors duration-300 hover:text-gray-500">
@@ -144,9 +143,9 @@ export default function Hero() {
           <RollButton
             label="Se exempellista"
             href="#exempel"
-            className="w-fit bg-[#F26522] py-2 pl-5 pr-2 text-[13px] text-white hover:bg-[#e05a1a] sm:pl-6 sm:text-[14px]"
+            className="w-fit bg-accent py-2 pl-5 pr-2 text-[13px] text-ink hover:bg-accent-hover sm:pl-6 sm:text-[14px]"
             circleClassName="h-7 w-7 sm:h-8 sm:w-8"
-            arrowClassName="text-[#F26522]"
+            arrowClassName="text-accent"
           />
           <a href="#sa-funkar-det" className="w-fit text-[13px] font-medium text-gray-900 underline underline-offset-4 sm:text-[14px]">
             Så funkar det

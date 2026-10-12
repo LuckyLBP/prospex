@@ -24,19 +24,19 @@ export default function QueueBar({ init, callsToday, left, onHelp, onRefresh, re
       <div className="flex items-center gap-2">
         <div className="flex min-w-0 flex-1 gap-1 rounded-full bg-white p-1">
           {MODES.map(({ mode, label }) => (
-            <Link key={mode} href={dialerHref({ ...scope, mode })} aria-current={scope.mode === mode ? "page" : undefined} className={`flex-1 truncate rounded-full px-2 py-2 text-center text-[13px] font-medium ${scope.mode === mode ? "bg-[#14161F] text-white" : "text-gray-700 hover:bg-[#F4F4F1]"}`}>
+            <Link key={mode} href={dialerHref({ ...scope, mode })} aria-current={scope.mode === mode ? "page" : undefined} className={`flex-1 truncate rounded-full px-2 py-2 text-center text-[13px] font-medium ${scope.mode === mode ? "bg-ink text-white" : "text-gray-700 hover:bg-canvas"}`}>
               {label}
             </Link>
           ))}
         </div>
-        <button type="button" onClick={onFilters} aria-label="Filter" className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 hover:bg-gray-50 ${filtered ? "ring-2 ring-[#F26522]" : ""}`}>
+        <button type="button" onClick={onFilters} aria-label="Filter" className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-700 hover:bg-gray-50 ${filtered ? "ring-2 ring-accent" : ""}`}>
           <SlidersHorizontal size={17} />
         </button>
       </div>
 
       <div className="flex items-center justify-between gap-3 px-2 text-[13px] text-gray-600">
         <p className="min-w-0 truncate">
-          <span className="font-semibold text-[#14161F]">{left}{init.capped ? "+" : ""}</span> kvar · <span className="font-semibold text-[#14161F]">{callsToday}</span> ringda idag
+          <span className="font-semibold text-ink">{left}{init.capped ? "+" : ""}</span> kvar · <span className="font-semibold text-ink">{callsToday}</span> ringda idag
           {(sourceName || scope.city) && <span className="text-gray-400"> · {[sourceName, scope.city].filter(Boolean).join(", ")}</span>}
         </p>
         <div className="flex shrink-0 items-center gap-1">

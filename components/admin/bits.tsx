@@ -5,8 +5,8 @@ const TONES = {
   gray: "bg-gray-100 text-gray-600",
   amber: "bg-amber-100 text-amber-800",
   red: "bg-rose-100 text-rose-800",
-  orange: "bg-[#FFE3D2] text-[#C2490C]",
-  dark: "bg-[#14161F] text-white",
+  orange: "bg-accent-tint text-accent-text",
+  dark: "bg-ink text-white",
 } as const;
 
 export function StatusPill({ tone = "gray", children }: { tone?: keyof typeof TONES; children: React.ReactNode }) {
@@ -16,9 +16,9 @@ export function StatusPill({ tone = "gray", children }: { tone?: keyof typeof TO
 export function EmptyState({ title, text, action }: { title: string; text?: string; action?: { href: string; label: string } }) {
   return (
     <div className="rounded-3xl bg-white px-6 py-14 text-center">
-      <p className="text-[16px] font-semibold text-[#14161F]">{title}</p>
+      <p className="text-[16px] font-semibold text-ink">{title}</p>
       {text && <p className="mx-auto mt-1 max-w-md text-[14px] text-gray-500">{text}</p>}
-      {action && <Link href={action.href} className="mt-5 inline-block rounded-full bg-[#14161F] px-5 py-2.5 text-[13px] font-semibold text-white">{action.label}</Link>}
+      {action && <Link href={action.href} className="mt-5 inline-block rounded-full bg-ink px-5 py-2.5 text-[13px] font-semibold text-white">{action.label}</Link>}
     </div>
   );
 }

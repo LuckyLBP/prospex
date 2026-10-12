@@ -11,7 +11,7 @@ export default async function AccessPage() {
   const flagged = rows.filter((r) => accessLevel(r.today) !== "ok").length;
 
   const cols: Column<AccessRow>[] = [
-    { key: "who", header: "Användare", primary: true, cell: (r) => <span className="font-medium text-[#14161F]">{r.email}</span> },
+    { key: "who", header: "Användare", primary: true, cell: (r) => <span className="font-medium text-ink">{r.email}</span> },
     { key: "org", header: "Bolag", cell: (r) => <span className="text-gray-600">{r.org_name ?? "–"}</span> },
     { key: "today", header: "Idag", align: "right", cell: (r) => <span className="font-semibold tabular-nums">{r.today}<span className="font-normal text-gray-400"> / {LIMITS.dailyViews}</span></span> },
     { key: "week", header: "7 dagar", align: "right", cell: (r) => <span className="tabular-nums text-gray-600">{r.week}</span> },

@@ -19,7 +19,7 @@ export default function TechGrid({ groups, audit }: { groups: TechGroup[]; audit
             {g.tiles.map((t) => (
               <li key={t.name} className="flex items-center gap-3 rounded-2xl border border-gray-100 px-3 py-2.5">
                 <BrandIcon id={t.id} name={t.name} />
-                <span className="min-w-0"><span className="block truncate text-[14px] font-medium text-[#14161F]">{t.name}</span>{t.detail && <span className="block truncate text-[12px] text-gray-400">{t.detail}</span>}</span>
+                <span className="min-w-0"><span className="block truncate text-[14px] font-medium text-ink">{t.name}</span>{t.detail && <span className="block truncate text-[12px] text-gray-400">{t.detail}</span>}</span>
               </li>
             ))}
           </ul>

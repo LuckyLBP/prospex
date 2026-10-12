@@ -6,7 +6,7 @@ import { OUTCOMES, OUTCOME_GROUPS, type CallOutcome } from "@/lib/calls/outcomes
 
 const DOT: Record<string, string> = {
   neutral: "bg-gray-300",
-  primary: "bg-[#14161F]",
+  primary: "bg-ink",
   success: "bg-emerald-500",
   warning: "bg-amber-400",
   danger: "bg-rose-400",
@@ -17,7 +17,7 @@ const DOT: Record<string, string> = {
  * Stängs med Esc, ett klick utanför eller ett val. Siffertangenterna fungerar som förut, med eller utan menyn, och
  * nästa-tangenten (S eller →) öppnar den och hoppar till nästa företag när den trycks igen.
  */
-export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { selected: CallOutcome | null; onPick: (o: CallOutcome) => void; onSkip: () => void; onClose: () => void }) {
+export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { selected: CallOutcome | null; onPick: (o: CallOutcome) => void; onSkip?: () => void; onClose: () => void }) {
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { sel
               // Knappen ska inte ta fokus, annars blir Enter "klicka igen" i stället för "spara".
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onPick(o.value)}
-              className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] ${selected === o.value ? "bg-[#14161F] font-semibold text-white" : "text-[#14161F] hover:bg-[#F4F4F1]"}`}
+              className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] ${selected === o.value ? "bg-ink font-semibold text-white" : "text-ink hover:bg-canvas"}`}
             >
               <span className={`h-2 w-2 shrink-0 rounded-full ${DOT[o.tone]}`} aria-hidden />
               <span className="flex-1">{o.label}</span>
@@ -54,13 +54,13 @@ export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { sel
           ))}
         </div>
       ))}
-      <div className="mt-1 border-t border-gray-100 pt-1">
-        <button type="button" role="menuitem" onMouseDown={(e) => e.preventDefault()} onClick={onSkip} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] text-gray-700 hover:bg-[#F4F4F1]">
+      {onSkip && <div className="mt-1 border-t border-gray-100 pt-1">
+        <button type="button" role="menuitem" onMouseDown={(e) => e.preventDefault()} onClick={onSkip} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[14px] text-gray-700 hover:bg-canvas">
           <SkipForward size={15} className="shrink-0 text-gray-400" />
           <span className="flex-1">Hoppa över</span>
           <kbd className="hidden rounded bg-black/[0.06] px-1.5 text-[11px] font-medium text-gray-500 [@media(pointer:fine)]:inline">S</kbd>
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

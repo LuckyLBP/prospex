@@ -21,7 +21,7 @@ export default async function LogPage({ searchParams }: { searchParams: Promise<
   const [{ rows, next }, actors] = await Promise.all([listAudit({ group: sp.group, actor: sp.actor, q: sp.q }, { cursor: sp.cursor, limit: 25 }), auditActors()]);
   const cols: Column<AuditRow>[] = [
     { key: "at", header: "Tid", className: "whitespace-nowrap", cell: (r) => <span className="text-gray-500">{formatDateTime(r.at)}</span> },
-    { key: "what", header: "Händelse", cell: (r) => { const h = HREF[r.entity]?.(r); const t = describeAudit(r); return h ? <Link href={h} className="text-[#14161F] hover:underline">{t}</Link> : <span>{t}</span>; } },
+    { key: "what", header: "Händelse", cell: (r) => { const h = HREF[r.entity]?.(r); const t = describeAudit(r); return h ? <Link href={h} className="text-ink hover:underline">{t}</Link> : <span>{t}</span>; } },
     { key: "who", header: "Av", className: "whitespace-nowrap", cell: (r) => <span className="text-gray-500">{r.actor_email}</span> },
   ];
   return (

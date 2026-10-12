@@ -5,8 +5,8 @@ import type { CompanyProfile } from "@/lib/profile/types";
 function Tile({ icon, label, value, sub, negative, delta }: { icon: React.ReactNode; label: string; value: string | null; sub?: string | null; negative?: boolean; delta?: { text: string; up: boolean } | null }) {
   return (
     <div className="rounded-3xl bg-white p-4">
-      <div className="mb-3 flex items-center gap-2 text-[12px] text-gray-500"><span className="text-[#F26522]">{icon}</span>{label}</div>
-      <p className={`text-[24px] font-semibold leading-none tracking-[-0.02em] ${value === null ? "text-gray-300" : negative ? "text-rose-700" : "text-[#14161F]"}`}>{value ?? "saknas"}</p>
+      <div className="mb-3 flex items-center gap-2 text-[12px] text-gray-500"><span className="text-accent">{icon}</span>{label}</div>
+      <p className={`tabular text-[24px] font-semibold leading-none tracking-[-0.02em] ${value === null ? "text-gray-300" : negative ? "text-rose-700" : "text-ink"}`}>{value ?? "saknas"}</p>
       <p className="mt-2 min-h-[16px] text-[12px] text-gray-400">{delta ? <span className={`font-medium ${delta.up ? "text-emerald-700" : "text-rose-700"}`}>{delta.text}</span> : (sub ?? "")}</p>
     </div>
   );

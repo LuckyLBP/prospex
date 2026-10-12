@@ -9,7 +9,7 @@ import type { DialerCard } from "@/lib/dialer/card-types";
 import { profileProgressAction, scanCompanyAction, searchCompaniesAction } from "@/app/app/foretagsprofil/actions";
 
 const POLL_MS = 1500;
-const BTN = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F26522]";
+const BTN = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 type Picker = { state: "loading" } | { state: "ready"; candidates: Candidate[] } | { state: "error"; text: string };
 
@@ -80,14 +80,14 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
   }
 
   if (runningId) {
-    return <span className={`${BTN} cursor-default border-[#FFE3D2] bg-[#FFF6F0] text-[#C2490C]`} role="status"><Loader2 size={15} className="animate-spin" />{stage ?? "Skannar"}…</span>;
+    return <span className={`${BTN} cursor-default border-accent-tint bg-accent-wash text-accent-text`} role="status"><Loader2 size={15} className="animate-spin" />{stage ?? "Skannar"}…</span>;
   }
   if (p?.status === "done") return null;
 
   return (
     <>
-      <button type="button" onClick={() => start()} disabled={starting} className={`${BTN} border-gray-200 bg-white text-[#14161F] hover:border-gray-400 disabled:opacity-60`}>
-        {starting ? <Loader2 size={15} className="animate-spin" /> : <ScanSearch size={15} className="text-[#F26522]" />}
+      <button type="button" onClick={() => start()} disabled={starting} className={`${BTN} border-gray-200 bg-white text-ink hover:border-gray-400 disabled:opacity-60`}>
+        {starting ? <Loader2 size={15} className="animate-spin" /> : <ScanSearch size={15} className="text-accent" />}
         {p?.status === "error" ? "Försök skanna igen" : "Skanna webbplats"}
       </button>
 
@@ -103,11 +103,11 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
                 <li key={c.key}>
                   <button type="button" disabled={!c.buildFrom || starting} onClick={() => start({ buildFrom: c.buildFrom })} className="flex w-full items-center gap-3 rounded-2xl border border-gray-200 p-3 text-left hover:border-gray-400 disabled:opacity-50">
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-semibold text-[#14161F]">{c.name}</span>
+                      <span className="block truncate text-[14px] font-semibold text-ink">{c.name}</span>
                       <span className="block truncate text-[12px] text-gray-500">{[c.city, c.domain ?? c.orgnr ?? "ingen webbplats eller org.nr"].filter(Boolean).join(" · ")}</span>
                     </span>
                     {c.rating != null && <span className="inline-flex shrink-0 items-center gap-1 text-[12px] text-gray-500"><Star size={12} className="fill-amber-400 text-amber-400" />{c.rating.toLocaleString("sv-SE", { minimumFractionDigits: 1 })}</span>}
-                    <span className="shrink-0 rounded-full bg-[#F4F4F1] px-2 py-0.5 text-[11px] text-gray-600">{c.source === "katalog" ? "Katalog" : "Google"}</span>
+                    <span className="shrink-0 rounded-full bg-canvas px-2 py-0.5 text-[11px] text-gray-600">{c.source === "katalog" ? "Katalog" : "Google"}</span>
                   </button>
                 </li>
               ))}
