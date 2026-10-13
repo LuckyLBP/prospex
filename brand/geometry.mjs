@@ -1,8 +1,9 @@
-// Prospex logotypens geometri och färger. En enda sanning: scripts/brand/build.mjs gör alla filer av den här
-// (SVG, ikoner, delningsbild) och components/brand/Logo.tsx ritar samma former i appen.
+// Prospex logotyp: gemensamma färger och hjälpare för att rita den. En enda sanning: scripts/brand/build.mjs gör alla
+// filer (SVG, ikoner, delningsbild) och components/brand/Logo.tsx ritar samma former i appen.
 //
-// Märket är ett "P" av en stam och en rund kupa, med en liten prick i hålet: en köpsignal som hittats. Ritat på ett
-// rutnät om 64 x 64. Mitten av bokstaven ligger vid (34.5, 32.5).
+// Logotypen är ett ordmärke: "prospex" i Geist SemiBold med en orange detalj (punkten efter ordet). För de små
+// fyrkantiga ytorna (favicon, appikon, hopfälld meny) finns ett "p." på en rundad platta. Själva formerna (bokstävernas
+// kurvor) ligger i wordmark.generated.mjs, som skapas ur typsnittet av build-skriptet.
 
 export const COLORS = {
   ink: "#0E1116",
@@ -12,28 +13,26 @@ export const COLORS = {
 
 export const GRID = 64;
 export const TILE_RADIUS = 15;
-export const GLYPH_CENTER = [34.5, 32.5];
 
-/** Stam och kupa i ett stycke. Hålet läggs till med fyllningsregeln evenodd. */
-export const P_D = "M19 20A5 5 0 0 1 24 15H35A15 15 0 0 1 35 45H29A5 5 0 0 1 19 45Z";
-/** Hålet i kupan. Det stora märket har ett mindre hål med en prick i, det lilla (favicon) ett större hål utan prick. */
-export const HOLE = { cx: 35, cy: 30, r: 7, rSmall: 8.5 };
-export const DOT = { cx: 35, cy: 30, r: 3 };
+/** Plattans färger. `ink`: mörk platta med vit bokstav och orange punkt (ljusa ytor, ikoner). `accent`: orange platta med ink-bokstav och ink-punkt (mörka ytor). */
+export const TONES = {
+  ink: { bg: COLORS.ink, fg: COLORS.white, dot: COLORS.accent },
+  accent: { bg: COLORS.accent, fg: COLORS.ink, dot: COLORS.ink },
+};
 
-export const holeD = (r) => `M${HOLE.cx - r} ${HOLE.cy}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0Z`;
-
-/** Bokstaven som SVG-element i färgen `fg`. `small`: större hål och ingen prick, så att den håller på 16 px. */
-export function glyphSvg({ fg = COLORS.ink, small = false, dot = true } = {}) {
-  const d = P_D + holeD(small ? HOLE.rSmall : HOLE.r);
-  return `<path fill="${fg}" fill-rule="evenodd" d="${d}"/>` + (dot && !small ? `<circle cx="${DOT.cx}" cy="${DOT.cy}" r="${DOT.r}" fill="${fg}"/>` : "");
+/** "p." som SVG-element på rutnätet 64 x 64. `mark`: MARK eller MARK_SMALL. `bleed`: hela ytan fylld (appikoner). `scale`: storlek på bokstaven. */
+export function markSvg(mark, { tone = "ink", bleed = false, scale = 1 } = {}) {
+  const t = TONES[tone];
+  const inner = `<path fill="${t.fg}" d="${mark.d}"/><circle cx="${mark.dot.cx}" cy="${mark.dot.cy}" r="${mark.dot.r}" fill="${t.dot}"/>`;
+  const rect = `<rect width="${GRID}" height="${GRID}" rx="${bleed ? 0 : TILE_RADIUS}" fill="${t.bg}"/>`;
+  return rect + (scale === 1 ? inner : `<g transform="translate(32 32) scale(${scale}) translate(-32 -32)">${inner}</g>`);
 }
 
-/** Märket på en rundad platta. `bleed`: hela ytan fylld (appikoner, där systemet själv rundar hörnen) och bokstaven ritas mindre. */
-export function tileSvg({ bg = COLORS.accent, fg = COLORS.ink, small = false, bleed = false, scale = 1 } = {}) {
-  const [cx, cy] = GLYPH_CENTER;
-  const rect = `<rect width="${GRID}" height="${GRID}" rx="${bleed ? 0 : TILE_RADIUS}" fill="${bg}"/>`;
-  const glyph = scale === 1 ? glyphSvg({ fg, small }) : `<g transform="translate(32 32) scale(${scale}) translate(${-cx} ${-cy})">${glyphSvg({ fg, small })}</g>`;
-  return rect + glyph;
+/** Ordmärket som SVG-element. `word`: färgen på bokstäverna, `accent`: på den orange detaljen. */
+export function wordmarkSvg(w, { word = COLORS.ink, accent = COLORS.accent } = {}) {
+  const parts = w.parts.map((p) => `<path fill="${p.accent ? accent : word}" d="${p.d}"/>`).join("");
+  const dot = w.dot ? `<circle cx="${w.dot.cx}" cy="${w.dot.cy}" r="${w.dot.r}" fill="${accent}"/>` : "";
+  return `<g transform="translate(${w.x} ${w.baseline})">${parts}${dot}</g>`;
 }
 
 export const svgDoc = (viewBox, inner, { width, height, title } = {}) =>

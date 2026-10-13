@@ -44,7 +44,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
   const body = (narrow: boolean, mobile: boolean) => (
     <>
       <Link href={orgName ? "/app" : "/admin"} aria-label="Prospex" className="mb-8 ml-1 flex shrink-0 items-center">
-        {narrow ? <LogoMark size={48} /> : <Logo height={40} theme="dark" />}
+        {narrow ? <LogoMark size={48} tone="accent" /> : <Logo height={54} theme="dark" className="-ml-1" />}
       </Link>
       {!narrow && orgName && <p className="-mt-5 mb-6 ml-1 truncate text-[12px] text-white/50">{orgName}</p>}
       {inAdmin ? (
@@ -110,7 +110,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
     <>
       {/* Smal skärm: en liten överdel med menyknapp, och menyn som lägger sig över sidan. */}
       <div className="flex shrink-0 items-center justify-between pb-3 lg:hidden">
-        <Link href={orgName ? "/app" : "/admin"} aria-label="Prospex" className="flex items-center"><Logo height={30} theme="dark" /></Link>
+        <Link href={orgName ? "/app" : "/admin"} aria-label="Prospex" className="flex items-center"><Logo height={42} theme="dark" /></Link>
         <button onClick={() => setOpen(true)} aria-label="Öppna menyn" className="rounded-xl p-2 text-white/80 hover:bg-white/10"><Menu size={22} /></button>
       </div>
       {open && (

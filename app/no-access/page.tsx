@@ -12,7 +12,7 @@ export default async function NoAccessPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink p-4">
       <div className="w-full max-w-[460px] rounded-[28px] bg-canvas p-8">
-        <Logo height={36} className="mb-6" />
+        <Logo height={56} className="mb-5 -ml-1" />
         <h1 className="text-[26px] font-semibold tracking-[-0.02em] text-ink">Du har inte åtkomst än</h1>
         <p className="mt-3 text-[14px] leading-relaxed text-gray-600">
           Du är inloggad som <span className="font-medium text-ink">{a.user.email}</span>, men kontot är inte kopplat till något bolag.

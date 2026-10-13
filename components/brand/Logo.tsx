@@ -1,49 +1,40 @@
-import { COLORS, DOT, GRID, HOLE, P_D, TILE_RADIUS, holeD } from "@/brand/geometry.mjs";
-import { WORDMARK } from "@/brand/wordmark.generated.mjs";
+import { COLORS, GRID, TILE_RADIUS, TONES } from "@/brand/geometry.mjs";
+import { MARK, MARK_SMALL, WORDMARK } from "@/brand/wordmark.generated.mjs";
 
-// Prospex logotyp i appen. Samma former som filerna i public/brand, ritade av samma geometri (brand/geometry.mjs).
+// Prospex logotyp i appen. Samma former som filerna i public/brand, ritade av samma data (brand/wordmark.generated.mjs).
+// Logotypen är ordmärket "prospex" med en orange punkt. "p." på en platta är till för små fyrkantiga ytor.
 
 type MarkProps = {
   /** Sidan i pixlar. */
   size?: number;
-  /** Större hål och ingen prick: för storlekar under cirka 24 px. */
-  small?: boolean;
-  /** Utan platta: bara bokstaven, i `color`. För en färg, till exempel i tryck eller på orange bakgrund. */
-  bare?: boolean;
-  color?: string;
+  /** `ink`: mörk platta, för ljusa ytor. `accent`: orange platta, för mörka ytor (till exempel den mörka menyn). */
+  tone?: "ink" | "accent";
   className?: string;
   title?: string;
 };
 
-function Glyph({ fg, small }: { fg: string; small: boolean }) {
+/** "p." på en rundad platta: favicon, appikon och den hopfällda menyn. Under 24 px ritas en större prick och bokstav. */
+export function LogoMark({ size = 40, tone = "ink", className, title = "Prospex" }: MarkProps) {
+  const t = TONES[tone as keyof typeof TONES];
+  const m = size < 24 ? MARK_SMALL : MARK;
   return (
-    <>
-      <path fill={fg} fillRule="evenodd" d={P_D + holeD(small ? HOLE.rSmall : HOLE.r)} />
-      {!small && <circle cx={DOT.cx} cy={DOT.cy} r={DOT.r} fill={fg} />}
-    </>
-  );
-}
-
-/** Märket: ett P med en signalprick i, på en orange platta. */
-export function LogoMark({ size = 40, small = size < 24, bare = false, color = COLORS.ink, className, title = "Prospex" }: MarkProps) {
-  return bare ? (
-    <svg viewBox="14 10 40 44" width={size} height={(size * 44) / 40} role="img" aria-label={title} className={className}><Glyph fg={color} small={small} /></svg>
-  ) : (
     <svg viewBox={`0 0 ${GRID} ${GRID}`} width={size} height={size} role="img" aria-label={title} className={className}>
-      <rect width={GRID} height={GRID} rx={TILE_RADIUS} fill={COLORS.accent} />
-      <Glyph fg={COLORS.ink} small={small} />
+      <rect width={GRID} height={GRID} rx={TILE_RADIUS} fill={t.bg} />
+      <path fill={t.fg} d={m.d} />
+      <circle cx={m.dot.cx} cy={m.dot.cy} r={m.dot.r} fill={t.dot} />
     </svg>
   );
 }
 
-/** Märket och ordmärket "prospex" bredvid varandra. `theme`: vilken bakgrund den ligger på. */
+/** Ordmärket "prospex" med den orange punkten. `theme`: vilken bakgrund det ligger på. `height` är hela ytans höjd, texten fyller ungefär hälften. */
 export function Logo({ height = 32, theme = "light", className, title = "Prospex" }: { height?: number; theme?: "light" | "dark"; className?: string; title?: string }) {
   const word = theme === "dark" ? COLORS.white : COLORS.ink;
   return (
     <svg viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`} width={(height * WORDMARK.width) / WORDMARK.height} height={height} role="img" aria-label={title} className={className}>
-      <rect width={GRID} height={GRID} rx={TILE_RADIUS} fill={COLORS.accent} />
-      <Glyph fg={COLORS.ink} small={height < 24} />
-      <path transform={`translate(${WORDMARK.x} ${WORDMARK.baseline})`} fill={word} d={WORDMARK.d} />
+      <g transform={`translate(${WORDMARK.x} ${WORDMARK.baseline})`}>
+        {WORDMARK.parts.map((p, i) => <path key={i} fill={p.accent ? COLORS.accent : word} d={p.d} />)}
+        {WORDMARK.dot && <circle cx={WORDMARK.dot.cx} cy={WORDMARK.dot.cy} r={WORDMARK.dot.r} fill={COLORS.accent} />}
+      </g>
     </svg>
   );
 }

@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink p-4">
       <div className="w-full max-w-[420px] rounded-[28px] bg-canvas p-8">
-        <Logo height={40} className="mb-6" />
+        <Logo height={64} className="mb-5 -ml-1" />
         <h1 className="text-[28px] font-semibold tracking-[-0.02em] text-ink">Logga in på Prospex</h1>
 
         {sp.email ? (

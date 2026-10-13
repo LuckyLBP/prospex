@@ -27,7 +27,7 @@ const SWATCHES: Swatch[] = [
 ];
 
 const FILES = [
-  ["logo.svg", "Logotyp, ljus bakgrund"], ["logo-dark.svg", "Logotyp, mörk bakgrund"], ["logo-mono.svg", "Logotyp, en färg"], ["mark.svg", "Märket"], ["mark-mono.svg", "Märket, bara bokstaven"],
+  ["logo.svg", "Logotyp, ljus bakgrund"], ["logo-dark.svg", "Logotyp, mörk bakgrund"], ["logo-mono.svg", "Logotyp, en färg"], ["mark.svg", "Plattan p., mörk"], ["mark-accent.svg", "Plattan p., orange"],
   ["logo.png", "Logotyp som PNG (stor)"], ["icon-512.png", "Appikon 512"], ["icon-maskable-512.png", "Appikon, maskable"],
 ] as const;
 
@@ -43,14 +43,14 @@ export default function BrandPage() {
         <Card>
           <H>Logotyp</H>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="flex min-h-[160px] items-center justify-center rounded-2xl bg-canvas p-8"><Logo height={56} /></div>
-            <div className="flex min-h-[160px] items-center justify-center rounded-2xl bg-ink p-8"><Logo height={56} theme="dark" /></div>
+            <div className="flex min-h-[160px] items-center justify-center rounded-2xl bg-canvas p-8"><Logo height={96} /></div>
+            <div className="flex min-h-[160px] items-center justify-center rounded-2xl bg-ink p-8"><Logo height={96} theme="dark" /></div>
           </div>
           <div className="mt-4 flex flex-wrap items-end gap-6 rounded-2xl bg-canvas p-6">
             {[96, 64, 40, 28, 20, 16].map((s) => <div key={s} className="flex flex-col items-center gap-2"><LogoMark size={s} /><span className="text-[11px] text-gray-500">{s} px</span></div>)}
-            <div className="flex flex-col items-center gap-2"><LogoMark size={64} bare /><span className="text-[11px] text-gray-500">en färg</span></div>
+            <div className="flex flex-col items-center gap-2 rounded-2xl bg-ink p-3"><LogoMark size={64} tone="accent" /><span className="text-[11px] text-white/60">på mörkt</span></div>
           </div>
-          <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-gray-600">Märket är ett P med en signalprick i: ett köpsignal som hittats. Under cirka 24 px används den lilla varianten med större hål och utan prick. Ordmärket är Geist SemiBold, omritat som kurvor. Ge märket fri yta lika stor som pricken är hög (cirka en femtedel av märkets höjd) åt alla håll.</p>
+          <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-gray-600">Logotypen är ordmärket "prospex" i Geist SemiBold, omritat som kurvor, med en orange punkt efter: ett fullt stop och en signal som hittats. För små fyrkantiga ytor (favicon, appikon, den hopfällda menyn) finns "p." på en rundad platta, mörk på ljusa ytor och orange på mörka. Under cirka 24 px ritas bokstaven och pricken något större. Ge ordmärket fri yta lika stor som bokstaven x är hög åt alla håll.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {FILES.map(([f, label]) => (
               <a key={f} href={`/brand/${f}`} download className={btnSecondary}><Download size={14} />{label}</a>

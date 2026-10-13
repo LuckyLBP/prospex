@@ -51,7 +51,7 @@ export default function Hero() {
       <nav className="relative z-20 mx-auto w-full max-w-[1440px] p-2 sm:p-3">
         <div className="flex items-center justify-between rounded-full bg-white p-[5px]">
           <div className="flex items-center gap-6">
-            <a href="/" aria-label="Prospex" className="flex items-center"><Logo height={34} /></a>
+            <a href="/" aria-label="Prospex" className="flex items-center"><Logo height={46} /></a>
             <div className="hidden items-center gap-6 md:flex">
               {NAV.map((n) => (
                 <a key={n.label} href={n.href} className="text-[14px] text-gray-900 transition-colors duration-300 hover:text-gray-500">
