@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Trash2 } from "lucide-react";
+import { ArrowUpRight, Trash2 } from "@/components/brand/icons";
 import { StatusPill } from "@/components/admin/bits";
 import { FormSection } from "@/components/admin/FormSection";
 import type { AgencyCustomer, CustomerEvent } from "@/lib/agencies/store";

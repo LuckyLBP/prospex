@@ -1,4 +1,4 @@
-import { ArrowUpRight, Mail, Phone, Trash2 } from "lucide-react";
+import { ArrowUpRight, Mail, Phone, Trash2 } from "@/components/brand/icons";
 import { formatSwedishPhone } from "@/lib/enrich/phone";
 import { personKey, type Person } from "@/lib/profile/people";
 import { removePersonAction } from "@/app/admin/foretagsprofil/actions";

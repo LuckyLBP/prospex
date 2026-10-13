@@ -1,4 +1,4 @@
-import { Play, RotateCw, Square } from "lucide-react";
+import { Play, RotateCw, Square } from "@/components/brand/icons";
 import RunPoller from "./RunPoller";
 import { StatusPill } from "./bits";
 import { btnPrimary, btnSecondary } from "./ui";

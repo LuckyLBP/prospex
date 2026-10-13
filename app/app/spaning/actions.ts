@@ -12,7 +12,7 @@ import { findCompanyById } from "@/lib/companies/upsert";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import type { ProfileProgress, StartResult } from "@/app/admin/foretagsprofil/actions";
 
-// Företagsprofilen för bolag som en admin öppnat den för. Samma bygge som adminens, men varje anrop kräver att
+// Spaning (företagsprofilen) för bolag som en admin öppnat den för. Samma bygge som adminens, men varje anrop kräver att
 // medlemmens bolag har åtkomst, och en profil kan bara öppnas av bolag som skapat eller uppdaterat den.
 
 const SEARCH_LIMIT_PER_MINUTE = 10;
@@ -39,7 +39,7 @@ export async function createProfileAction(raw: string): Promise<StartResult> {
     if (e instanceof ProfileStartError) return { ok: false, error: e.message };
     throw e;
   }
-  revalidatePath("/app/foretagsprofil");
+  revalidatePath("/app/spaning");
   return { ok: true, id };
 }
 
@@ -63,7 +63,7 @@ export async function refreshProfileAction(f: FormData) {
   const m = await requireProfileAccess();
   const id = String(f.get("id") ?? "");
   const row = await getOrgProfile(id, m.org.id);
-  if (!row) redirect("/app/foretagsprofil");
+  if (!row) redirect("/app/spaning");
   try {
     await requeueProfile(id, { id: m.user.id });
     await grantOrgAccess(id, m.org.id);
@@ -74,11 +74,11 @@ export async function refreshProfileAction(f: FormData) {
     }
     await audit(m.user, "profile.refresh", "company", { id, name: row.name ?? row.input, details: { kind: row.input_kind, org: m.org.slug } });
   } catch (e) {
-    if (e instanceof ProfileStartError) redirect(`/app/foretagsprofil/${id}?error=${encodeURIComponent(e.message)}`);
+    if (e instanceof ProfileStartError) redirect(`/app/spaning/${id}?error=${encodeURIComponent(e.message)}`);
     throw e;
   }
-  revalidatePath(`/app/foretagsprofil/${id}`);
-  redirect(`/app/foretagsprofil/${id}`);
+  revalidatePath(`/app/spaning/${id}`);
+  redirect(`/app/spaning/${id}`);
 }
 
 export type ScanResult = { ok: true; id: string; reused: boolean } | { ok: false; error: string; needsSearch?: boolean };

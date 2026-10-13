@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "@/components/brand/icons";
 
 const EASE = "ease-[cubic-bezier(0.25,0.1,0.25,1)]";
 

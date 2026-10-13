@@ -16,13 +16,13 @@ export async function setProfileAccess(orgId: string, on: boolean): Promise<void
 
 export async function listMembers(orgId: string) {
   const { rows } = await pool.query(
-    `select m.user_id, p.email, p.full_name, m.role, m.created_at,
+    `select m.user_id, p.email, p.full_name, p.avatar_path, m.role, m.created_at,
             (select max(called_at) from call_logs cl where cl.org_id = m.org_id and cl.user_id = m.user_id) as last_call
      from memberships m join profiles p on p.user_id = m.user_id
      where m.org_id = $1 order by (m.role = 'owner') desc, p.email`,
     [orgId],
   );
-  return rows as { user_id: string; email: string; full_name: string | null; role: Role; created_at: Date; last_call: Date | null }[];
+  return rows as { user_id: string; email: string; full_name: string | null; avatar_path: string | null; role: Role; created_at: Date; last_call: Date | null }[];
 }
 
 export async function listInvites(orgId: string) {

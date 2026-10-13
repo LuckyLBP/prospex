@@ -40,9 +40,9 @@ export async function getQueueIds(orgId: string, userId: string, scope: DialerSc
   const p = (v: unknown) => { args.push(v); return `$${args.length}`; };
 
   const filt: string[] = [];
-  if (scope.profileSlug) {
+  if (scope.sources.length > 0) {
     filt.push(`exists (select 1 from company_signals cs join suppliers s on s.id = cs.supplier_id and s.published
-                       where cs.company_id = c.id and s.slug = ${p(scope.profileSlug)})`);
+                       where cs.company_id = c.id and s.slug = any(${p(scope.sources)}::text[]))`);
   } else {
     filt.push(`exists (select 1 from company_signals cs join suppliers s on s.id = cs.supplier_id and s.published where cs.company_id = c.id)`);
   }
@@ -71,6 +71,10 @@ export async function getQueueIds(orgId: string, userId: string, scope: DialerSc
   }
 
   const ts = p(todayStart);
+  // Vilka som är kandidater beror på mallen. Utan mall: oringda, och ej svar/upptaget en tidigare dag utan återkomst.
+  const never = `(k.id is null or k.outcome is null)`;
+  const noAnswer = `(k.outcome in ('no_answer','busy') and k.next_callback_at is null and k.last_called_at < ${ts})`;
+  const wanted = scope.template === "fresh" ? never : scope.template === "noanswer" ? noAnswer : `(${never} or ${noAnswer})`;
   // Fröet är en parameter bara när det används: en oanvänd parameter ger "bind message supplies N parameters".
   const orderBy =
     order === "slump" ? `md5(id::text || ${p(queueSeed(userId))})`
@@ -90,8 +94,7 @@ export async function getQueueIds(orgId: string, userId: string, scope: DialerSc
          left join contacts k on k.company_id = c.id and k.org_id = $1
         where c.phone is not null
           and k.archived_at is null
-          and (k.id is null or k.outcome is null
-               or (k.outcome in ('no_answer','busy') and k.next_callback_at is null and k.last_called_at < ${ts}))
+          and ${wanted}
           and not exists (select 1 from claims cl where cl.org_id = $1 and cl.company_id = c.id
                           and cl.user_id <> $2 and cl.claimed_until > now())
           and c.phone not in (select phone from handled)

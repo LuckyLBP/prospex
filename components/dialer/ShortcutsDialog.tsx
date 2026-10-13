@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/brand/icons";
 
 const ROWS: [string, string][] = [
   ["1 till 9, 0", "Välj utfall"],

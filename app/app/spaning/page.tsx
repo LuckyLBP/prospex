@@ -1,4 +1,4 @@
-import { History } from "lucide-react";
+import { History } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import DataTable, { type Column } from "@/components/admin/DataTable";
 import { EmptyState, StatusPill } from "@/components/admin/bits";
@@ -28,11 +28,11 @@ export default async function TenantProfilesPage() {
   return (
     <>
       <RunPoller active={running} />
-      <PageHeader title="Företagsprofil" />
-      <ProfileSearch actions={{ create: createProfileAction, progress: profileProgressAction, search: searchCompaniesAction }} basePath="/app/foretagsprofil" />
+      <PageHeader title="Spaning" subtitle="Gör din spaning innan du ringer." />
+      <ProfileSearch actions={{ create: createProfileAction, progress: profileProgressAction, search: searchCompaniesAction }} basePath="/app/spaning" />
       <div className="mx-auto w-full max-w-[1100px]">
-        <p className="mx-auto mb-4 flex w-fit items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-medium text-gray-600"><History size={15} className="text-gray-400" />Dina profiler ({rows.length})</p>
-        <DataTable columns={cols} rows={rows} rowKey={(r) => r.id} rowHref={(r) => `/app/foretagsprofil/${r.id}`} empty={<EmptyState title="Inga profiler än" text="Skriv en webbadress eller ett organisationsnummer ovan för att skapa den första." />} />
+        <p className="mx-auto mb-4 flex w-fit items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-medium text-gray-600"><History size={15} className="text-gray-400" />Dina spaningar ({rows.length})</p>
+        <DataTable columns={cols} rows={rows} rowKey={(r) => r.id} rowHref={(r) => `/app/spaning/${r.id}`} empty={<EmptyState title="Inga spaningar än" text="Skriv en webbadress, ett organisationsnummer eller ett företagsnamn ovan för att göra din första spaning." />} />
       </div>
     </>
   );

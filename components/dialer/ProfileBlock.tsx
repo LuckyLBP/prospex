@@ -1,4 +1,4 @@
-import { ArrowUpRight, Mail, MapPin, Phone, Star, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Mail, MapPin, Phone, Star, TrendingDown, TrendingUp } from "@/components/brand/icons";
 import { compactKr, sv } from "@/lib/profile/format";
 import { formatSwedishPhone } from "@/lib/enrich/phone";
 import { formatDateTime } from "@/lib/time";
@@ -12,7 +12,7 @@ function Sub({ title, children }: { title: string; children: React.ReactNode }) 
   return <div><p className="mb-1.5 text-[12px] font-medium text-gray-500">{title}</p>{children}</div>;
 }
 
-/** Det en skanning hittat om företaget. Det viktigaste för ett samtal först; resten under "Mer om företaget". */
+/** Det en spaning hittat om företaget. Det viktigaste för ett samtal först; resten under "Mer om företaget". */
 export default function ProfileBlock({ profile: p }: { profile: CardProfile }) {
   const f = p.figures;
   const age = p.founded ? new Date().getFullYear() - p.founded : null;
@@ -29,7 +29,7 @@ export default function ProfileBlock({ profile: p }: { profile: CardProfile }) {
   return (
     <section className="flex flex-col gap-4 border-t border-gray-100 pt-4">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-[13px] font-semibold text-ink">Skannad profil</h3>
+        <h3 className="text-[13px] font-semibold text-ink">Spaning</h3>
         {p.finishedAt && <span className="text-[12px] text-gray-400">{formatDateTime(new Date(p.finishedAt))}</span>}
       </div>
 
@@ -107,7 +107,7 @@ export default function ProfileBlock({ profile: p }: { profile: CardProfile }) {
         </details>
       )}
 
-      <a href={`/app/foretagsprofil/${p.id}`} className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-accent-text underline underline-offset-4">Öppna hela profilen<ArrowUpRight size={13} /></a>
+      <a href={`/app/spaning/${p.id}`} className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-accent-text underline underline-offset-4">Öppna hela spaningen<ArrowUpRight size={13} /></a>
     </section>
   );
 }

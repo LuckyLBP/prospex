@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, Search } from "lucide-react";
+import { Check, ChevronDown, Search } from "@/components/brand/icons";
 
 export type SelectOption = { value: string; label: string; hint?: string; icon?: React.ReactNode; /** Rubrik som alternativet hör till. Alternativen ska redan vara sorterade så att samma rubrik ligger intill varandra. */ group?: string };
 

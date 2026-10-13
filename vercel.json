@@ -1,9 +1,23 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [{ "path": "/api/cron/refresh", "schedule": "0 4 * * *" }],
+  "crons": [
+    {
+      "path": "/api/cron/refresh",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 5 * * *"
+    }
+  ],
   "functions": {
     "app/api/queues/scrape-run/route.ts": {
-      "experimentalTriggers": [{ "type": "queue/v2beta", "topic": "scrape-run" }]
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "scrape-run"
+        }
+      ]
     }
   }
 }

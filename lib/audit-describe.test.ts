@@ -31,10 +31,10 @@ describe("describeAudit", () => {
     expect(describeAudit(row("run.requeue", { kind: "supplier", count: 12 }, "Wix"))).toBe("Lucas lät leverantören Wix läsa om misslyckade webbplatser (12)");
   });
   it("describes company profiles", () => {
-    expect(describeAudit(row("profile.create", { input: "foretag.se" }, "Företaget AB"))).toBe("Lucas skapade en företagsprofil för Företaget AB");
-    expect(describeAudit(row("org.profile_access_on", null, "Test AB"))).toBe("Lucas öppnade Företagsprofil för bolaget Test AB");
-    expect(describeAudit(row("org.profile_access_off", null, "Test AB"))).toBe("Lucas stängde Företagsprofil för bolaget Test AB");
-    expect(describeAudit(row("profile.refresh", null, "Företaget AB"))).toBe("Lucas uppdaterade företagsprofilen för Företaget AB");
+    expect(describeAudit(row("profile.create", { input: "foretag.se" }, "Företaget AB"))).toBe("Lucas gjorde en spaning på Företaget AB");
+    expect(describeAudit(row("org.profile_access_on", null, "Test AB"))).toBe("Lucas öppnade Spaning för bolaget Test AB");
+    expect(describeAudit(row("org.profile_access_off", null, "Test AB"))).toBe("Lucas stängde Spaning för bolaget Test AB");
+    expect(describeAudit(row("profile.refresh", null, "Företaget AB"))).toBe("Lucas uppdaterade spaningen på Företaget AB");
   });
   it("falls back to something readable for an unknown action", () => {
     expect(describeAudit(row("thing.happened", null, "Y"))).toBe("Lucas utförde thing.happened på Y");

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, RotateCw } from "lucide-react";
+import { ChevronLeft, RotateCw } from "@/components/brand/icons";
 import ProfileView from "@/components/admin/profile/ProfileView";
 import RunPoller from "@/components/admin/RunPoller";
 import { Flash, StatusPill } from "@/components/admin/bits";
@@ -41,7 +41,7 @@ export default async function TenantProfilePage({ params, searchParams }: { para
   return (
     <>
       <RunPoller active={active} />
-      <Link href="/app/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Företagsprofil</Link>
+      <Link href="/app/spaning" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Spaning</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
 
@@ -52,9 +52,9 @@ export default async function TenantProfilePage({ params, searchParams }: { para
           <p className="mt-1 text-[14px] text-gray-500">Det tar oftast mellan 5 och 30 sekunder. Sidan uppdateras av sig själv.</p>
         </div>
       )}
-      {active && profile && <p className="mb-4 rounded-2xl bg-accent-wash px-5 py-3 text-[13px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra profilen tills den nya är klar.</p>}
+      {active && profile && <p className="mb-4 rounded-2xl bg-accent-wash px-5 py-3 text-[13px] text-accent-text">{row.stage ? `${STAGE_LABEL[row.stage]}…` : "Köad…"} Nedan syns den förra spaningen tills den nya är klar.</p>}
       {!active && !profile && (
-        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-ink">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen profil att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
+        <div className="rounded-3xl bg-white px-6 py-14 text-center"><p className="text-[18px] font-semibold text-ink">{title}</p><p className="mt-1 text-[14px] text-gray-500">Det finns ingen spaning att visa.</p><div className="mt-6 flex justify-center">{actions}</div></div>
       )}
 
       {profile && <ProfileView profile={profile} pages={[]} presence={[]} fallbackName={title} actions={actions} tenant photoUrls={photoUrls} />}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Check, TriangleAlert, X } from "lucide-react";
+import { Building2, Check, TriangleAlert, X } from "@/components/brand/icons";
 import { companyStatus, type AnnualFigures, type CompanyRegistry } from "@/lib/bolagsverket/types";
 import type { RegistryResponse } from "@/lib/bolagsverket/response";
 

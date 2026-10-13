@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Database, Globe, Loader2, MapPin, Search, Star } from "lucide-react";
+import { ArrowRight, Check, Database, Globe, Loader2, MapPin, Search, Star } from "@/components/brand/icons";
 import { STAGE_LABEL, STAGE_ORDER, type ProfileStage } from "@/lib/profile/stages";
 import * as adminActions from "@/app/admin/foretagsprofil/actions";
 import type { ProfileProgress, StartResult } from "@/app/admin/foretagsprofil/actions";
 import { kindOf } from "@/lib/profile/input-kind";
 import type { Candidate } from "@/lib/profile/name-search";
 
-// Sökfältet överst på Företagsprofil: ett stort fält med glöd i fokus, en markering av vad som skrivits
+// Sökfältet överst på Spaning: ett stort fält med glöd i fokus, en markering av vad som skrivits
 // (org.nr eller webbadress) och en rund sökknapp. När en profil byggs stannar man kvar här: fältet låses och
 // förloppet visas under det, och när bygget är klart går man vidare till profilen. Tolkningen av texten är bara
 // en ledtråd, servern avgör (lib/profile/input.ts).
@@ -27,10 +27,10 @@ const POLL_MS = 1200;
 
 type Phase = { kind: "idle" } | { kind: "searching" } | { kind: "choosing"; candidates: Candidate[] } | { kind: "starting" } | { kind: "building"; id: string; progress: ProfileProgress | null } | { kind: "done"; id: string };
 
-function Steps({ stage, done }: { stage: ProfileStage | null; done: boolean }) {
+function Steps({ stage, done, compact = false }: { stage: ProfileStage | null; done: boolean; compact?: boolean }) {
   const at = done ? STAGE_ORDER.length : stage ? STAGE_ORDER.indexOf(stage) : -1;
   return (
-    <div className="mt-6" aria-live="polite">
+    <div className={compact ? "mt-4" : "mt-6"} aria-live="polite">
       <div className="flex gap-1.5" role="progressbar" aria-valuemin={0} aria-valuemax={STAGE_ORDER.length} aria-valuenow={Math.max(0, at)}>
         {STAGE_ORDER.map((s, i) => (
           <div key={s} className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
@@ -41,7 +41,7 @@ function Steps({ stage, done }: { stage: ProfileStage | null; done: boolean }) {
       <ol className="mt-4 flex flex-col items-center gap-1 text-center">
         <li className="flex items-center gap-2 text-[15px] font-medium text-ink">
           {done ? <Check size={16} className="text-emerald-600" /> : <Loader2 size={16} className="animate-spin text-accent" />}
-          {done ? "Klar, öppnar profilen" : stage ? `${STAGE_LABEL[stage]}…` : "Köar…"}
+          {done ? "Klar, öppnar spaningen" : stage ? `${STAGE_LABEL[stage]}…` : "Köar…"}
         </li>
         <li className="text-[12px] text-gray-400">{done ? " " : `Steg ${Math.max(1, at + 1)} av ${STAGE_ORDER.length} · tar oftast 5 till 30 sekunder`}</li>
       </ol>
@@ -49,7 +49,7 @@ function Steps({ stage, done }: { stage: ProfileStage | null; done: boolean }) {
   );
 }
 
-export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/admin/foretagsprofil" }: { actions?: SearchActions; basePath?: string } = {}) {
+export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/admin/foretagsprofil", compact = false }: { actions?: SearchActions; basePath?: string; /** Litet fält för en ruta på startsidan: ingen rubrik, inga exempel, ingen autofokus. */ compact?: boolean } = {}) {
   const router = useRouter();
   const ref = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
@@ -127,7 +127,7 @@ export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/ad
       if (!r.ok) { setError(r.error); setPhase({ kind: "idle" }); return; }
       setPhase({ kind: "building", id: r.id, progress: null });
     } catch {
-      setError("Något gick fel när profilen skulle startas. Försök igen.");
+      setError("Något gick fel när spaningen skulle startas. Försök igen.");
       setPhase({ kind: "idle" });
     }
   }
@@ -136,17 +136,23 @@ export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/ad
   const shown = phase.kind === "building" || phase.kind === "done";
 
   return (
-    <form onSubmit={submit} className="mx-auto flex min-h-[60vh] w-full max-w-[720px] flex-col justify-center pb-10">
-      <h2 className="mb-2 text-center text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[34px]">
-        {shown ? (progress?.name ?? "Bygger profilen") : "Vilket företag vill du titta på?"}
-      </h2>
-      <p className="mx-auto mb-7 max-w-[520px] text-center text-[14px] text-gray-500">
-        {shown ? "Vi läser webbplatsen och hämtar uppgifter från Bolagsverket." : "Skriv ett företagsnamn, en webbadress eller ett organisationsnummer. Vi läser sajten och hämtar uppgifter från Bolagsverket."}
-      </p>
+    <form onSubmit={submit} className={compact ? "flex w-full flex-col" : "mx-auto flex min-h-[60vh] w-full max-w-[720px] flex-col justify-center pb-10"}>
+      {compact ? (
+        shown && <p className="mb-3 truncate text-[14px] font-semibold text-ink">{progress?.name ?? "Spanar…"}</p>
+      ) : (
+        <>
+          <h2 className="mb-2 text-center text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink sm:text-[34px]">
+            {shown ? (progress?.name ?? "Spanar…") : "Vilket företag vill du spana på?"}
+          </h2>
+          <p className="mx-auto mb-7 max-w-[520px] text-center text-[14px] text-gray-500">
+            {shown ? "Vi läser webbplatsen och hämtar uppgifter från Bolagsverket." : "Skriv ett företagsnamn, en webbadress eller ett organisationsnummer. Vi läser sajten och hämtar uppgifter från Bolagsverket."}
+          </p>
+        </>
+      )}
 
       <div className="group relative">
         <div aria-hidden className={`profile-glow pointer-events-none absolute -inset-1.5 rounded-full bg-gradient-to-r from-accent via-amber-300 to-rose-400 blur-xl transition-opacity duration-500 ${busy ? "opacity-70" : "opacity-20 group-focus-within:opacity-70"}`} />
-        <div className={`relative flex h-16 items-center gap-3 overflow-hidden rounded-full border bg-white pl-5 pr-2 shadow-[0_8px_30px_-12px_rgb(14_17_22/0.25)] transition-colors group-focus-within:border-accent ${busy ? "border-accent" : "border-gray-200"}`}>
+        <div className={`relative flex ${compact ? "h-14" : "h-16"} items-center gap-3 overflow-hidden rounded-full border bg-white pl-5 pr-2 shadow-[0_8px_30px_-12px_rgb(14_17_22/0.25)] transition-colors group-focus-within:border-accent ${busy ? "border-accent" : "border-gray-200"}`}>
           <Search size={20} className={`shrink-0 transition-colors group-focus-within:text-accent ${busy ? "text-accent" : "text-gray-400"}`} />
           <input
             ref={ref}
@@ -154,25 +160,25 @@ export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/ad
             value={value}
             onChange={(e) => { setValue(e.target.value); if (phase.kind === "choosing") setPhase({ kind: "idle" }); }}
             readOnly={busy}
-            autoFocus
+            autoFocus={!compact}
             // Webbläsarverktyg (och lösenordshanterare) lägger till attribut på fältet innan React hunnit ta över.
             suppressHydrationWarning
             required
             autoComplete="off"
             spellCheck={false}
-            placeholder="Företagsnamn, foretag.se eller 556677-8899"
+            placeholder={compact ? "Företag, webbadress, org.nr" : "Företagsnamn, foretag.se eller 556677-8899"}
             aria-label="Webbadress eller organisationsnummer"
-            className={`min-w-0 flex-1 bg-transparent text-[17px] outline-none placeholder:text-gray-400 ${busy ? "text-gray-500" : "text-ink"}`}
+            className={`min-w-0 flex-1 bg-transparent ${compact ? "text-[15px]" : "text-[17px]"} outline-none placeholder:text-gray-400 ${busy ? "text-gray-500" : "text-ink"}`}
           />
-          <span className={`hidden shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[12px] font-medium text-accent-text transition-opacity duration-200 sm:inline ${kind && !busy ? "opacity-100" : "opacity-0"}`}>
+          <span className={`hidden shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[12px] font-medium text-accent-text transition-opacity duration-200 ${compact ? "" : "sm:inline"} ${kind && !busy ? "opacity-100" : "opacity-0"}`}>
             {kind === "orgnr" ? "Org.nr" : kind === "url" ? "Webbadress" : kind === "name" ? "Företagsnamn" : ""}
           </span>
           <button
             disabled={!value.trim() || busy}
-            aria-label="Skapa profil"
+            aria-label="Starta spaning"
             className="flex h-12 items-center justify-center gap-2 rounded-full bg-ink px-5 text-[14px] font-semibold text-white transition-all hover:bg-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-40 sm:px-6"
           >
-            {busy ? <><Loader2 size={17} className="animate-spin" /><span className="hidden sm:inline">{phase.kind === "searching" ? "Söker…" : "Läser…"}</span></> : <><span className="hidden sm:inline">Sök</span><ArrowRight size={17} /></>}
+            {busy ? <><Loader2 size={17} className="animate-spin" /><span className={compact ? "hidden" : "hidden sm:inline"}>{phase.kind === "searching" ? "Söker…" : "Läser…"}</span></> : <><span className={compact ? "hidden" : "hidden sm:inline"}>Sök</span><ArrowRight size={17} /></>}
           </button>
           {busy && <span aria-hidden className="absolute inset-x-0 bottom-0 h-[3px] overflow-hidden"><span className="profile-shimmer block h-full w-2/5 bg-gradient-to-r from-transparent via-accent to-transparent" /></span>}
         </div>
@@ -214,14 +220,14 @@ export default function ProfileSearch({ actions = ADMIN_ACTIONS, basePath = "/ad
 
       {shown ? (
         <>
-          <Steps stage={progress?.stage ?? null} done={phase.kind === "done"} />
+          <Steps stage={progress?.stage ?? null} done={phase.kind === "done"} compact={compact} />
           {phase.kind === "building" && (
             <p className="mt-5 text-center text-[12px] text-gray-400">
               Du kan lämna sidan, bygget fortsätter. <button type="button" onClick={() => { setPhase({ kind: "idle" }); setValue(""); }} className="underline underline-offset-4 hover:text-ink">Sluta vänta</button>
             </p>
           )}
         </>
-      ) : (
+      ) : compact ? null : (
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-[13px] text-gray-400">
           <span>Prova</span>
           {EXAMPLES.map((e) => (

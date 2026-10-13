@@ -6,7 +6,7 @@ import { QUEUE_ORDERS } from "./order";
 const ORG = "cccccccc-0000-0000-0000-000000000002";
 const U1 = "dddddddd-0000-0000-0000-000000000011";
 const U2 = "dddddddd-0000-0000-0000-000000000012";
-const scope = { profileSlug: "roi", mode: "new" as const };
+const scope = { sources: ["roi"], mode: "new" as const };
 
 async function cleanup() {
   await pool.query(`delete from organizations where id = $1`, [ORG]);
@@ -55,4 +55,40 @@ describe("getQueueIds", () => {
     const stockholm = await getQueueIds(ORG, U1, { ...scope, city: "STOCKHOLM" }, "namn", 500);
     expect(stockholm.length).toBeLessThan(all.length);
   });
+
+  describe("templates", () => {
+    it("keeps never-called and no-answer companies apart, and together they make up the default list", async () => {
+      const all = await getQueueIds(ORG, U1, scope, "namn", 500);
+      const [a, b, c] = all;
+      // a: ej svar i går (ska komma tillbaka), b: ej svar i dag (hanterat i dag), c: upptaget i går med återkomstdatum (inte i kön)
+      await pool.query(`insert into contacts (org_id, company_id, outcome, last_called_at, call_count) values ($1,$2,'no_answer', now() - interval '1 day', 1)`, [ORG, a]);
+      await pool.query(`insert into contacts (org_id, company_id, outcome, last_called_at, call_count) values ($1,$2,'no_answer', now(), 1)`, [ORG, b]);
+      await pool.query(`insert into contacts (org_id, company_id, outcome, last_called_at, next_callback_at, call_count) values ($1,$2,'busy', now() - interval '1 day', now() + interval '2 days', 1)`, [ORG, c]);
+
+      const fresh = await getQueueIds(ORG, U1, { ...scope, template: "fresh" }, "namn", 500);
+      const noanswer = await getQueueIds(ORG, U1, { ...scope, template: "noanswer" }, "namn", 500);
+      const def = await getQueueIds(ORG, U1, scope, "namn", 500);
+
+      expect(noanswer).toEqual([a]);
+      expect(fresh).not.toContain(a);
+      expect([b, c].some((id) => fresh.includes(id) || noanswer.includes(id) || def.includes(id))).toBe(false);
+      expect(fresh.length).toBeGreaterThan(0);
+      expect([...fresh, ...noanswer].sort()).toEqual([...def].sort());
+      // I standardlistan kommer de som inte svarade före de oringda (så har kön alltid sorterat)
+      expect(def.indexOf(a)).toBe(0);
+    });
+  });
+
+  describe("several sources", () => {
+    it("takes companies from any of the chosen sources, and ignores unknown ones", async () => {
+      const slugs = (await pool.query(`select slug from suppliers where published order by slug limit 3`)).rows.map((r) => r.slug as string);
+      const [a, b] = slugs;
+      const onlyA = await getQueueIds(ORG, U1, { ...scope, sources: [a] }, "namn", 500);
+      const onlyB = await getQueueIds(ORG, U1, { ...scope, sources: [b] }, "namn", 500);
+      const both = await getQueueIds(ORG, U1, { ...scope, sources: [a, b] }, "namn", 500);
+      expect(new Set(both)).toEqual(new Set([...onlyA, ...onlyB]));
+      expect(await getQueueIds(ORG, U1, { ...scope, sources: [a, "finns-inte"] }, "namn", 500)).toEqual(onlyA);
+    });
+  });
 });
+

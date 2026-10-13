@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Logo, LogoMark } from "@/components/brand/Logo";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, Eye, LayoutDashboard, LayoutGrid, LibraryBig, LogOut, Menu, Palette, PhoneCall, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "lucide-react";
+import { DUO_OF, ArrowLeft, Building2, CalendarDays, ChevronsLeft, ChevronsRight, Contact, DatabaseZap, Eye, LayoutDashboard, LayoutGrid, LibraryBig, LogOut, Menu, Palette, PhoneCall, ScanSearch, ScrollText, Shapes, ShieldCheck, Tags, Users, X } from "@/components/brand/icons";
 import { signOut } from "@/app/login/actions";
 
 const NAV = [
@@ -23,9 +23,15 @@ function adminGroups(c: { invites: number; late: number }): { title: string | nu
   return [
     { title: null, items: [{ href: "/admin", label: "Översikt", icon: LayoutDashboard }] },
     { title: "Kunder", items: [{ href: "/admin/bolag", label: "Bolag", icon: Building2 }, { href: "/admin/anvandare", label: "Användare", icon: Users, badge: c.invites }] },
-    { title: "Katalog", items: [{ href: "/admin/leverantorer", label: "Leverantörer", icon: Shapes }, { href: "/admin/listor", label: "Listor", icon: LibraryBig }, { href: "/admin/kategorier", label: "Kategorier", icon: Tags }, { href: "/admin/foretagsprofil", label: "Företagsprofil", icon: ScanSearch }] },
+    { title: "Katalog", items: [{ href: "/admin/leverantorer", label: "Leverantörer", icon: Shapes }, { href: "/admin/listor", label: "Listor", icon: LibraryBig }, { href: "/admin/kategorier", label: "Kategorier", icon: Tags }, { href: "/admin/foretagsprofil", label: "Spaning", icon: ScanSearch }] },
     { title: "System", items: [{ href: "/admin/insamling", label: "Insamling", icon: DatabaseZap, badge: c.late }, { href: "/admin/logg", label: "Aktivitetslogg", icon: ScrollText }, { href: "/admin/atkomst", label: "Åtkomst", icon: Eye }, { href: "/admin/varumarke", label: "Varumärke", icon: Palette }] },
   ];
+}
+
+/** Menyikonen: linjeikon, och den aktiva posten får en duotone med orange andra ton. */
+function NavIcon({ icon: Icon, active }: { icon: typeof ArrowLeft; active: boolean }) {
+  const Duo = active ? DUO_OF.get(Icon) : undefined;
+  return Duo ? <Duo size={20} secondaryColor="var(--accent)" secondaryOpacity={1} className="text-white" /> : <Icon size={20} className={active ? "text-accent" : ""} />;
 }
 
 export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasProfiles = false }: { isAdmin: boolean; isOwner: boolean; orgName: string | null; adminCounts?: { invites: number; late: number }; hasProfiles?: boolean }) {
@@ -33,8 +39,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
   const inAdmin = !!adminCounts && pathname.startsWith("/admin");
   const nav = [
     ...(orgName ? NAV : []),
-    ...(hasProfiles ? [{ href: "/app/foretagsprofil", label: "Företagsprofil", icon: ScanSearch }] : []),
-    ...(isOwner && orgName ? [{ href: "/app/team", label: "Team", icon: Users }] : []),
+    ...(hasProfiles ? [{ href: "/app/spaning", label: "Spaning", icon: ScanSearch }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
   const [collapsed, setCollapsed] = useState(false);
@@ -62,7 +67,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
                 return (
                   <Link key={href} href={href} title={label} aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-[15px] font-medium transition-colors ${active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"}`}>
-                    <Icon size={20} className={active ? "text-accent" : ""} />
+                    <NavIcon icon={Icon} active={active} />
                     {!narrow && <span className="flex-1">{label}</span>}
                     {!narrow && !!badge && badge > 0 && <span className="rounded-full bg-accent px-1.5 text-[11px] font-semibold leading-5 text-ink">{badge}</span>}
                   </Link>
@@ -84,7 +89,7 @@ export default function Sidebar({ isAdmin, isOwner, orgName, adminCounts, hasPro
                 active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon size={20} className={active ? "text-accent" : ""} />
+              <NavIcon icon={Icon} active={active} />
               {!narrow && label}
             </Link>
           );

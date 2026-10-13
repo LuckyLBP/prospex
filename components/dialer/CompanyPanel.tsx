@@ -1,4 +1,4 @@
-import { ArrowUpRight, Building2, Check, Copy, Globe, Mail, MapPin, Phone, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, Building2, Check, Copy, Globe, Mail, MapPin, Phone, TriangleAlert } from "@/components/brand/icons";
 import OutcomePill from "@/components/dashboard/OutcomePill";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";

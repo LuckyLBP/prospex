@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, ScanSearch, Star } from "lucide-react";
+import { Loader2, ScanSearch, Star } from "@/components/brand/icons";
 import Sheet from "./Sheet";
 import { STAGE_LABEL } from "@/lib/profile/stages";
 import type { Candidate } from "@/lib/profile/name-search";
 import type { DialerCard } from "@/lib/dialer/card-types";
-import { profileProgressAction, scanCompanyAction, searchCompaniesAction } from "@/app/app/foretagsprofil/actions";
+import { profileProgressAction, scanCompanyAction, searchCompaniesAction } from "@/app/app/spaning/actions";
 
 const POLL_MS = 1500;
 const BTN = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -14,9 +14,9 @@ const BTN = "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px
 type Picker = { state: "loading" } | { state: "ready"; candidates: Candidate[] } | { state: "error"; text: string };
 
 /**
- * "Skanna webbplats" i ringläget. Skannar just det här företaget, så att resultatet hamnar på kortet. Saknar
+ * "Spana på företaget" i ringläget. Spanar på just det här företaget, så att resultatet hamnar på kortet. Saknar
  * företaget webbplats och org.nr i katalogen får den som ringer välja företaget bland sökträffar på namnet.
- * Medan en skanning pågår visas steget; när den är klar hämtas kortet på nytt.
+ * Medan en spaning pågår visas steget; när den är klar hämtas kortet på nytt.
  */
 export default function ScanControl({ card, onDone, onNotice }: { card: DialerCard; onDone: () => void; onNotice: (kind: "info" | "error", text: string) => void }) {
   const p = card.profile;
@@ -40,9 +40,9 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
       let failed = false;
       try { r = await profileProgressAction(runningId); } catch { failed = true; /* ett missat svar provas igen */ }
       if (stop) return;
-      if (!failed && r === null) { setBuildId(null); notice.current("error", "Skanningen hittades inte."); return; }
+      if (!failed && r === null) { setBuildId(null); notice.current("error", "Spaningen hittades inte."); return; }
       if (r && r.status === "done") { setBuildId(null); done.current(); return; }
-      if (r && r.status === "error") { setBuildId(null); notice.current("error", r.error ?? "Skanningen misslyckades."); done.current(); return; }
+      if (r && r.status === "error") { setBuildId(null); notice.current("error", r.error ?? "Spaningen misslyckades."); done.current(); return; }
       if (r) setStage(r.stage ? STAGE_LABEL[r.stage] : "I kö");
       timer = setTimeout(tick, POLL_MS);
     };
@@ -63,7 +63,7 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
       if (r.reused) done.current();
       else { setStage("I kö"); setBuildId(r.id); }
     } catch {
-      notice.current("error", "Kunde inte starta skanningen. Försök igen.");
+      notice.current("error", "Kunde inte starta spaningen. Försök igen.");
     } finally {
       setStarting(false);
     }
@@ -80,7 +80,7 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
   }
 
   if (runningId) {
-    return <span className={`${BTN} cursor-default border-accent-tint bg-accent-wash text-accent-text`} role="status"><Loader2 size={15} className="animate-spin" />{stage ?? "Skannar"}…</span>;
+    return <span className={`${BTN} cursor-default border-accent-tint bg-accent-wash text-accent-text`} role="status"><Loader2 size={15} className="animate-spin" />{stage ?? "Spanar"}…</span>;
   }
   if (p?.status === "done") return null;
 
@@ -88,12 +88,12 @@ export default function ScanControl({ card, onDone, onNotice }: { card: DialerCa
     <>
       <button type="button" onClick={() => start()} disabled={starting} className={`${BTN} border-gray-200 bg-white text-ink hover:border-gray-400 disabled:opacity-60`}>
         {starting ? <Loader2 size={15} className="animate-spin" /> : <ScanSearch size={15} className="text-accent" />}
-        {p?.status === "error" ? "Försök skanna igen" : "Skanna webbplats"}
+        {p?.status === "error" ? "Försök spana igen" : "Spana på företaget"}
       </button>
 
       {picker && (
         <Sheet title="Vilket företag är det?" onClose={() => setPicker(null)}>
-          <p className="mb-3 text-[13px] text-gray-500">Katalogen saknar webbplats och organisationsnummer för {card.name ?? "företaget"}. Välj rätt träff så skannas den.</p>
+          <p className="mb-3 text-[13px] text-gray-500">Katalogen saknar webbplats och organisationsnummer för {card.name ?? "företaget"}. Välj rätt träff så spanar vi på den.</p>
           {picker.state === "loading" && <p className="flex items-center gap-2 py-6 text-[14px] text-gray-500"><Loader2 size={16} className="animate-spin" />Söker…</p>}
           {picker.state === "error" && <p className="py-4 text-[14px] text-rose-700">{picker.text}</p>}
           {picker.state === "ready" && picker.candidates.length === 0 && <p className="py-4 text-[14px] text-gray-500">Inga träffar på namnet.</p>}

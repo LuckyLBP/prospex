@@ -1,4 +1,4 @@
-import { Play } from "lucide-react";
+import { Play } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import DataTable, { type Column } from "@/components/admin/DataTable";
 import RunPoller from "@/components/admin/RunPoller";

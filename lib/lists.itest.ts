@@ -78,12 +78,12 @@ describe("leverantörer och listor", () => {
     const rows = await searchCompanies({ supplier: "redovisningsbyraer", orgId: ORG }, 5);
     expect(rows.length).toBe(5);
     expect(rows.every((r) => r.supplier === "Redovisningsbyråer")).toBe(true);
-    const ids = await getQueueIds(ORG, U, { profileSlug: "redovisningsbyraer", mode: "new" }, "namn", 20);
+    const ids = await getQueueIds(ORG, U, { sources: ["redovisningsbyraer"], mode: "new" }, "namn", 20);
     expect(ids.length).toBeGreaterThan(0);
   });
 
   it("companies only in an unpublished source are not in anyone's queue", async () => {
-    const ids = await getQueueIds(ORG, U, { profileSlug: UNPUB, mode: "new" }, "namn", 20);
+    const ids = await getQueueIds(ORG, U, { sources: [UNPUB], mode: "new" }, "namn", 20);
     expect(ids).toEqual([]);
   });
 

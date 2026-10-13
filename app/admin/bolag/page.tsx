@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import FilterBar from "@/components/admin/FilterBar";
 import DataTable, { type Column } from "@/components/admin/DataTable";

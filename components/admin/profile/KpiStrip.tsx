@@ -1,4 +1,4 @@
-import { Coins, Layers, Share2, Star, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { Coins, Layers, Share2, Star, TrendingDown, TrendingUp, Users } from "@/components/brand/icons";
 import { changePercent, compactKr, ratioPercent, sv } from "@/lib/profile/format";
 import type { CompanyProfile } from "@/lib/profile/types";
 

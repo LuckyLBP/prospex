@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { ChevronLeft, ChevronRight, Download, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Trash2 } from "@/components/brand/icons";
 import Header from "@/components/dashboard/Header";
 import CopyButton from "@/components/dashboard/CopyButton";
 import { requireMember } from "@/lib/auth";

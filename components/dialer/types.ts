@@ -22,4 +22,10 @@ export type DialerInit = {
   limit: string | null;
   /** Ett enda företag, öppnat från sök eller en lista i stället för ur kön. Ingen kö, inget hoppa över. */
   single?: boolean;
+  /**
+   * Den sparade listan i "Att ringa". `offset`: hur många i listan som redan är avklarade när sidan laddades (en fortsatt
+   * lista har tappat de som ringts sedan sist), `total`: listans ursprungliga längd, `resumed`: den fortsattes från sparat läge.
+   * Null i Återkomster och Mina, som inte sparas.
+   */
+  list?: { offset: number; total: number; resumed: boolean } | null;
 };

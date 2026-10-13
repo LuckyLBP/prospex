@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import { getCollectionRows, getOverview } from "@/lib/admin-data";
 import { recentAudit } from "@/lib/audit";

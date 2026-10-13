@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, ChevronDown, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Clock, Mail, MapPin, Phone } from "@/components/brand/icons";
 import { StatusPill } from "@/components/admin/bits";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";

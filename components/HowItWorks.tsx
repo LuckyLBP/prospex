@@ -1,4 +1,4 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@/components/brand/icons";
 import { SAMPLE_ROWS, SUPPLIERS, TOTAL_COMPANIES, VERIFIED } from "@/lib/mock";
 
 const STEPS = [

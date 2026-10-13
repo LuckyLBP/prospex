@@ -14,6 +14,9 @@ importers:
       '@ai-sdk/deepseek':
         specifier: ^3.0.62
         version: 3.0.62(zod@4.6.5)
+      '@solar-icons/react':
+        specifier: ^2.3.2
+        version: 2.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@supabase/ssr':
         specifier: ^0.12.7
         version: 0.12.7(@supabase/supabase-js@2.117.3)
@@ -29,9 +32,6 @@ importers:
       fflate:
         specifier: ^0.8.3
         version: 0.8.3
-      lucide-react:
-        specifier: ^1.53.0
-        version: 1.53.0(@types/react@18.3.31)(react@18.3.1)
       next:
         specifier: ^16.4.0
         version: 16.4.0(@types/node@26.6.4)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -484,6 +484,13 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@solar-icons/react@2.3.2':
+    resolution: {integrity: sha512-ZZGIm9Njg+tcJxSK0jSuPJrO4vOFDETbN5jNpCdR/b1LBCvLumkOimLi2GFFwR9205nlD6dNcBM9623yxbLyuA==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      react: '>= 16.8'
+      react-dom: '>= 16.8'
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -1032,15 +1039,6 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
-
-  lucide-react@1.53.0:
-    resolution: {integrity: sha512-OxJ7elNku+iqVzOolk5caxq2LM8Mck6lhA6uZx3g2PlZ53+FvBnT6PlJxGCukCa6oF5wQwgSatn9cH1b4olWmQ==}
-    peerDependencies:
-      '@types/react': '*'
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
 
   magic-string@1.4.3:
     resolution: {integrity: sha512-z12OxmaPGE0F4xlpGdjuAUckipLpQlTAuAmyGhNoD7ODpYUzvDfvtxUbjM/jwznyP178oju/KDdyi220wNJ0RQ==}
@@ -1829,6 +1827,11 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
+  '@solar-icons/react@2.3.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
   '@standard-schema/spec@1.1.0': {}
 
   '@supabase/auth-js@2.117.3':
@@ -2251,12 +2254,6 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
-
-  lucide-react@1.53.0(@types/react@18.3.31)(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-    optionalDependencies:
-      '@types/react': 18.3.31
 
   magic-string@1.4.3:
     dependencies:

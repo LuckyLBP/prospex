@@ -1,4 +1,4 @@
-import { Download, Phone, ScanSearch } from "lucide-react";
+import { Building2, CalendarDays, Check, Download, Eye, Globe, LayoutGrid, Layers, Mail, MapPin, Phone, PhoneCall, ScanSearch, Search, ShieldCheck, Star, Trash2, TrendingUp, Users, Bell, Clock, Briefcase, Palette, DUO_OF } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import { StatusPill } from "@/components/admin/bits";
 import { btnPrimary, btnSecondary, inputCls } from "@/components/admin/ui";
@@ -59,6 +59,23 @@ export default function BrandPage() {
         </Card>
 
         <Card>
+          <H>Ikoner</H>
+          <p className="mb-4 max-w-2xl text-[13px] leading-relaxed text-gray-600">Ikonerna är Solar av 480 Design (CC BY 4.0, credit står i sidfoten och på inloggningen). Normalt används linjestilen, 1,5 px linje. Den aktiva posten i menyn får duotone-stilen med orange andra ton. Alla ikoner hämtas från <code className="rounded bg-canvas px-1.5 py-0.5 text-[12px]">components/brand/icons.ts</code>, det enda stället som vet vilket bibliotek som används.</p>
+          <div className="grid grid-cols-6 gap-3 sm:grid-cols-8 lg:grid-cols-12">
+            {[Phone, PhoneCall, Mail, Search, MapPin, Building2, Users, CalendarDays, Check, Star, Globe, ScanSearch, TrendingUp, Bell, Layers, Palette, Eye, Clock, Briefcase, ShieldCheck, LayoutGrid, Trash2].map((I, n) => (
+              <span key={n} className="flex h-14 items-center justify-center rounded-2xl bg-canvas text-ink"><I size={24} /></span>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {[LayoutGrid, PhoneCall, Users, CalendarDays, ScanSearch, ShieldCheck].map((I, n) => {
+              const D = DUO_OF.get(I);
+              return D ? <span key={n} className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-white"><D size={24} secondaryColor="var(--accent)" secondaryOpacity={1} /></span> : null;
+            })}
+            <span className="self-center text-[12px] text-gray-500">Aktivt läge i menyn (duotone)</span>
+          </div>
+        </Card>
+
+        <Card>
           <H>Färger</H>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SWATCHES.map((s) => (
@@ -80,7 +97,7 @@ export default function BrandPage() {
           <H>Typografi</H>
           <div className="flex flex-col gap-4">
             <div><p className="mb-1 text-[11px] text-gray-500">Rubrik stor · Geist 500 · −3 %</p><p className="text-[clamp(2rem,5vw,3.4rem)] font-medium leading-[1.08] tracking-[-0.03em] text-ink">Ring företag som redan köper det du säljer.</p></div>
-            <div><p className="mb-1 text-[11px] text-gray-500">Sidrubrik · 28 px · 600 · −2 %</p><p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink">Företagsprofil</p></div>
+            <div><p className="mb-1 text-[11px] text-gray-500">Sidrubrik · 28 px · 600 · −2 %</p><p className="text-[28px] font-semibold leading-tight tracking-[-0.02em] text-ink">Spaning</p></div>
             <div><p className="mb-1 text-[11px] text-gray-500">Kortrubrik · 16 px · 600</p><p className="text-[16px] font-semibold text-ink">Att ta upp i samtalet</p></div>
             <div><p className="mb-1 text-[11px] text-gray-500">Brödtext · 14 px · 400</p><p className="max-w-xl text-[14px] leading-relaxed text-gray-700">Hemtjänst för äldre i Stockholm. Företaget rekryterar tre undersköterskor och saknar en synlig bokning på webbplatsen.</p></div>
             <div><p className="mb-1 text-[11px] text-gray-500">Liten text · 12 px · 500</p><p className="text-[12px] font-medium text-gray-500">Uppdaterad för 3 minuter sedan</p></div>

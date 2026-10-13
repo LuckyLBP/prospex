@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search } from "@/components/brand/icons";
 
 type Filter = { key: string; label: string; value: string | undefined; options: { value: string; label: string }[] };
 

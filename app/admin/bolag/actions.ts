@@ -63,7 +63,7 @@ export async function toggleOrgAction(f: FormData) {
 export async function toggleProfileAccessAction(f: FormData) {
   const a = await requireAdmin();
   const on = f.get("on") === "1";
-  await onOrg(f, on ? "Företagsprofil är öppnad för bolaget." : "Företagsprofil är stängd för bolaget.", async (o) => {
+  await onOrg(f, on ? "Spaning är öppnad för bolaget." : "Spaning är stängd för bolaget.", async (o) => {
     await setProfileAccess(o.id, on);
     await audit(a.user, on ? "org.profile_access_on" : "org.profile_access_off", "org", { id: o.slug, name: o.name });
   });

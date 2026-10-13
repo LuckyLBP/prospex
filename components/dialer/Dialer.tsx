@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, ChevronLeft, ClipboardCheck, PartyPopper, Undo2, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, ChevronLeft, ClipboardCheck, PartyPopper, Undo2, X } from "@/components/brand/icons";
 import CompanyPanel from "./CompanyPanel";
 import CallPanel from "./CallPanel";
 import { canSaveForm, EMPTY_FORM as EMPTY, menuChoice, withOutcome, type CallFormState } from "@/lib/dialer/outcome-form";
@@ -10,6 +10,7 @@ import QueueBar from "./QueueBar";
 import ShortcutsDialog from "./ShortcutsDialog";
 import RegistryDialog from "./RegistryDialog";
 import FilterSheet from "./FilterSheet";
+import Sheet from "./Sheet";
 import OutcomeMenu from "./OutcomeMenu";
 import type { DialerInit } from "./types";
 import type { DialerCard } from "@/lib/dialer/card-types";
@@ -19,6 +20,8 @@ import { keyAction, type KeyInput } from "@/lib/dialer/keys";
 import { missingIds } from "@/lib/dialer/window";
 import { outcomeInfo, outcomeLabel, type CallOutcome } from "@/lib/calls/outcomes";
 import { addNote, saveCall, undoCallAction } from "@/app/app/actions";
+import { finishListAction, saveListPositionAction } from "@/app/app/ring/actions";
+import { templateLabel } from "@/lib/dialer/scope";
 
 
 type Toast =
@@ -67,6 +70,8 @@ export default function Dialer({ init }: { init: DialerInit }) {
   // Utkast till anteckning, ett per företag, så att inget går förlorat när man hoppar fram och tillbaka.
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
+  /** Väntar på bekräftelse: en ny lista ersätter den pågående. */
+  const [confirmReplace, setConfirmReplace] = useState<null | (() => void)>(null);
   /** Gränsen för hur många företag som släpps är nådd. Visas i stället för kortet. */
   const [limitMsg, setLimitMsg] = useState<string | null>(init.limit);
   const [session, setSession] = useState({ calls: 0, meetings: 0 });
@@ -86,7 +91,6 @@ export default function Dialer({ init }: { init: DialerInit }) {
   const setDraft = useCallback((id: string, v: string) => setDrafts((d) => ({ ...d, [id]: v })), []);
 
   const canSave = !!card && canSaveForm(form);
-  const here = dialerHref(init.scope);
 
   const say = useCallback((kind: "info" | "error", text: string) => setToast({ key: ++toastSeq.current, kind, text }), []);
 
@@ -248,7 +252,33 @@ export default function Dialer({ init }: { init: DialerInit }) {
     if (window.history.length > 1) router.back(); else router.push("/app/ring");
   }, [router]);
 
-  const refreshQueue = useCallback(() => { setRefreshing(true); router.refresh(); }, [router]);
+  // Ett nytt urval eller en ny lista ersätter den pågående. Mitt i en lista frågar vi först.
+  const midList = !!init.list && !done && init.list.offset + index > 0;
+  const askReplace = useCallback((go: () => void) => { if (midList) setConfirmReplace(() => go); else go(); }, [midList]);
+  const newList = useCallback(() => askReplace(() => { setRefreshing(true); router.push(dialerHref(init.scope, [], { ny: true })); }), [askReplace, router, init.scope]);
+  const refreshQueue = init.list ? newList : () => { setRefreshing(true); router.refresh(); };
+
+  // Var i listan man är sparas, så att man kan fortsätta där senare, även på en annan enhet.
+  useEffect(() => {
+    if (!init.list || init.single || !currentId || done) return;
+    const t = setTimeout(() => { void saveListPositionAction(currentId).catch(() => {}); }, 600);
+    return () => clearTimeout(t);
+  }, [currentId, init.list, init.single, done]);
+
+  // Listan är slut: markeras klar, så att nästa besök bygger en ny.
+  const finishedSent = useRef(false);
+  useEffect(() => {
+    if (done && init.list && !init.single && !finishedSent.current) { finishedSent.current = true; void finishListAction().catch(() => {}); }
+  }, [done, init.list, init.single]);
+
+  // En fortsatt lista säger det en gång.
+  const resumeToldRef = useRef(false);
+  useEffect(() => {
+    if (!init.list?.resumed || resumeToldRef.current) return;
+    resumeToldRef.current = true;
+    say("info", `Du fortsätter där du var (${Math.min(init.list.offset + init.startIndex + 1, init.list.total)} av ${init.list.total}).`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // En global tangentlyssnare. Själva reglerna ligger i lib/dialer/keys.ts och är testade.
   useEffect(() => {
@@ -285,13 +315,14 @@ export default function Dialer({ init }: { init: DialerInit }) {
   const warning = claimWarning(claim);
   const callsToday = init.stats.callsToday + session.calls;
   const left = Math.max(0, ids.length - index);
+  const progress = init.list ? { done: Math.min(init.list.offset + index, init.list.total), total: init.list.total } : null;
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3">
       {init.single ? (
         <button type="button" onClick={goBack} className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white px-4 py-2.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50"><ArrowLeft size={15} />Tillbaka</button>
       ) : (
-        <QueueBar init={init} callsToday={callsToday} left={left} onHelp={() => setHelp(true)} onRefresh={refreshQueue} refreshing={refreshing} onFilters={() => setFiltersOpen(true)} />
+        <QueueBar init={init} progress={progress} callsToday={callsToday} left={left} onHelp={() => setHelp(true)} onRefresh={refreshQueue} refreshing={refreshing} onFilters={() => setFiltersOpen(true)} />
       )}
 
       {done && init.single ? (
@@ -306,17 +337,29 @@ export default function Dialer({ init }: { init: DialerInit }) {
       ) : done ? (
         <div className="flex flex-col items-center justify-center rounded-3xl bg-white px-6 py-16 text-center">
           <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-tint text-accent"><PartyPopper size={26} /></span>
-          <h2 className="text-[22px] font-semibold text-ink">{ids.length === 0 ? "Kön är tom" : "Kön är slut"}</h2>
+          <h2 className="text-[22px] font-semibold text-ink">{ids.length === 0 ? "Inga företag att ringa" : init.list ? "Listan är klar" : "Kön är slut"}</h2>
           <p className="mt-2 max-w-md text-[14px] text-gray-600">
             {session.calls > 0
               ? `Du ringde ${session.calls} samtal${session.meetings > 0 ? ` och bokade ${session.meetings} möte${session.meetings === 1 ? "" : "n"}` : ""} den här omgången. Bra jobbat.`
-              : init.scope.mode === "callbacks" ? "Du har inga återringningar för i dag." : "Det finns inga fler företag med telefonnummer som matchar filtret och som inte redan är ringda eller omhändertagna."}
+              : init.scope.mode === "callbacks" ? "Du har inga återringningar för i dag." : ids.length > 0 ? "Du har gått igenom hela listan." : "Det finns inga företag med telefonnummer som matchar urvalet och som inte redan är ringda eller omhändertagna."}
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button onClick={refreshQueue} className="rounded-full bg-ink px-5 py-3 text-[14px] font-semibold text-white">Uppdatera kön</button>
-            <button onClick={() => setFiltersOpen(true)} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Ändra filter</button>
-            {index > 0 && <button onClick={() => go(index - 1, "back")} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Gå tillbaka</button>}
-          </div>
+          {init.list ? (
+            <>
+              <p className="mt-4 text-[14px] font-medium text-ink">Vill du ha en ny lista?</p>
+              <div className="mt-3 flex w-full max-w-sm flex-col gap-2">
+                <button onClick={newList} className="h-12 rounded-full bg-ink px-5 text-[15px] font-semibold text-white">Ny lista: {templateLabel(init.scope.template)}</button>
+                <button onClick={() => setFiltersOpen(true)} className="h-12 rounded-full border border-gray-300 px-5 text-[15px] font-semibold text-gray-800">Välj en annan mall</button>
+                <button onClick={() => router.push("/app")} className="h-12 rounded-full px-5 text-[15px] font-medium text-gray-600 hover:text-ink">Klar för idag</button>
+              </div>
+              {index > 0 && <button onClick={() => go(index - 1, "back")} className="mt-3 text-[13px] text-gray-500 underline underline-offset-4">Gå tillbaka</button>}
+            </>
+          ) : (
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <button onClick={refreshQueue} className="rounded-full bg-ink px-5 py-3 text-[14px] font-semibold text-white">Uppdatera kön</button>
+              <button onClick={() => setFiltersOpen(true)} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Ändra filter</button>
+              {index > 0 && <button onClick={() => go(index - 1, "back")} className="rounded-full border border-gray-300 px-5 py-3 text-[14px] font-semibold">Gå tillbaka</button>}
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-3xl bg-white p-5 sm:p-7">
@@ -375,7 +418,16 @@ export default function Dialer({ init }: { init: DialerInit }) {
         </div>
       )}
 
-      {filtersOpen && <FilterSheet init={init} here={here} onClose={() => setFiltersOpen(false)} />}
+      {filtersOpen && <FilterSheet init={init} onClose={() => setFiltersOpen(false)} onReplace={askReplace} />}
+      {confirmReplace && (
+        <Sheet title="Byta lista?" onClose={() => setConfirmReplace(null)}>
+          <p className="text-[14px] leading-relaxed text-gray-700">Du är på {progress?.done} av {progress?.total} i listan. En ny lista ersätter den, och du hamnar överst i den nya.</p>
+          <div className="mt-5 flex gap-2">
+            <button onClick={() => { const go = confirmReplace; setConfirmReplace(null); go(); }} className="h-12 flex-1 rounded-full bg-ink px-5 text-[15px] font-semibold text-white">Byt lista</button>
+            <button onClick={() => setConfirmReplace(null)} className="h-12 rounded-full border border-gray-300 px-5 text-[15px] font-semibold text-gray-800">Behåll</button>
+          </div>
+        </Sheet>
+      )}
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       {registryOpen && card && <RegistryDialog companyId={card.id} name={card.name} onClose={() => setRegistryOpen(false)} onOrgnrSaved={() => refreshCard(card.id)} />}
     </div>

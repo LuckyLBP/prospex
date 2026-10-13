@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { ArrowUpRight, CalendarDays, PhoneCall } from "lucide-react";
+import { ArrowUpRight, CalendarDays, PhoneCall } from "@/components/brand/icons";
 import Header from "@/components/dashboard/Header";
 import SupplierLogo from "@/components/ui/SupplierLogo";
-import { requireMember } from "@/lib/auth";
+import SpaningWidget from "@/components/dashboard/SpaningWidget";
+import { orgHasProfileAccess, requireMember } from "@/lib/auth";
+import { orgProfiles, sweepDeadProfiles } from "@/lib/profile/store";
 import { getStats, getSuppliers } from "@/lib/queries";
 import { homeStats, myCallStats, upcomingEvents } from "@/lib/workflow";
 import { kindMeta } from "@/lib/status";
@@ -15,6 +17,10 @@ export default async function StartPage() {
   const [me, week, events, cat, suppliers] = await Promise.all([
     homeStats(m.org.id, m.user.id), myCallStats(m.org.id, m.user.id), upcomingEvents(m.user.id, 5), getStats(), getSuppliers(),
   ]);
+  // Spaning visas bara för bolag som en admin öppnat den för.
+  const hasSpaning = await orgHasProfileAccess(m.org.id).catch(() => false);
+  if (hasSpaning) await sweepDeadProfiles();
+  const recentSpaningar = hasSpaning ? await orgProfiles(m.org.id, 4).catch(() => []) : [];
   const date = new Intl.DateTimeFormat("sv-SE", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const top = suppliers.slice(0, 6);
   const max = top[0]?.n ?? 1;
@@ -119,6 +125,8 @@ export default async function StartPage() {
             </span>
             <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink transition-transform group-hover:rotate-45"><ArrowUpRight size={18} /></span>
           </Link>
+
+          {hasSpaning && <SpaningWidget recent={recentSpaningar} />}
 
           <div className="rounded-3xl bg-white p-6">
             <h2 className="mb-2 flex items-center gap-2 text-[18px] font-semibold text-ink"><CalendarDays size={18} /> Synka kalendern</h2>

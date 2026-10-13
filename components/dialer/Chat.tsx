@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp } from "@/components/brand/icons";
 import OutcomePill from "@/components/dashboard/OutcomePill";
 import { buildTimeline } from "@/lib/dialer/timeline";
 import type { DialerCard } from "@/lib/dialer/card-types";

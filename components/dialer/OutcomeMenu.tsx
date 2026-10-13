@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SkipForward } from "lucide-react";
+import { SkipForward } from "@/components/brand/icons";
 import { OUTCOMES, OUTCOME_GROUPS, type CallOutcome } from "@/lib/calls/outcomes";
 
 const DOT: Record<string, string> = {

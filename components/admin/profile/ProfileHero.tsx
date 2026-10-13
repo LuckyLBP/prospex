@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, Globe, MapPin } from "lucide-react";
+import { Building2, CalendarDays, Globe, MapPin } from "@/components/brand/icons";
 import { StatusPill } from "@/components/admin/bits";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import type { CompanyProfile } from "@/lib/profile/types";

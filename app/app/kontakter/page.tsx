@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search } from "@/components/brand/icons";
 import Header from "@/components/dashboard/Header";
 import OutcomePill from "@/components/dashboard/OutcomePill";
 import { requireMember } from "@/lib/auth";

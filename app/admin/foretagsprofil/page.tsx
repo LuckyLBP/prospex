@@ -1,4 +1,4 @@
-import { ChevronDown, History } from "lucide-react";
+import { ChevronDown, History } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import DataTable, { type Column } from "@/components/admin/DataTable";
 import { EmptyState, Flash, StatusPill } from "@/components/admin/bits";
@@ -40,7 +40,7 @@ export default async function ProfilesPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <RunPoller active={running} />
-      <PageHeader title="Företagsprofil" />
+      <PageHeader title="Spaning" />
       <ProfileSearch />
       <Flash ok={sp.ok} error={sp.error} />
       {notices.length > 0 && <ul className="mx-auto mb-8 max-w-[720px] text-center text-[12px] text-amber-700">{notices.map((n) => <li key={n} className="py-0.5">{n}</li>)}</ul>}
@@ -48,7 +48,7 @@ export default async function ProfilesPage({ searchParams }: { searchParams: Pro
       <details open={running || undefined} className="group mx-auto w-full max-w-[1100px]">
         <summary className="mx-auto mb-4 flex w-fit cursor-pointer list-none items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-medium text-gray-600 transition-colors hover:text-ink [&::-webkit-details-marker]:hidden">
           <History size={15} className="text-gray-400" />
-          Tidigare profiler ({rows.length})
+          Tidigare spaningar ({rows.length})
           {running && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-label="Pågår" />}
           <ChevronDown size={15} className="text-gray-400 transition-transform group-open:rotate-180" />
         </summary>

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { Bell, ChevronDown, Plus } from "lucide-react";
+import { Bell, Plus } from "@/components/brand/icons";
+import UserMenu from "./UserMenu";
+import { signAvatarUrls } from "@/lib/storage-avatars";
 import { getAccess } from "@/lib/auth";
 import { dueCallbacks } from "@/lib/workflow";
 import SearchBox from "./SearchBox";
@@ -7,6 +9,7 @@ import SearchBox from "./SearchBox";
 export default async function Header({ title, subtitle, icon }: { title: string; subtitle: string; icon?: React.ReactNode }) {
   const a = await getAccess();
   const due = a.org ? (await dueCallbacks(a.org.id, a.user.id, 8)).length : 0;
+  const avatarUrl = a.user.avatarPath ? ((await signAvatarUrls([a.user.avatarPath])).get(a.user.avatarPath) ?? null) : null;
   return (
     <div className="mb-6 flex items-start justify-between gap-4">
       <div className="flex min-w-0 items-center gap-4">
@@ -29,10 +32,7 @@ export default async function Header({ title, subtitle, icon }: { title: string;
             {due > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-ink">{due}</span>}
           </Link>
         )}
-        <div title={a.user.email} className="flex items-center gap-2 rounded-full bg-white py-1.5 pl-1.5 pr-3 text-[14px] font-medium">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-tint text-[13px] font-semibold text-accent-text">{a.user.name.charAt(0)}</span>
-          {a.user.name} <ChevronDown size={15} />
-        </div>
+        <UserMenu name={a.user.name} email={a.user.email} avatarUrl={avatarUrl} orgName={a.org?.name ?? null} role={a.role} isOwner={a.role === "owner" || a.isAdmin} />
       </div>
     </div>
   );

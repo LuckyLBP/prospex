@@ -36,7 +36,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ id: st
           ids: [id],
           startIndex: 0,
           cards,
-          scope: { profileSlug: null, mode: "mine", outdatedOnly: parseOutdatedOnly(undefined) },
+          scope: { sources: [], mode: "mine", outdatedOnly: parseOutdatedOnly(undefined) },
           order: await getQueueOrder(m.user.id),
           suppliers: [],
           stats: { callsToday: 0 },

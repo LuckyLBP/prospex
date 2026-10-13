@@ -2,7 +2,7 @@
 
 import { Logo } from "@/components/brand/Logo";
 import { useState } from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "@/components/brand/icons";
 import { Shader, ChromaFlow, FilmGrain, FlutedGlass, Swirl } from "shaders/react";
 import RollButton from "./RollButton";
 import { TOTAL_COMPANIES, VERIFIED } from "@/lib/mock";

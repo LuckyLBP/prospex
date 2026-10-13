@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@/components/brand/icons";
 import PageHeader from "@/components/admin/PageHeader";
 import ConfirmButton from "@/components/admin/ConfirmButton";
 import { Field, FormSection, Input } from "@/components/admin/FormSection";
@@ -76,11 +76,11 @@ export default async function OrgDetailPage({ params, searchParams }: { params: 
           )}
         </FormSection>
 
-        <FormSection title="Företagsprofil" description="Låter bolagets medlemmar söka upp företag och bygga profiler själva, utan gräns. De ser profilen men inte hur vi hittat källorna, och bara de profiler bolaget själv skapat. Varje bygge kostar några kronor.">
+        <FormSection title="Spaning" description="Låter bolagets medlemmar spana på företag själva, utan gräns. De ser profilen men inte hur vi hittat källorna, och bara de profiler bolaget själv skapat. Varje bygge kostar några kronor.">
           <form action={toggleProfileAccessAction} className="flex items-center gap-3">
             <input type="hidden" name="org_id" value={org.id} /><input type="hidden" name="on" value={org.profile_access ? "0" : "1"} />
             <StatusPill tone={org.profile_access ? "green" : "gray"}>{org.profile_access ? "Öppen" : "Stängd"}</StatusPill>
-            {org.profile_access ? <ConfirmButton label="Stäng" confirmLabel="Ja, stäng" message="Stänga Företagsprofil för bolaget?" /> : <button className={btnPrimary}>Öppna för bolaget</button>}
+            {org.profile_access ? <ConfirmButton label="Stäng" confirmLabel="Ja, stäng" message="Stänga Spaning för bolaget?" /> : <button className={btnPrimary}>Öppna för bolaget</button>}
           </form>
         </FormSection>
 

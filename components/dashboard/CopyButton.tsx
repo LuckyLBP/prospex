@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@/components/brand/icons";
 
 export default function CopyButton({ text, label = "Kopiera länk" }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);

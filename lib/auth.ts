@@ -5,7 +5,7 @@ import { createClient } from "./supabase/server";
 import { pool } from "./db";
 
 export type Role = "owner" | "member";
-export type User = { id: string; email: string; name: string };
+export type User = { id: string; email: string; name: string; avatarPath?: string | null };
 export type Org = { id: string; name: string; slug: string };
 export type Access = { user: User; org: Org | null; role: Role | null; isAdmin: boolean };
 
@@ -49,12 +49,12 @@ async function loadAccess(user: User): Promise<Access> {
     `insert into profiles (user_id, email, is_platform_admin) values ($1,$2,$3)
      on conflict (user_id) do update set email = excluded.email,
        is_platform_admin = profiles.is_platform_admin or excluded.is_platform_admin
-     returning is_platform_admin, active, full_name`,
+     returning is_platform_admin, active, full_name, avatar_path`,
     [user.id, email, boot],
   );
-  const profile = pr[0] as { is_platform_admin: boolean; active: boolean; full_name: string | null };
+  const profile = pr[0] as { is_platform_admin: boolean; active: boolean; full_name: string | null; avatar_path: string | null };
   if (!profile.active) return { user, org: null, role: null, isAdmin: false };
-  const named = profile.full_name ? { ...user, name: profile.full_name } : user;
+  const named = { ...user, name: profile.full_name || user.name, avatarPath: profile.avatar_path };
 
   const lookup = async () =>
     (await pool.query(

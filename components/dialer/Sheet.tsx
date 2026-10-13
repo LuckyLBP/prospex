@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/brand/icons";
 
 /**
  * Ett blad från botten på telefon och en centrerad ruta på större skärmar. Används för utfallet, filtren och

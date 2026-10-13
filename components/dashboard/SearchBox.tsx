@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search } from "@/components/brand/icons";
 
 type Result = { id: string; name: string | null; city: string | null; suppliers: string | null };
 

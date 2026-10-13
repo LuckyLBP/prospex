@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RotateCw } from "lucide-react";
-import { ChevronLeft } from "lucide-react";
+import { RotateCw } from "@/components/brand/icons";
+import { ChevronLeft } from "@/components/brand/icons";
 import ProfileView from "@/components/admin/profile/ProfileView";
 import RunPoller from "@/components/admin/RunPoller";
 import { Flash, StatusPill } from "@/components/admin/bits";
@@ -55,7 +55,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   return (
     <>
       <RunPoller active={active} />
-      <Link href="/admin/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Företagsprofil</Link>
+      <Link href="/admin/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Spaning</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
 

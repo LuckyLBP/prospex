@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, ArchiveRestore, ArrowUpRight, PhoneCall } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowUpRight, PhoneCall } from "@/components/brand/icons";
 import OutcomePill from "./OutcomePill";
 import SupplierFilter from "./SupplierFilter";
 import SupplierLogo from "@/components/ui/SupplierLogo";

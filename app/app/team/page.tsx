@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus } from "@/components/brand/icons";
 import Header from "@/components/dashboard/Header";
 import { requireOwner } from "@/lib/auth";
 import { listInvites, listMembers } from "@/lib/orgs";
+import Avatar from "@/components/account/Avatar";
+import { signAvatarUrls } from "@/lib/storage-avatars";
 import { teamStats } from "@/lib/workflow";
 import { formatRate, parseTeamPeriod, TEAM_PERIODS } from "@/lib/calls/team";
 import { formatDateTime } from "@/lib/time";
@@ -13,6 +15,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   const sp = await searchParams;
   const days = parseTeamPeriod(sp.days);
   const [members, invites, { stats, suppliers }] = await Promise.all([listMembers(m.org.id), listInvites(m.org.id), teamStats(m.org.id, days)]);
+  const avatars = await signAvatarUrls(members.map((u) => u.avatar_path ?? ""));
   const field = "rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
   const th = "px-5 py-3 font-medium";
 
@@ -87,7 +90,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <tbody>
             {members.map((u) => (
               <tr key={u.user_id} className="border-t border-gray-50">
-                <td className="py-2.5 font-medium text-ink">{u.email}{u.user_id === m.user.id && <span className="ml-2 text-[12px] text-gray-400">(du)</span>}</td>
+                <td className="py-2.5 font-medium text-ink"><span className="flex items-center gap-3"><Avatar name={u.full_name ?? u.email} url={u.avatar_path ? avatars.get(u.avatar_path) : null} size={32} /><span className="min-w-0">{u.full_name && <span className="block truncate">{u.full_name}</span>}<span className={`block truncate ${u.full_name ? "text-[12px] font-normal text-gray-500" : ""}`}>{u.email}{u.user_id === m.user.id && <span className="ml-2 text-[12px] text-gray-400">(du)</span>}</span></span></span></td>
                 <td className="py-2.5">
                   <form action={roleAction} className="flex items-center gap-2">
                     <input type="hidden" name="user_id" value={u.user_id} />

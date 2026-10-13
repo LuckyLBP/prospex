@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/brand/icons";
 import Link from "next/link";
 import PageHeader from "@/components/admin/PageHeader";
 import FilterBar from "@/components/admin/FilterBar";

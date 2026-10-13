@@ -1,5 +1,5 @@
 import { Logo } from "@/components/brand/Logo";
-import { KeyRound, Mail } from "lucide-react";
+import { KeyRound, Mail } from "@/components/brand/icons";
 import CodeInput from "@/components/CodeInput";
 import { sendCode, verifyCode } from "./actions";
 
@@ -67,6 +67,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </form>
         )}
       </div>
+      <p className="fixed inset-x-0 bottom-4 text-center text-[11px] text-white/40">Ikoner: <a href="https://www.figma.com/community/file/1166831539721848736" target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-white/70">Solar</a> av 480 Design, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-4 hover:text-white/70">CC BY 4.0</a></p>
     </main>
   );
 }

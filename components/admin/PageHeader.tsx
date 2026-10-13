@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "@/components/brand/icons";
 
 /** Sidhuvud för en adminsida: valfri tillbaka-länk, titel, undertext och åtgärder till höger. */
 export default function PageHeader({ title, subtitle, back, actions, icon }: {

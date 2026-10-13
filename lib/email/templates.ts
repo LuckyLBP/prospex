@@ -14,7 +14,7 @@ export type Email = { subject: string; html: string; text: string };
 export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function shell(preheader: string, inner: string): string {
+function shell(preheader: string, inner: string, footer = "Du fick det här mejlet för att någon angav din adress hos Prospex. Känner du inte igen det kan du ignorera det."): string {
   return `<!doctype html>
 <html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prospex</title></head>
 <body style="margin:0;background:${CANVAS};font-family:'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:${INK};">
@@ -23,7 +23,7 @@ function shell(preheader: string, inner: string): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
     <tr><td style="padding:0 0 20px;"><img src="${logoUrl()}" width="150" alt="Prospex" style="display:block;border:0;outline:none;height:auto;font-weight:700;font-size:20px;color:${INK};"></td></tr>
     <tr><td style="background:#fff;border-radius:24px;padding:32px;">${inner}</td></tr>
-    <tr><td style="padding:20px 8px 0;font-size:12px;line-height:1.6;color:${MUTED};">Du fick det här mejlet för att någon angav din adress hos Prospex. Känner du inte igen det kan du ignorera det.</td></tr>
+    <tr><td style="padding:20px 8px 0;font-size:12px;line-height:1.6;color:${MUTED};">${footer}</td></tr>
   </table>
 </td></tr></table></body></html>`;
 }
@@ -61,3 +61,33 @@ export function invitationEmail(o: { orgName: string; role: "owner" | "member"; 
     text: `${o.inviter ? `${o.inviter} har bjudit in dig` : "Du har blivit inbjuden"} till ${o.orgName} i Prospex ${roleText}.\n\nLogga in med den här e-postadressen så får du en kod: ${o.loginUrl}`,
   };
 }
+
+export interface ReminderItem {
+  name: string;
+  /** "Kl 14:30" när återringningen har en tid, annars null. */
+  when: string | null;
+  phone: string | null;
+}
+
+/** Morgonmejlet med dagens återringningar. `test`: ett testmejl från inställningarna. */
+export function callbackReminderEmail(o: { name: string; total: number; items: ReminderItem[]; url: string; settingsUrl: string; test?: boolean }): Email {
+  const n = o.total;
+  const word = n === 1 ? "återringning" : "återringningar";
+  const headline = n === 0 ? "Inga återringningar idag" : `${n} ${word} idag`;
+  const subject = `${o.test ? "Testmejl: " : ""}${n === 0 ? "Inga återringningar idag" : `Du har ${n} ${word} idag`}`;
+  const rows = o.items
+    .map((i) => `<tr><td style="padding:9px 0;border-bottom:1px solid #E7E5DF;font-size:14px;color:${INK};"><strong>${escapeHtml(i.name)}</strong>${i.when ? ` <span style="color:${MUTED};">· ${escapeHtml(i.when)}</span>` : ""}${i.phone ? `<br><span style="color:${MUTED};font-size:13px;">${escapeHtml(i.phone)}</span>` : ""}</td></tr>`)
+    .join("");
+  const more = n > o.items.length ? `<p style="margin:12px 0 0;font-size:13px;color:${MUTED};">och ${n - o.items.length} till.</p>` : "";
+  const html = shell(
+    headline,
+    `<h1 style="margin:0 0 8px;font-size:22px;letter-spacing:-0.02em;">${o.test ? "Så här ser påminnelsen ut" : `God morgon, ${escapeHtml(o.name)}`}</h1>
+       <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:${BODY};">${n === 0 ? "Du har inga återringningar att ringa idag." : `Du har ${n} ${word} att ringa idag.`}</p>
+       ${rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 4px;">${rows}</table>${more}` : ""}
+       <a href="${escapeHtml(o.url)}" style="display:inline-block;margin-top:22px;background:${INK};color:#fff;text-decoration:none;font-weight:600;font-size:14px;border-radius:999px;padding:13px 26px;">Öppna återringningar</a>`,
+    `Du får det här mejlet för att du slagit på påminnelser i Prospex. <a href="${escapeHtml(o.settingsUrl)}" style="color:${MUTED};">Stäng av dem i inställningarna</a>.`,
+  );
+  const text = `${o.test ? "Testmejl. " : ""}${headline}\n\n${o.items.map((i) => `- ${i.name}${i.when ? ` (${i.when})` : ""}${i.phone ? `, ${i.phone}` : ""}`).join("\n")}${n > o.items.length ? `\n- och ${n - o.items.length} till` : ""}\n\nÖppna återringningar: ${o.url}\n\nStäng av påminnelserna: ${o.settingsUrl}`;
+  return { subject, html, text };
+}
+

@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { X } from "lucide-react";
+import { X } from "@/components/brand/icons";
 import { OUTCOMES, type CallOutcome } from "@/lib/calls/outcomes";
 import { quickCallbackDates } from "@/lib/dialer/quickdates";
 import type { CallFormState } from "@/lib/dialer/outcome-form";
