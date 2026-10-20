@@ -2,7 +2,7 @@ import { auditSite } from "@/lib/enrich/audit";
 import { isInterstitial, toText } from "@/lib/enrich/extract";
 import { findCreator } from "@/lib/profile/creator";
 import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
-import { agencyFingerprint, anchorNamesAgency, creatorMatchesAgency, footerLinksTo, footerTextCredit, isSameOrSubdomain, pageMentionsDomain, type Agency } from "./match";
+import { agencyFingerprint, anchorNamesAgency, contactsAgency, creatorMatchesAgency, footerLinksTo, footerTextCredit, isSameOrSubdomain, pageMentionsDomain, type Agency } from "./match";
 
 // Kontrollen som gör att ingen kund läggs in på någon annans ord: kandidatens EGEN sida hämtas, och byrån måste synas
 // där. Det gäller oavsett om kandidaten kom från bakåtlänkar, PublicWWW, ViewDNS, vår katalog eller Claude.
@@ -11,12 +11,13 @@ import { agencyFingerprint, anchorNamesAgency, creatorMatchesAgency, footerLinks
 //   credit       kreditraden ("Skapad av ...") pekar ut byrån med länk, på domän eller kärnnamn
 //   text-credit  kreditraden finns men utan länk: "Byggd med ♥ av Capace Media"
 //   footer-link  sidfoten länkar till byråns domän utan någon kreditfras
+//   contact      sidan länkar till en e-postadress hos byrån (mailto:offert@byran.se): byrån tar emot sidans förfrågningar
 //   fingerprint  inget synligt, men koden bär byråns namn: generator-tagg, tema eller resurser från byråns domän
 //   portfolio    byråns EGEN sida (som vi hämtat själva, inte Claudes referat) listar kunden, och kundens sida visar
 //                inte en annan byrå
 //   backlink     kundens sida släpper inte in oss, men en bakåtlänk med en tydlig kredittext pekar ut den. Svagast.
 
-export type Confidence = "credit" | "text-credit" | "footer-link" | "fingerprint" | "portfolio" | "backlink";
+export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "portfolio" | "backlink";
 
 export type Verdict =
   | { accepted: true; confidence: Confidence; evidenceUrl: string; evidence: string }
@@ -52,6 +53,8 @@ function checkPage(html: string, finalUrl: string, domain: string, agency: Agenc
   const text = footerTextCredit(html, agency);
   if (text) return { verdict: { accepted: true, confidence: "text-credit", evidenceUrl: finalUrl, evidence: `Sidfoten: ${text}` } };
   if (footerLinksTo(html, agency.domain)) return { verdict: { accepted: true, confidence: "footer-link", evidenceUrl: finalUrl, evidence: `Sidfoten länkar till ${agency.domain}` } };
+  const mail = contactsAgency(html, agency.domain);
+  if (mail) return { verdict: { accepted: true, confidence: "contact", evidenceUrl: finalUrl, evidence: `Sidan länkar till e-postadressen ${mail}` } };
   const print = agencyFingerprint(html, agency);
   if (print) return { verdict: { accepted: true, confidence: "fingerprint", evidenceUrl: finalUrl, evidence: print } };
   // Visar sidan en annan byrå är byråns portfölj fel eller föråldrad.

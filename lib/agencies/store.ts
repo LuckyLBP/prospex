@@ -183,6 +183,27 @@ export async function existingCustomerDomains(supplierId: string): Promise<strin
   return rows.map((r) => r.domain as string);
 }
 
+/** Antal kunder per server som har ett hårt belägg (kredit eller e-post hos byrån). Två sådana gör servern till byråns. */
+export async function provenServers(supplierId: string): Promise<Map<string, number>> {
+  const { rows } = await pool.query(
+    `select cs.raw->>'server' as ip, count(*)::int as n from company_signals cs
+     where cs.supplier_id = $1 and cs.raw->>'server' is not null and cs.raw->>'confidence' in ('credit', 'text-credit', 'contact')
+     group by 1`,
+    [supplierId],
+  );
+  return new Map(rows.map((r) => [r.ip as string, r.n as number]));
+}
+
+/** Kunder som bara har "samma server" som belägg, med servern. De kontrolleras om mot servern, inte mot sin sidfot. */
+export async function serverCustomers(supplierId: string): Promise<{ domain: string; ip: string }[]> {
+  const { rows } = await pool.query(
+    `select c.domain, cs.raw->>'server' as ip from company_signals cs join companies c on c.id = cs.company_id
+     where cs.supplier_id = $1 and c.domain is not null and cs.raw->>'confidence' = 'same-server' and cs.raw->>'server' is not null`,
+    [supplierId],
+  );
+  return rows.map((r) => ({ domain: r.domain as string, ip: r.ip as string }));
+}
+
 /**
  * En kund som slutat visa byrån tas bort från den och noteras som tappad, eller som bytt byrå (`toName`). Företaget
  * i katalogen lämnas kvar. Görs bara om händelsen kan sparas, så att ingenting försvinner utan spår.

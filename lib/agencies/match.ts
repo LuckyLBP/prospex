@@ -53,6 +53,16 @@ export function footerLinksTo(html: string, agencyDomain: string): boolean {
   return false;
 }
 
+/** Länkar sidan till en e-postadress hos byrån (mailto:offert@byran.se)? Då styr byrån sidans förfrågningar, vilket en kund sällan har. */
+export function contactsAgency(html: string, agencyDomain: string): string | null {
+  for (const m of html.matchAll(/\bhref\s*=\s*["']mailto:([^"'?]+)/gi)) {
+    const address = decodeURIComponent(m[1]).trim().toLowerCase();
+    const host = address.split("@")[1];
+    if (host && isSameOrSubdomain(host, agencyDomain)) return address;
+  }
+  return null;
+}
+
 /** Byråns varumärkesord: första ordet i namnet och domänens första led, utan vaga branschord. "Capace Media Group" och capace.se ger "capace". */
 export function agencyBrands(agency: Agency): string[] {
   const first = agencyKey(agency.name).split(" ")[0] ?? "";

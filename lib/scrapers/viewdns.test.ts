@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { extractDomains, isComplete, totalPages } from "./viewdns";
+import { extractDomains, isComplete, parseIpHistory, totalPages } from "./viewdns";
 
 // The three endpoints answer in three shapes. Getting one wrong produces an
 // empty run rather than an error, so each shape is pinned here.
+
+describe("parseIpHistory", () => {
+  it("reads iphistory's records[], skipping rows without a plain IPv4 address", () => {
+    const body = { response: { records: [{ ip: "65.20.114.37", lastseen: "2026-10-20", owner: "AS-CHOOPA" }, { ip: "172.105.250.144", lastseen: "2025-03-24" }, { ip: "not-an-ip" }, { lastseen: "2020-01-01" }] } };
+    expect(parseIpHistory(body)).toEqual([{ ip: "65.20.114.37", lastSeen: "2026-10-20" }, { ip: "172.105.250.144", lastSeen: "2025-03-24" }]);
+    expect(parseIpHistory({})).toEqual([]);
+  });
+});
 
 describe("extractDomains", () => {
   it("reads reverseip's domains[].name", () => {

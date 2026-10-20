@@ -3,7 +3,7 @@ import { discoveryDone, finishDiscovery, newDiscovery, runDiscoveryStep, default
 import type { Agency } from "@/lib/agencies/match";
 import { afterRecheck, recentlyChecked } from "@/lib/agencies/recheck";
 import { spendLast24h, type Spend } from "@/lib/agencies/spend";
-import { existingCustomerDomains, loadChecked, markCustomerLost, recordChecked, rejectedDomains, type CheckedRow } from "@/lib/agencies/store";
+import { existingCustomerDomains, loadChecked, markCustomerLost, provenServers, recordChecked, rejectedDomains, serverCustomers, type CheckedRow } from "@/lib/agencies/store";
 import { verifyCandidate, type BacklinkHint, type PortfolioProof, type Verdict } from "@/lib/agencies/verify";
 import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
 import { agencyConfigSchema, type AgencyConfig } from "@/lib/sources/schema";
@@ -14,6 +14,8 @@ import { CollectorError, type CollectBatch, type CollectContext, type Collector,
 // behöver rymma allt:
 //
 //   discover   ett källsteg i taget (katalog, bakåtlänkar, byråns webbplats, PublicWWW, ViewDNS, Claude)
+//   server     efter kontrollen: en sajt som delar en liten server med minst två sajter som visar byrån (kredit eller e-post
+//              hos byrån) godkänns som "samma server". Gäller bara om den fortfarande ligger på servern.
 //   verify     kandidaterna kontrolleras i omgångar mot kundens EGEN sida. Bara de som visar byrån blir poster, med
 //              beviset bifogat. Redan kontrollerade domäner hoppas över, så att en stor byrå fylls på över flera körningar.
 //
@@ -22,6 +24,11 @@ import { CollectorError, type CollectBatch, type CollectContext, type Collector,
 
 /** Så många nya kandidater kontrolleras per körning. Resten väntar till nästa. */
 export const FRESH_BATCH = 600;
+/** En server med fler domäner än så här är delad drift, inte byråns egen. */
+export const SAME_SERVER_MAX_SIZE = 60;
+/** Så många sajter med hårt belägg ska ligga på servern för att den ska räknas som byråns. */
+export const SAME_SERVER_MIN_PROOF = 2;
+const HARD_PROOF = new Set(["credit", "text-credit", "contact"]);
 const VERIFY_CHUNK = 40;
 const VERIFY_CONCURRENCY = 8;
 /** Ett slumpat uppehåll före varje kontroll, så att tusen sajter inte får anrop i samma sekund. */
@@ -50,6 +57,12 @@ export interface AgencyDeps {
   record: (supplierId: string, rows: { domain: string; verdict: string; misses: number }[]) => Promise<void>;
   markLost: (supplierId: string, domain: string, kind: "lost" | "switched", toName: string | null) => Promise<boolean>;
   spend: () => Promise<Spend>;
+  /** Antal kunder med hårt belägg per server (IP), ur det som redan är sparat. */
+  proven: (supplierId: string) => Promise<Map<string, number>>;
+  /** Kunder som bara har "samma server" som belägg. */
+  serverCustomers: (supplierId: string) => Promise<{ domain: string; ip: string }[]>;
+  /** Pekar domänen fortfarande på servern? */
+  onServer: (domain: string, ip: string) => Promise<boolean>;
   now: () => number;
   pause: (ms: number) => Promise<void>;
 }
@@ -67,6 +80,15 @@ const defaultDeps = (): AgencyDeps => ({
   record: recordChecked,
   markLost: markCustomerLost,
   spend: spendLast24h,
+  proven: provenServers,
+  serverCustomers,
+  async onServer(domain, ip) {
+    try {
+      return (await (await import("node:dns/promises")).resolve4(domain)).includes(ip);
+    } catch {
+      return false;
+    }
+  },
   now: Date.now,
   pause: (ms) => new Promise((r) => setTimeout(r, ms)),
 });
@@ -131,7 +153,9 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
         const fresh = found.candidates.filter((c) => !known.has(c.domain) && !recentlyChecked(checkedBefore.get(c.domain), now));
         const recent = found.candidates.filter((c) => !known.has(c.domain)).length - fresh.length;
         const batch = fresh.slice(0, FRESH_BATCH);
-        const recheck: Candidate[] = [...known].map((domain) => ({ domain, via: "known", sourceUrl: null }));
+        // Kunder som bara har "samma server" som belägg kontrolleras mot servern i slutet, inte mot sin sidfot.
+        const onServerOnly = new Set((await deps.serverCustomers(supplierId)).map((s) => s.domain));
+        const recheck: Candidate[] = [...known].filter((d) => !onServerOnly.has(d)).map((domain) => ({ domain, via: "known", sourceUrl: null }));
         const queue = [...recheck, ...batch];
         const deferred = fresh.length - batch.length;
         ctx.log(`Byrå ${agency.name}: ${queue.length} att kontrollera (${recheck.length} befintliga kunder, ${batch.length} nya, ${recent} kontrollerade nyligen, ${deferred} väntar)`);
@@ -181,7 +205,7 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
               domain: c.domain,
               website: websiteUrl(c.domain),
               sourceUrl: verdict.evidenceUrl,
-              raw: { confidence: verdict.confidence, evidence: verdict.evidence, via: c.via, agency: agency.domain, ...(c.evidence?.quote ? { quote: c.evidence.quote } : {}), ...(c.hint ? { anchor: c.hint.anchor, urlFrom: c.hint.urlFrom } : {}) },
+              raw: { confidence: verdict.confidence, evidence: verdict.evidence, via: c.via, agency: agency.domain, ...(c.server ? { server: c.server.ip } : {}), ...(c.evidence?.quote ? { quote: c.evidence.quote } : {}), ...(c.hint ? { anchor: c.hint.anchor, urlFrom: c.hint.urlFrom } : {}) },
               prefilled: false,
             });
             continue;
@@ -195,6 +219,16 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
             rows.push({ domain: c.domain, verdict: verdict.reason, misses: 0 });
           }
         }
+        // Sista omgången: servrarna som visat sig vara byråns drar med sig de sajter som ligger kvar där utan eget belägg.
+        if (verify.index + chunk.length >= verify.queue.length) {
+          const extra = await sameServerPass(deps, supplierId, agency, verify.queue, items, verdicts);
+          items.push(...extra.items);
+          rows.push(...extra.rows);
+          stats.accepted += extra.items.length;
+          stats.lost += extra.lost;
+          // De som godkänndes som samma server räknades som "utan kredit" i kontrollen: flytta dem.
+          if (stats.rejected["no-credit"]) stats.rejected["no-credit"] = Math.max(0, stats.rejected["no-credit"] - extra.items.length);
+        }
         await deps.record(supplierId, rows);
 
         verify = { ...verify, index: verify.index + chunk.length, stats: mergeStats(verify.stats, stats) };
@@ -205,6 +239,55 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
       }
     },
   };
+}
+
+/** Vilka kandidater som ska godkännas som "samma server". Ren. */
+export function planSameServer(i: { queue: readonly Candidate[]; noCredit: ReadonlySet<string>; proven: ReadonlyMap<string, number> }): { domain: string; ip: string; proof: number; via: Candidate["via"] }[] {
+  const out: { domain: string; ip: string; proof: number; via: Candidate["via"] }[] = [];
+  for (const c of i.queue) {
+    if (!c.server || c.via === "known" || c.server.size > SAME_SERVER_MAX_SIZE || !i.noCredit.has(c.domain)) continue;
+    const proof = i.proven.get(c.server.ip) ?? 0;
+    if (proof >= SAME_SERVER_MIN_PROOF) out.push({ domain: c.domain, ip: c.server.ip, proof, via: c.via });
+  }
+  return out;
+}
+
+type Verdicts = { c: Candidate; verdict: Verdict }[];
+
+/** Godkänner sajter som delar byråns server, och tar bort tidigare "samma server"-kunder som lämnat servern eller vars server inte längre har belägg. */
+async function sameServerPass(deps: AgencyDeps, supplierId: string, agency: Agency, queue: readonly Candidate[], chunkItems: CollectBatch["items"], verdicts: Verdicts) {
+  const empty = { items: [] as CollectBatch["items"], rows: [] as { domain: string; verdict: string; misses: number }[], lost: 0 };
+  try {
+    const proven = new Map(await deps.proven(supplierId));
+    // Omgångens egna godkända är inte sparade än.
+    for (const it of chunkItems) {
+      const raw = it.raw as { server?: string; confidence?: string } | undefined;
+      if (raw?.server && raw.confidence && HARD_PROOF.has(raw.confidence)) proven.set(raw.server, (proven.get(raw.server) ?? 0) + 1);
+    }
+    const noCredit = new Set<string>();
+    for (const [domain, row] of await deps.checked(supplierId)) if (row.verdict === "no-credit") noCredit.add(domain);
+    for (const { c, verdict } of verdicts) if (!verdict.accepted && verdict.reason === "no-credit") noCredit.add(c.domain);
+
+    const out = { ...empty };
+    for (const p of planSameServer({ queue, noCredit, proven })) {
+      if (!(await deps.onServer(p.domain, p.ip))) continue;
+      out.items.push({
+        dedupeKey: p.domain, domain: p.domain, website: websiteUrl(p.domain), sourceUrl: websiteUrl(p.domain),
+        raw: { confidence: "same-server", evidence: `Ligger på samma server (${p.ip}) som ${p.proof} sajter som visar ${agency.name}`, via: p.via, agency: agency.domain, server: p.ip },
+        prefilled: false,
+      });
+      out.rows.push({ domain: p.domain, verdict: "accepted", misses: 0 });
+    }
+    for (const s of await deps.serverCustomers(supplierId)) {
+      if ((proven.get(s.ip) ?? 0) >= SAME_SERVER_MIN_PROOF && (await deps.onServer(s.domain, s.ip))) continue;
+      if (await deps.markLost(supplierId, s.domain, "lost", null)) out.lost++;
+    }
+    return out;
+  } catch (e) {
+    // Ett tillägg: ett fel här ändrar ingenting för de kunder som redan kontrollerats.
+    console.error("[byrå] samma server-steget misslyckades:", e instanceof Error ? e.message : e);
+    return empty;
+  }
 }
 
 function mergeStats(a: Stats, b: Stats): Stats {

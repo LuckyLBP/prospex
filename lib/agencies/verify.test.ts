@@ -17,6 +17,15 @@ describe("verifyCandidate", () => {
     const v = await verifyCandidate("kund.se", agency, deps(ok(withFooter(`<a href="https://conseo.se"><img src="l.png" alt=""></a>`))));
     expect(v).toMatchObject({ accepted: true, confidence: "footer-link" });
   });
+  it("accepts a page that sends its inquiries to a mailbox at the agency (leads.nu's own lead sites)", async () => {
+    const leads = { name: "Leads Sverige AB", domain: "leads.nu" };
+    const v = await verifyCandidate("stambyte-stockholm.nu", leads, deps(ok(`<html><body><main>Stambyte</main><a href="mailto:offert@leads.nu">Begär offert</a></body></html>`)));
+    expect(v).toMatchObject({ accepted: true, confidence: "contact", evidence: "Sidan länkar till e-postadressen offert@leads.nu" });
+  });
+  it("does not count a mailbox elsewhere, or the agency's name written as plain text", async () => {
+    const leads = { name: "Leads Sverige AB", domain: "leads.nu" };
+    expect(await verifyCandidate("kund.se", leads, deps(ok(`<html><body><a href="mailto:info@kund.se">Mejla</a><p>Kontakta offert@leads.nu</p></body></html>`)))).toEqual({ accepted: false, reason: "no-credit" });
+  });
   it("rejects a credit that names another agency, and a page with no credit", async () => {
     expect(await verifyCandidate("kund.se", agency, deps(ok(withFooter(`Skapad av <a href="https://infront.se">Infront Media</a>`))))).toEqual({ accepted: false, reason: "other-agency", to: "Infront Media" });
     expect(await verifyCandidate("kund.se", agency, deps(ok(withFooter("© Kund AB"))))).toEqual({ accepted: false, reason: "no-credit" });

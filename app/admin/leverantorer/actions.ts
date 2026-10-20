@@ -72,7 +72,7 @@ export async function profileAgencyAction(f: FormData) {
   redirect(`/admin/foretagsprofil/${id}`);
 }
 
-const TIERS = ["credit", "text-credit", "footer-link", "fingerprint", "portfolio", "backlink"];
+const TIERS = ["credit", "text-credit", "footer-link", "contact", "same-server", "fingerprint", "portfolio", "backlink"];
 
 /** Tar bort alla kunder med en viss bevisnivå, till exempel alla som bara har en bakåtlänk. Domänerna läggs inte tillbaka. */
 export async function removeCustomersByTierAction(f: FormData) {

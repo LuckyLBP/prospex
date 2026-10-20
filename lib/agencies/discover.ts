@@ -3,7 +3,7 @@ import { agencyKey } from "@/lib/profile/creator";
 import { classifyDns, lookupDns, type DnsRecords } from "@/lib/profile/dns";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { searchPublicwww } from "@/lib/scrapers/publicwww";
-import { reverseLookup } from "@/lib/scrapers/viewdns";
+import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -28,6 +28,14 @@ export interface Candidate {
   evidence?: { url: string; quote: string | null };
   /** Bakåtlänken som gav förslaget: sidan som länkar till byrån och länktexten. Verifieringen tittar på sidan. */
   hint?: { urlFrom: string; anchor: string | null };
+  /** Servern kandidaten delar med byrån (ett reverse IP-uppslag) och hur många domäner som ligger där. Ger inget belägg ensamt. */
+  server?: { ip: string; size: number };
+}
+
+/** Ett träffat domännamn från ViewDNS, med servern uppslaget gällde när det var ett reverse IP-uppslag. */
+export interface ViewdnsHit {
+  domain: string;
+  server: { ip: string; size: number } | null;
 }
 
 /** ViewDNS-svar större än så här är delad drift (ett webbhotell), inte byråns egna kunder, och kastas. */
@@ -53,6 +61,18 @@ export function chooseViewdnsLookups(rec: Pick<DnsRecords, "ns"> & { a: string[]
   return out;
 }
 
+/** Så många gamla IP-adresser slås upp per byrå. Varje uppslag är ett betalt anrop. */
+export const MAX_HISTORY_IPS = 3;
+
+/**
+ * Vilka av byråns gamla IP-adresser som är värda ett uppslag: inte de den har nu (de är redan provade) och de senaste först.
+ * Ett uppslag som ger över MAX_SHARED_RESULTS domäner är delad drift och kastas av anroparen. Ren.
+ */
+export function chooseHistoryIps(history: readonly IpRecord[], currentIps: readonly string[], limit = MAX_HISTORY_IPS): string[] {
+  const current = new Set(currentIps);
+  return [...new Set(history.map((h) => h.ip))].filter((ip) => !current.has(ip)).slice(0, limit);
+}
+
 /** Vad ett steg kostade. */
 export interface Usage {
   credits?: number;
@@ -63,7 +83,7 @@ export interface DiscoverDeps {
   /** Företag i vår katalog vars egen profil anger den här byrån. */
   catalog: (agency: Agency) => Promise<string[]>;
   publicwww: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domains: { domain: string; url: string | null }[]; truncated: boolean }>;
-  viewdns: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<string[]>;
+  viewdns: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<ViewdnsHit[]>;
   viewdnsConfigured: () => boolean;
   /** Bakåtlänkar till byråns domän (OpenSEO), rensade av triage. Dyrare än katalogen men det som hittar flest kunder. */
   backlinks: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">, opts: { budget: number }) => Promise<{ candidates: BacklinkCandidate[]; total: number; credits: number | null; dropped: number; creditsUsed?: number; more?: boolean }>;
@@ -93,11 +113,24 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   },
   async viewdns(agency, ctx) {
     const rec = await lookupDns(agency.domain);
-    const out: string[] = [];
+    const out: ViewdnsHit[] = [];
+    const hits = (domains: string[], ip: string | null): ViewdnsHit[] => domains.map((domain) => ({ domain, server: ip ? { ip, size: domains.length } : null }));
     for (const lookup of chooseViewdnsLookups({ ns: rec.ns, a: rec.hosting?.a ?? [] }, agency.domain)) {
       const page = await reverseLookup(lookup.endpoint, lookup.target, 1, 1, ctx);
       // Ett för stort svar är delad drift, inte byråns egna kunder.
-      if (page.domains.length <= MAX_SHARED_RESULTS) out.push(...page.domains);
+      if (page.domains.length <= MAX_SHARED_RESULTS) out.push(...hits(page.domains, lookup.endpoint === "reverseip" ? lookup.target : null));
+    }
+    // Byrån har ofta flyttat sin egen sajt men lämnat kunderna på den gamla servern. IP-historiken är en tilläggskälla:
+    // saknas den (ViewDNS Pro) eller felar den ger det bara färre förslag.
+    try {
+      const now = rec.hosting?.a ?? [];
+      for (const ip of chooseHistoryIps(await ipHistory(agency.domain, ctx), now)) {
+        const page = await reverseLookup("reverseip", ip, 1, 1, ctx);
+        ctx.log(`Byrå ${agency.name}: gamla adressen ${ip} gav ${page.domains.length} domäner`);
+        if (page.domains.length <= MAX_SHARED_RESULTS) out.push(...hits(page.domains, ip));
+      }
+    } catch (e) {
+      ctx.log(`Byrå ${agency.name}: IP-historiken hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
     }
     return out;
   },
@@ -175,11 +208,11 @@ export async function runDiscoveryStep(
   const next: DiscoveryState = { ...state, step: state.step + 1, found: [...state.found], notes: [...state.notes], usage: { ...state.usage } };
   const seen = new Set(next.found.map((c) => c.domain));
   const spend = opts.spend ?? { credits: 0, costSek: 0 };
-  const add = (raw: string | null | undefined, via: CandidateVia, sourceUrl: string | null = null, evidence?: Candidate["evidence"], hint?: Candidate["hint"]) => {
+  const add = (raw: string | null | undefined, via: CandidateVia, sourceUrl: string | null = null, evidence?: Candidate["evidence"], hint?: Candidate["hint"], server?: Candidate["server"]) => {
     const domain = normalizeDomain(raw);
     if (!domain || seen.has(domain) || isSameOrSubdomain(domain, agency.domain) || opts.rejected.has(domain)) return;
     seen.add(domain);
-    next.found.push({ domain, via, sourceUrl, ...(evidence ? { evidence } : {}), ...(hint ? { hint } : {}) });
+    next.found.push({ domain, via, sourceUrl, ...(evidence ? { evidence } : {}), ...(hint ? { hint } : {}), ...(server ? { server } : {}) });
   };
   const skip = (source: string, e: unknown) => {
     const why = e instanceof Error ? e.message : String(e);
@@ -245,7 +278,7 @@ export async function runDiscoveryStep(
     case "viewdns":
       if (opts.useViewdns && deps.viewdnsConfigured()) {
         try {
-          for (const d of await deps.viewdns(agency, ctx)) add(d, "viewdns");
+          for (const d of await deps.viewdns(agency, ctx)) add(d.domain, "viewdns", null, undefined, undefined, d.server ?? undefined);
           next.externalOk++;
           ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter ViewDNS`);
         } catch (e) {

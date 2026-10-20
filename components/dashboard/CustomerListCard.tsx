@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Search } from "@/components/brand/icons";
+import { RotateCw } from "@/components/brand/icons";
 import { btnPrimary } from "@/components/admin/ui";
+import FindListButton from "./FindListButton";
 import type { ListState } from "@/lib/agencies/request";
 import { requestCustomerListAction } from "@/app/app/spaning/actions";
 
@@ -31,20 +32,21 @@ export default function CustomerListCard({ state, profileId, domain, name }: { s
         </div>
         <form action={requestCustomerListAction}>
           <input type="hidden" name="id" value={profileId} />
-          <button className={btnPrimary}><Search size={14} />Hitta företagen</button>
+          <FindListButton />
         </form>
       </div>
     );
   }
   const text: Record<"searching" | "too-few" | "failed" | "later", [string, string]> = {
     searching: [`Vi letar efter företag kopplade till ${name}`, "Det kan ta några minuter. Sidan uppdateras av sig själv."],
-    "too-few": ["Vi hittade för få företag för att visa en lista", "Försök igen om ett dygn."],
+    "too-few": ["Vi hittade för få företag för att visa en lista", "Vi hittar företag genom länkar och krediter på deras webbplatser, och den här verksamheten syns sällan hos sina kunder."],
     failed: ["Sökningen lyckades inte", "Försök igen om ett dygn."],
     later: ["Vi kan inte starta fler sökningar just nu", "Försök igen senare."],
   };
   const [t, s] = text[state.state];
   return (
-    <div className={box}>
+    <div className={`${box} justify-start`}>
+      {state.state === "searching" && <RotateCw size={18} className="shrink-0 animate-spin text-accent-text" aria-hidden />}
       <div>
         <p className={title}>{t}</p>
         <p className={sub}>{s}</p>

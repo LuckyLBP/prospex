@@ -144,6 +144,45 @@ export async function reverseLookup(
   return { domains, lastPage };
 }
 
+export interface IpRecord {
+  ip: string;
+  /** "ÅÅÅÅ-MM-DD" när ViewDNS såg adressen senast. */
+  lastSeen: string | null;
+}
+
+/** Exported for tests: iphistory answers with response.records[] of { ip, lastseen, owner, location }. */
+export function parseIpHistory(body: { response?: { records?: Record<string, unknown>[] } }): IpRecord[] {
+  const out: IpRecord[] = [];
+  for (const r of body.response?.records ?? []) {
+    if (typeof r.ip === "string" && /^\d{1,3}(?:\.\d{1,3}){3}$/.test(r.ip)) out.push({ ip: r.ip, lastSeen: typeof r.lastseen === "string" ? r.lastseen : null });
+  }
+  return out;
+}
+
+/**
+ * Vilka IP-adresser en domän haft, senast sedda först. En byrå flyttar ofta sin egen sajt men kunderna blir kvar på den
+ * gamla servern, så den gamla adressen är det som avslöjar dem. Kastar CollectorError med ett svenskt meddelande.
+ */
+export async function ipHistory(domain: string, ctx: { signal: AbortSignal; log: (message: string) => void }, deps: ViewdnsDeps = defaultDeps()): Promise<IpRecord[]> {
+  if (!deps.apiKey) throw new CollectorError("VIEWDNS_API_KEY saknas i miljön.");
+  ctx.log("ViewDNS iphistory");
+  let response: Response;
+  try {
+    response = await deps.fetch(`${BASE}/iphistory/?domain=${encodeURIComponent(domain)}&apikey=${encodeURIComponent(deps.apiKey)}&output=json`, { headers: { Accept: "application/json" }, signal: ctx.signal });
+  } catch (cause) {
+    throw new CollectorError(`Kunde inte nå ViewDNS: ${cause instanceof Error ? cause.message : "okänt fel"}`);
+  }
+  if (!response.ok) throw new CollectorError(`ViewDNS svarade ${response.status}.`);
+  let body: { response?: { records?: Record<string, unknown>[] }; error?: string };
+  try {
+    body = await response.json();
+  } catch {
+    throw new CollectorError("ViewDNS svarade inte med JSON. Kontrollera API-nyckeln.");
+  }
+  if (body.error) throw new CollectorError(`ViewDNS: ${body.error}`);
+  return parseIpHistory(body).sort((a, b) => (b.lastSeen ?? "").localeCompare(a.lastSeen ?? ""));
+}
+
 export function createViewdnsCollector(deps: ViewdnsDeps = defaultDeps()): Collector<ViewdnsConfig> {
   return {
     method: "viewdns",

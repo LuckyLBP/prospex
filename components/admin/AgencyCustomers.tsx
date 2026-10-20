@@ -10,12 +10,14 @@ const CONFIDENCE: Record<string, { label: string; tone: "green" | "amber" }> = {
   credit: { label: "Kreditrad", tone: "green" },
   "text-credit": { label: "Kreditrad utan länk", tone: "green" },
   "footer-link": { label: "Länk i sidfoten", tone: "amber" },
+  contact: { label: "E-post hos byrån", tone: "green" },
+  "same-server": { label: "Samma server som byråns kunder", tone: "amber" },
   fingerprint: { label: "Fingeravtryck i koden", tone: "amber" },
   portfolio: { label: "Byråns portfölj", tone: "amber" },
   backlink: { label: "Bakåtlänk (sajten blockerar oss)", tone: "amber" },
 };
 const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "PublicWWW", viewdns: "ViewDNS", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
-const WEAK = ["backlink", "portfolio", "fingerprint"];
+const WEAK = ["backlink", "portfolio", "fingerprint", "same-server"];
 
 export interface CustomerView {
   rows: AgencyCustomer[];

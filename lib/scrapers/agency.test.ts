@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Candidate } from "@/lib/agencies/discover";
 import type { CheckedRow } from "@/lib/agencies/store";
 import type { Verdict } from "@/lib/agencies/verify";
-import { createAgencyCollector, FRESH_BATCH, summary, type AgencyDeps } from "./agency";
+import { createAgencyCollector, FRESH_BATCH, planSameServer, summary, type AgencyDeps } from "./agency";
 import type { CollectBatch, CollectContext, Json } from "./types";
 
 const config = { agencyName: "Conseo Webb", domain: "conseo.se", maxCandidates: 3000, useViewdns: true, useClaude: true };
@@ -31,6 +31,9 @@ function harness(domains: string[], verify: AgencyDeps["verify"], over: Partial<
     fetchProof: async () => null,
     existing: async () => h.existingDomains,
     checked: async () => new Map(store),
+    proven: async () => new Map(),
+    serverCustomers: async () => [],
+    onServer: async () => true,
     record: async (_id, rows) => { for (const r of rows) store.set(r.domain, { verdict: r.verdict, misses: r.misses, checkedAt: new Date(NOW) }); },
     markLost: async (_id, domain, kind, to) => { lost.push({ domain, kind, to }); return true; },
     spend: async () => ({ credits: 0, costSek: 0 }),
@@ -195,6 +198,54 @@ describe("agency collector", () => {
     const out: CollectBatch[] = [];
     for await (const b of c.collect(c.parseConfig(config), ctx({ candidates: queue, index: 0 } as unknown as Json))) out.push(b);
     expect(itemsOf(out).map((i) => i.domain)).toEqual(["a.se"]);
+  });
+});
+
+describe("same server", () => {
+  const server = { ip: "172.105.250.144", size: 35 };
+  const contact = (domain: string): Verdict => ({ accepted: true, confidence: "contact", evidenceUrl: `https://${domain}/`, evidence: "Sidan länkar till e-postadressen offert@conseo.se" });
+
+  it("plans only sites without credit on a small server that two proven sites share", () => {
+    const queue: Candidate[] = [
+      { domain: "ok.se", via: "viewdns", sourceUrl: null, server },
+      { domain: "stor.se", via: "viewdns", sourceUrl: null, server: { ip: "1.1.1.1", size: 61 } },
+      { domain: "okand.se", via: "viewdns", sourceUrl: null, server: { ip: "2.2.2.2", size: 10 } },
+      { domain: "annan.se", via: "viewdns", sourceUrl: null, server },
+      { domain: "utan.se", via: "viewdns", sourceUrl: null },
+      { domain: "kund.se", via: "known", sourceUrl: null, server },
+    ];
+    const proven = new Map([[server.ip, 2], ["1.1.1.1", 5], ["2.2.2.2", 1]]);
+    const plan = planSameServer({ queue, noCredit: new Set(["ok.se", "stor.se", "okand.se", "utan.se", "kund.se"]), proven });
+    expect(plan).toEqual([{ domain: "ok.se", ip: server.ip, proof: 2, via: "viewdns" }]);
+  });
+
+  it("accepts a no-credit site that still sits on a server two proven sites share, and keeps the server in the proof", async () => {
+    const verify = async (d: string): Promise<Verdict> => (d === "a.se" || d === "b.se" ? contact(d) : d === "d.se" ? reject("blocked") : reject("no-credit"));
+    const h = harness([], verify);
+    h.discover.viewdnsConfigured = () => true;
+    h.discover.viewdns = async () => ["a.se", "b.se", "c.se", "d.se"].map((domain) => ({ domain, server }));
+    const items = itemsOf((await runAll(createAgencyCollector(h))).batches);
+    expect(items.map((i) => [i.domain, (i.raw as { confidence: string }).confidence])).toEqual([["a.se", "contact"], ["b.se", "contact"], ["c.se", "same-server"]]);
+    expect(items[2].raw).toMatchObject({ server: server.ip, evidence: expect.stringContaining("2 sajter") });
+    expect(h.store.get("c.se")).toMatchObject({ verdict: "accepted" });
+  });
+
+  it("does not accept it once it has left the server, or when only one site has proof", async () => {
+    const verify = async (d: string): Promise<Verdict> => (d === "a.se" ? contact(d) : reject("no-credit"));
+    const h = harness([], verify, { onServer: async () => false });
+    h.discover.viewdnsConfigured = () => true;
+    h.discover.viewdns = async () => ["a.se", "b.se"].map((domain) => ({ domain, server }));
+    expect(itemsOf((await runAll(createAgencyCollector(h))).batches).map((i) => i.domain)).toEqual(["a.se"]);
+  });
+
+  it("removes a same-server customer when its server no longer has two proven sites, and rechecks the rest by server, not by footer", async () => {
+    const verify = vi.fn(async (): Promise<Verdict> => reject("no-credit"));
+    const h = harness([], verify, { serverCustomers: async () => [{ domain: "x.se", ip: server.ip }, { domain: "y.se", ip: "9.9.9.9" }], proven: async () => new Map([[server.ip, 2]]) });
+    h.existingDomains = ["x.se", "y.se"];
+    h.discover.catalog = async () => ["z.se"];
+    await runAll(createAgencyCollector(h));
+    expect(verify).not.toHaveBeenCalledWith("x.se", expect.anything(), expect.anything(), expect.anything());
+    expect(h.lost).toEqual([{ domain: "y.se", kind: "lost", to: null }]);
   });
 });
 

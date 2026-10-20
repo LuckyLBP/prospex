@@ -40,12 +40,23 @@ const DIRECTORY_DOMAINS = [
   "eniro.se", "hitta.se", "allabolag.se", "ratsit.se", "merinfo.se", "proff.se", "reco.se", "uc.se", "oppettider.nu",
   "trustpilot.com", "yelp.com", "facebook.com", "instagram.com", "linkedin.com", "youtube.com", "twitter.com", "x.com",
   "pinterest.com", "google.com", "clutch.co", "sortlist.com", "goodfirms.co", "similarweb.com", "semrush.com", "ahrefs.com",
+  "byralistan.se", "superbcompanies.com", "businesswith.se", "krowdbase.com", "tendermap.com", "heroagencies.com", "sortlist.fr",
 ];
 
 const LISTING_PATH = /\/(?:foretag|företag|company|companies|listings?|directory|directorio|byra|byrå|domains?|site|sites|katalog|profil)\//i;
 const PARTNER_TEXT = /partner|sponsor|samarbet/i;
 /** DataForSEO döljer redan 40 och uppåt, men gränsen hålls här också för anrop utan det filtret. */
 export const SPAM_DROP = 40;
+
+/** Står byråns domän i adressens sökväg eller frågedel? Ren. */
+export function embedsDomain(url: string, agencyDomain: string): boolean {
+  try {
+    const u = new URL(url);
+    return `${u.pathname}${u.search}`.toLowerCase().includes(agencyDomain.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 
 const clean = (d: string) => normalizeDomain(d) ?? "";
 const RANK: Record<Strength, number> = { credit: 0, name: 1, weak: 2 };
@@ -72,6 +83,8 @@ export function triageBacklinks(rows: readonly BacklinkRow[], agency: Agency): {
     if (/[?&]utm_source=gbp\b/i.test(row.urlTo ?? "")) { drop(domain, "listing"); continue; }
     if (DIRECTORY_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`))) { drop(domain, "directory"); continue; }
     if (LISTING_PATH.test(row.urlFrom)) { drop(domain, "listing"); continue; }
+    // Speglar och länkfarmer bär byråns domän i sin egen adress ("server.example.com/www.byran.se"). Det är ingen kund.
+    if (embedsDomain(row.urlFrom, agency.domain)) { drop(domain, "listing"); continue; }
     if ((row.spamScore ?? 0) >= SPAM_DROP) { drop(domain, "spam"); continue; }
 
     let path = "";

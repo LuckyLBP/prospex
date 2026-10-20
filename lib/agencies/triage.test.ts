@@ -1,11 +1,25 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { triageBacklinks, type BacklinkRow } from "./triage";
+import { embedsDomain, triageBacklinks, type BacklinkRow } from "./triage";
 
 // Raderna är ett utdrag ur ett riktigt svar från OpenSEO för capace.se (fixtures/openseo-capace.json).
 const rows = (JSON.parse(readFileSync(join(__dirname, "fixtures", "openseo-capace.json"), "utf8")) as { backlinks: { rows: BacklinkRow[] } }).backlinks.rows;
 const capace = { name: "Capace Media Group", domain: "capace.se" };
+
+describe("mirror pages and link farms", () => {
+  const row = (urlFrom: string, domainFrom: string): BacklinkRow => ({ domainFrom, urlFrom, urlTo: "https://leads.nu/", anchor: "Din Leads, CPO och Telemarketing leverantör", itemType: "anchor", spamScore: 0 });
+  it("detects the agency's domain inside the linking page's own address", () => {
+    expect(embedsDomain("http://server1.fijin.com/www.leads.nu", "leads.nu")).toBe(true);
+    expect(embedsDomain("https://kund.se/om-oss", "leads.nu")).toBe(false);
+    expect(embedsDomain("inte en url", "leads.nu")).toBe(false);
+  });
+  it("drops them before anything is fetched, and the known agency directories", () => {
+    const { candidates, dropped } = triageBacklinks([row("http://server1.fijin.com/www.leads.nu", "server1.fijin.com"), row("https://byralistan.se/byra/leads", "byralistan.se"), row("https://kund.se/", "kund.se")], { name: "Leads Sverige AB", domain: "leads.nu" });
+    expect(candidates.map((c) => c.domain)).toEqual(["kund.se"]);
+    expect(Object.fromEntries(dropped.map((d) => [d.domain, d.reason]))).toEqual({ "server1.fijin.com": "listing", "byralistan.se": "directory" });
+  });
+});
 
 describe("triageBacklinks on a real response", () => {
   const { candidates, dropped } = triageBacklinks(rows, capace);

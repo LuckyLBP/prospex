@@ -1,8 +1,18 @@
 import { describe, expect, it, vi } from "vitest";
-import { chooseViewdnsLookups, discoverCandidates, type DiscoverDeps } from "./discover";
+import { chooseHistoryIps, chooseViewdnsLookups, discoverCandidates, type DiscoverDeps } from "./discover";
 
 const agency = { name: "Conseo Webb", domain: "conseo.se" };
 const ctx = { signal: new AbortController().signal, log: () => {} };
+
+describe("chooseHistoryIps", () => {
+  const history = [{ ip: "65.20.114.37", lastSeen: "2026-10-20" }, { ip: "172.105.250.144", lastSeen: "2025-03-24" }, { ip: "172.105.250.144", lastSeen: "2024-01-01" }, { ip: "10.0.0.1", lastSeen: "2023-01-01" }];
+  it("skips the addresses the agency has now and repeats, keeping the most recent first", () => {
+    expect(chooseHistoryIps(history, ["65.20.114.37"])).toEqual(["172.105.250.144", "10.0.0.1"]);
+  });
+  it("stops at the limit", () => {
+    expect(chooseHistoryIps(history, [], 1)).toEqual(["65.20.114.37"]);
+  });
+});
 
 describe("chooseViewdnsLookups", () => {
   it("looks up its own name servers, and a single own IP", () => {
@@ -18,7 +28,7 @@ function deps(over: Partial<DiscoverDeps> = {}): DiscoverDeps {
   return {
     catalog: vi.fn(async () => ["kund1.se"]),
     publicwww: vi.fn(async () => ({ domains: [{ domain: "kund1.se", url: "https://kund1.se/" }, { domain: "kund2.se", url: "https://kund2.se/" }, { domain: "conseo.se", url: null }, { domain: "blogg.conseo.se", url: null }], truncated: false })),
-    viewdns: vi.fn(async () => ["kund3.se", "KUND2.se"]),
+    viewdns: vi.fn(async () => [{ domain: "kund3.se", server: null }, { domain: "KUND2.se", server: { ip: "203.0.113.7", size: 3 } }]),
     viewdnsConfigured: () => true,
     claude: vi.fn(async () => []),
     claudeConfigured: () => false,
