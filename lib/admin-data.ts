@@ -21,11 +21,13 @@ export async function getCollectionRows(): Promise<CollectionRow[]> {
 }
 
 export async function adminNavCounts(): Promise<{ invites: number; late: number }> {
-  const [inv, rows] = await Promise.all([
+  const [inv, req, rows] = await Promise.all([
     pool.query(`select count(*)::int n from invitations i join organizations o on o.id = i.org_id where i.accepted_at is null and o.active`),
+    pool.query(`select count(*)::int n from access_requests where handled_at is null`),
     getCollectionRows(),
   ]);
-  return { invites: inv.rows[0].n as number, late: rows.filter((r) => r.late).length };
+  // Märket vid Användare räknar både väntande inbjudningar och obehandlade förfrågningar om åtkomst.
+  return { invites: (inv.rows[0].n as number) + (req.rows[0].n as number), late: rows.filter((r) => r.late).length };
 }
 
 export async function getOverview() {

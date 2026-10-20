@@ -9,7 +9,7 @@ module.exports = {
       colors: tokens.colors,
       borderRadius: tokens.radius,
       boxShadow: tokens.shadow,
-      fontFamily: { sans: ["var(--font-geist)", ...defaultTheme.fontFamily.sans] },
+      fontFamily: { sans: ["var(--font-geist)", ...defaultTheme.fontFamily.sans], hand: ["var(--font-hand)", "cursive"] },
     },
   },
   plugins: [],

@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = path.resolve(__dirname, "../..");
 const DIRS = ["app", "components", "lib"];
-// Ställen där en hexfärg är rätt: tokens i CSS, metadata, e-post (ingen Tailwind där) och landningssidans WebGL-bakgrund.
-const ALLOWED = new Set(["app/globals.css", "app/layout.tsx", "app/manifest.ts", "components/Hero.tsx", "lib/email/templates.ts"]);
+// Ställen där en hexfärg är rätt: tokens i CSS, metadata, e-post (ingen Tailwind där).
+const ALLOWED = new Set(["app/globals.css", "app/layout.tsx", "app/manifest.ts", "lib/email/templates.ts"]);
 const OLD = ["#14161F", "#F26522", "#F4F4F1", "#C2490C", "#FFE3D2", "#FFF6F0", "#FFF1E8", "#F7F7F4", "#E05A1A", "#FF5F03"];
 
 function walk(dir: string): string[] {

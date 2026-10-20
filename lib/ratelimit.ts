@@ -1,12 +1,14 @@
 import { headers } from "next/headers";
 import { pool } from "./db";
 
-export type Kind = "send" | "verify";
+export type Kind = "send" | "verify" | "request";
 
-/** Gränserna. `send`: en kod per 30 sekunder, åtta per timme per adress. `verify`: tio kontroller per kvart. */
+/** Gränserna. `send`: en kod per 30 sekunder, åtta per timme per adress. `verify`: tio kontroller per kvart. `request`: se nedan. */
 export const LIMITS = {
   send: { cooldownSec: 30, emailWindowSec: 3600, emailMax: 8, ipWindowSec: 3600, ipMax: 30 },
   verify: { cooldownSec: 0, emailWindowSec: 900, emailMax: 10, ipWindowSec: 900, ipMax: 30 },
+  /** Förfrågan om åtkomst från startsidan: tre per timme och adress, tio per timme och IP. */
+  request: { cooldownSec: 0, emailWindowSec: 3600, emailMax: 3, ipWindowSec: 3600, ipMax: 10 },
 } as const;
 
 export type Counts = {

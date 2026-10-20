@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { invitationEmail, loginCodeEmail } from "./templates";
+import { accessRequestEmail, invitationEmail, loginCodeEmail } from "./templates";
 
 describe("loginCodeEmail", () => {
   it("shows the six digit code unbroken, first in the subject, and in html and text", () => {
@@ -29,8 +29,15 @@ describe("invitationEmail", () => {
     expect(owner.html).toContain('href="https://x.se/login"');
   });
 
+  it("escapes the visitor's text in the access request email", () => {
+    const m = accessRequestEmail({ name: "<b>X</b>", email: "a@b.se", company: "C & Co", message: null, adminUrl: "https://x.se/admin" });
+    expect(m.html).not.toContain("<b>X</b>");
+    expect(m.html).toContain("C &amp; Co");
+    expect(m.text).toContain("Företag: C & Co");
+  });
+
   it("uses no en or em dashes", () => {
-    const all = [loginCodeEmail("111111"), invitationEmail({ orgName: "X", role: "member", inviter: "Y", loginUrl: "u" })]
+    const all = [loginCodeEmail("111111"), accessRequestEmail({ name: "A", email: "a@b.se", company: "C", message: "M", adminUrl: "u" }), invitationEmail({ orgName: "X", role: "member", inviter: "Y", loginUrl: "u" })]
       .flatMap((m) => [m.subject, m.html.replace(/<[^>]+>/g, ""), m.text]).join(" ");
     expect(all).not.toMatch(/[–—]/);
   });

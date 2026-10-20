@@ -11,7 +11,7 @@ type Actor = { id: string | null; email: string };
 export async function audit(
   actor: Actor,
   action: string,
-  entity: "org" | "user" | "source" | "category" | "invite" | "company",
+  entity: "org" | "user" | "source" | "category" | "invite" | "company" | "request",
   target: { id?: string | null; name?: string | null; details?: Record<string, unknown> | null } = {},
 ): Promise<void> {
   try {

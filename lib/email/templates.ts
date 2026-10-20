@@ -45,6 +45,22 @@ export function loginCodeEmail(code: string): Email {
   };
 }
 
+/** Till administratörerna: någon har bett om åtkomst på startsidan. */
+export function accessRequestEmail(o: { name: string; email: string; company: string; message?: string | null; adminUrl: string }): Email {
+  const row = (k: string, v: string) => `<tr><td style="padding:4px 16px 4px 0;font-size:13px;color:${MUTED};vertical-align:top;">${k}</td><td style="padding:4px 0;font-size:15px;color:${INK};">${escapeHtml(v)}</td></tr>`;
+  return {
+    subject: `Ny förfrågan om åtkomst från ${o.company}`,
+    html: shell(
+      `${o.name} på ${o.company} vill komma in`,
+      `<h1 style="margin:0 0 16px;font-size:22px;letter-spacing:-0.02em;">Ny förfrågan om åtkomst</h1>
+       <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">${row("Namn", o.name)}${row("E-post", o.email)}${row("Företag", o.company)}${o.message ? row("Meddelande", o.message) : ""}</table>
+       <a href="${escapeHtml(o.adminUrl)}" style="display:inline-block;background:${INK};color:#fff;text-decoration:none;font-weight:600;font-size:14px;border-radius:999px;padding:13px 26px;">Öppna i admin</a>`,
+      "Du får det här för att någon fyllde i formuläret på startsidan.",
+    ),
+    text: `Ny förfrågan om åtkomst\n\nNamn: ${o.name}\nE-post: ${o.email}\nFöretag: ${o.company}${o.message ? `\nMeddelande: ${o.message}` : ""}\n\nÖppna i admin: ${o.adminUrl}`,
+  };
+}
+
 /** Inbjudan till ett bolag. */
 export function invitationEmail(o: { orgName: string; role: "owner" | "member"; inviter?: string | null; loginUrl: string }): Email {
   const org = escapeHtml(o.orgName);

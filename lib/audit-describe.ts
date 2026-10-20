@@ -14,7 +14,7 @@ export type AuditRow = {
 export type AuditGroup = "bolag" | "anvandare" | "katalog";
 
 export const AUDIT_GROUPS: { value: AuditGroup; label: string; prefixes: string[] }[] = [
-  { value: "bolag", label: "Bolag och medlemmar", prefixes: ["org.", "member.", "invite."] },
+  { value: "bolag", label: "Bolag och medlemmar", prefixes: ["org.", "member.", "invite.", "request."] },
   { value: "anvandare", label: "Användare", prefixes: ["user."] },
   { value: "katalog", label: "Katalog och insamling", prefixes: ["source.", "category.", "run.", "profile."] },
 ];
@@ -60,6 +60,7 @@ export function describeAudit(row: Pick<AuditRow, "action" | "actor_email" | "en
     case "member.add": return `${a} lade till ${email} i ${org} som ${role(d.role)}`;
     case "member.role": return `${a} ändrade rollen för ${email} i ${org} från ${role(d.from)} till ${role(d.to)}`;
     case "member.remove": return `${a} tog bort ${email} från ${org}`;
+    case "request.handle": return `${a} markerade förfrågan från ${email} som hanterad`;
     case "invite.cancel": return `${a} avbröt inbjudan till ${email}`;
     case "user.admin_grant": return `${a} gjorde ${email} till plattformsadmin`;
     case "user.admin_revoke": return `${a} tog bort adminrättigheterna från ${email}`;

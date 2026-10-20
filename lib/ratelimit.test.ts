@@ -30,3 +30,10 @@ describe("decide(verify)", () => {
     expect(decide("verify", { sinceLastSec: 1, emailInWindow: 10, ipInWindow: 10, emailOldestSec: 100 })).toEqual({ ok: false, retryAfterSec: 800 });
   });
 });
+
+describe("decide(request)", () => {
+  it("allows three requests per hour and address, then says how long to wait", () => {
+    expect(decide("request", { sinceLastSec: 5, emailInWindow: 2, ipInWindow: 2 })).toEqual({ ok: true });
+    expect(decide("request", { sinceLastSec: 5, emailInWindow: 3, ipInWindow: 3, emailOldestSec: 600 })).toEqual({ ok: false, retryAfterSec: 3000 });
+  });
+});

@@ -43,3 +43,14 @@ export async function toggleUserAction(f: FormData) {
     await audit(a.user, active ? "user.activate" : "user.deactivate", "user", { id: u.id, name: u.email, details: { email: u.email } });
   });
 }
+
+/** Markerar en förfrågan om åtkomst från startsidan som hanterad. */
+export async function handleRequestAction(f: FormData) {
+  const a = await requireAdmin();
+  const id = str(f, "id");
+  if (!UUID.test(id)) return;
+  const { rows } = await pool.query(`update access_requests set handled_at = now() where id = $1 and handled_at is null returning email, company`, [id]);
+  if (rows[0]) await audit(a.user, "request.handle", "request", { id, name: rows[0].company, details: { email: rows[0].email } });
+  revalidatePath("/admin", "layout");
+  redirect("/admin/anvandare?ok=Förfrågan%20markerad%20som%20hanterad.");
+}
