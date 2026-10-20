@@ -133,26 +133,27 @@ export async function myCallStats(orgId: string, userId: string) {
 /** Teamets siffror (per säljare och per leverantör) de senaste `days` svenska dygnen. */
 export async function teamStats(orgId: string, days: TeamPeriod) {
   const since = startOfDayUtc(addDays(dateKey(new Date()), -(days - 1)));
-  const { rows } = await pool.query(
-    `select cl.company_id, coalesce(cl.user_id::text, 'email:' || lower(cl.user_email)) as uid, cl.user_email, cl.outcome
-     from call_logs cl where cl.org_id = $1 and cl.called_at >= $2 limit 50000`,
-    [orgId, since],
-  );
+  const [{ rows }, { rows: srows }, { rows: sup }] = await Promise.all([
+    pool.query(
+      `select cl.company_id, coalesce(cl.user_id::text, 'email:' || lower(cl.user_email)) as uid, cl.user_email, cl.outcome
+       from call_logs cl where cl.org_id = $1 and cl.called_at >= $2 limit 50000`,
+      [orgId, since],
+    ),
+    // Per leverantör: samma samtal räknas under varje leverantör företaget har signal från.
+    pool.query(
+      `select cl.company_id, cl.user_email, cl.outcome, cs.supplier_id::text as profile_id
+       from call_logs cl join company_signals cs on cs.company_id = cl.company_id
+       join suppliers s on s.id = cs.supplier_id and s.published
+       where cl.org_id = $1 and cl.called_at >= $2 limit 100000`,
+      [orgId, since],
+    ),
+    pool.query(`select id::text, name from suppliers`),
+  ]);
   const calls: TeamCall[] = rows.map((r) => ({ recordId: r.company_id, userId: r.uid, userEmail: r.user_email, outcome: r.outcome, profileId: null }));
-
-  // Per leverantör: samma samtal räknas under varje leverantör företaget har signal från.
-  const { rows: srows } = await pool.query(
-    `select cl.company_id, cl.user_email, cl.outcome, cs.supplier_id::text as profile_id
-     from call_logs cl join company_signals cs on cs.company_id = cl.company_id
-     join suppliers s on s.id = cs.supplier_id and s.published
-     where cl.org_id = $1 and cl.called_at >= $2 limit 100000`,
-    [orgId, since],
-  );
   const expanded: TeamCall[] = srows.map((r) => ({ recordId: r.company_id, userId: "x", userEmail: r.user_email, outcome: r.outcome, profileId: r.profile_id }));
 
   const base = aggregateTeam(calls);
   const sources = aggregateTeam(expanded).sources;
-  const { rows: sup } = await pool.query(`select id::text, name from suppliers`);
   return { stats: { ...base, sources }, suppliers: new Map(sup.map((s) => [s.id as string, s.name as string])), since };
 }
 
@@ -168,6 +169,9 @@ export async function upcomingEvents(userId: string, limit = 5) {
 }
 
 export async function ensureFeedToken(userId: string): Promise<string> {
+  // Vanliga fallet är en ren läsning; skrivningen behövs bara första gången.
+  const existing = (await pool.query(`select token from calendar_feeds where user_id = $1`, [userId])).rows[0];
+  if (existing) return existing.token as string;
   const { randomBytes } = await import("node:crypto");
   const { rows } = await pool.query(
     `insert into calendar_feeds (user_id, token) values ($1, $2)

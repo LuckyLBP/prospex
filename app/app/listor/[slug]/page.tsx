@@ -5,12 +5,12 @@ import ListView, { type ListSP } from "@/components/dashboard/ListView";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";
 import { requireMember } from "@/lib/auth";
-import { getSource } from "@/lib/queries";
+import { getSourceCached } from "@/lib/cached";
 
 export default async function ListPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<ListSP> }) {
   const { slug } = await params;
   const m = await requireMember();
-  const source = await getSource(slug);
+  const source = await getSourceCached(slug);
   if (!source) notFound();
   if (source.kind === "supplier") redirect(`/app/leverantorer/${slug}`);
 

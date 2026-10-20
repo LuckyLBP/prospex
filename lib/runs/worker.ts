@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { invalidateCatalogue } from "@/lib/catalogue-tag";
 import { pool } from "@/lib/db";
 import { getCollector } from "@/lib/scrapers/registry";
 import { CollectorError, type Json, type ScrapeMethod } from "@/lib/scrapers/types";
@@ -98,11 +99,13 @@ export async function executeRun(runId: string, options: { budgetMs?: number; ex
     if ((await runRegistryStage(runId, source, deadline)) === "budget") return { kind: "continue", leaseToken };
 
     await pool.query(`update scrape_runs set status = 'success', stage = 'done', finished_at = now(), heartbeat_at = now() where id = $1 and status = 'running'`, [runId]);
+    invalidateCatalogue();
     return { kind: "done" };
   } catch (cause) {
     // Ett CollectorError bär en mening skriven för den som tryckte på knappen. Allt annat är en bugg.
     const message = cause instanceof CollectorError ? cause.message : `Oväntat fel: ${cause instanceof Error ? cause.message : "okänt"}`;
     await failRun(runId, message);
+    invalidateCatalogue();
     return { kind: "done" };
   }
 }

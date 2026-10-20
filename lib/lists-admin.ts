@@ -1,3 +1,4 @@
+import { invalidateCatalogue } from "./catalogue-tag";
 import { pool } from "./db";
 import { slugify } from "./slug";
 import type { Method } from "./sources/collection";
@@ -70,6 +71,7 @@ export async function createCategory(input: { name: string; description: string;
     [slug, name, input.description.trim() || null, icon, input.namesBrand, input.sort],
   );
   if (!r.rows[0]) throw new ListError("Det finns redan en kategori med det namnet.");
+  invalidateCatalogue();
   return slug;
 }
 
@@ -79,12 +81,14 @@ export async function updateCategory(id: string, input: { name: string; descript
     `update list_categories set name = $2, description = $3, icon = $4, names_brand = $5, sort = $6 where id = $1`,
     [id, cleanName(input.name), input.description.trim() || null, icon, input.namesBrand, input.sort],
   );
+  invalidateCatalogue();
 }
 
 export async function deleteCategory(id: string) {
   const n = (await pool.query(`select count(*)::int n from suppliers where category_id = $1`, [id])).rows[0].n as number;
   if (n > 0) throw new ListError("Kategorin har listor. Flytta eller ta bort dem först.");
   await pool.query(`delete from list_categories where id = $1`, [id]);
+  invalidateCatalogue();
 }
 
 export type SourceInput = {
@@ -114,6 +118,7 @@ export async function createList(i: SourceInput, logoPath: string | null = null)
     [slug, n.name, n.description, n.categoryId, i.published, i.sort, i.collection?.method ?? null, JSON.stringify(i.collection?.config ?? {}), i.collection?.enrichSites ?? true, logoPath],
   );
   if (!r.rows[0]) throw new ListError("Det finns redan en källa med det namnet.");
+  invalidateCatalogue();
   return slug;
 }
 
@@ -134,11 +139,13 @@ export async function updateSource(id: string, i: SourceInput) {
     [id, n.name, n.description, i.kind, n.categoryId, i.published, i.sort, !!c, c?.method ?? null, JSON.stringify(c?.config ?? {}), c?.enrichSites ?? true],
   );
   if (!r.rows[0]) throw new ListError("Källan finns inte.");
+  invalidateCatalogue();
 }
 
 export async function setLogoPath(id: string, path: string | null): Promise<string | null> {
   const old = (await pool.query(`select logo_path from suppliers where id = $1`, [id])).rows[0]?.logo_path as string | null | undefined;
   await pool.query(`update suppliers set logo_path = $2, updated_at = now() where id = $1`, [id, path]);
+  invalidateCatalogue();
   return old ?? null;
 }
 

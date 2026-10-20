@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowUpRight, Mail, MapPin, Phone, Star, TrendingDown, TrendingUp } from "@/components/brand/icons";
 import { compactKr, sv } from "@/lib/profile/format";
 import { formatSwedishPhone } from "@/lib/enrich/phone";
@@ -107,7 +108,7 @@ export default function ProfileBlock({ profile: p }: { profile: CardProfile }) {
         </details>
       )}
 
-      <a href={`/app/spaning/${p.id}`} className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-accent-text underline underline-offset-4">Öppna hela spaningen<ArrowUpRight size={13} /></a>
+      <Link href={`/app/spaning/${p.id}`} className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-accent-text underline underline-offset-4">Öppna hela spaningen<ArrowUpRight size={13} /></Link>
     </section>
   );
 }

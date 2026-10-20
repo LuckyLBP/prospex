@@ -46,13 +46,13 @@ export async function getOverview() {
 
 export async function getOrganizationBySlug(slug: string) {
   const { rows } = await pool.query(
-    `select o.id, o.name, o.slug, o.active, o.profile_access, o.created_at,
+    `select o.id, o.name, o.slug, o.active, o.profile_access, o.list_access, o.created_at,
             (select count(*)::int from call_logs cl where cl.org_id = o.id and cl.called_at >= now() - interval '30 days') as calls_30d,
             (select count(*)::int from contacts k where k.org_id = o.id) as contacts
      from organizations o where o.slug = $1`,
     [slug],
   );
-  return (rows[0] as { id: string; name: string; slug: string; active: boolean; profile_access: boolean; created_at: Date; calls_30d: number; contacts: number } | undefined) ?? null;
+  return (rows[0] as { id: string; name: string; slug: string; active: boolean; profile_access: boolean; list_access: boolean; created_at: Date; calls_30d: number; contacts: number } | undefined) ?? null;
 }
 
 export type AdminUser = {

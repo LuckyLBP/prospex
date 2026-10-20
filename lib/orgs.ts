@@ -1,3 +1,4 @@
+import { invalidateCatalogue } from "./catalogue-tag";
 import { pool } from "./db";
 import { joinOrg, type Role } from "./auth";
 import { invitationEmail } from "./email/templates";
@@ -12,6 +13,11 @@ import { slugify } from "./slug";
 /** Öppnar eller stänger Företagsprofil för ett bolag. Redan skapade profiler ligger kvar men syns inte. */
 export async function setProfileAccess(orgId: string, on: boolean): Promise<void> {
   await pool.query(`update organizations set profile_access = $2 where id = $1`, [orgId, on]);
+}
+
+/** Öppnar eller stänger fullständig bläddring i listorna (sidor) för ett bolag. Stängd visas bara de första raderna. */
+export async function setListAccess(orgId: string, on: boolean): Promise<void> {
+  await pool.query(`update organizations set list_access = $2 where id = $1`, [orgId, on]);
 }
 
 export async function listMembers(orgId: string) {
@@ -65,6 +71,7 @@ export async function inviteMember(orgId: string, invitedBy: string, rawEmail: s
      on conflict (org_id, email) do update set role = excluded.role, accepted_at = null, invited_by = excluded.invited_by`,
     [orgId, email, role, invitedBy],
   );
+  invalidateCatalogue(); // adminmenyns räknare för väntande inbjudningar
   await notifyInvited(email, org.name, role, notify);
   return "invited" as const;
 }
@@ -100,6 +107,7 @@ export async function setMemberRole(orgId: string, userId: string, role: Role) {
 
 export async function cancelInvite(orgId: string, inviteId: string) {
   await pool.query(`delete from invitations where id = $1 and org_id = $2 and accepted_at is null`, [inviteId, orgId]);
+  invalidateCatalogue();
 }
 
 // --- Plattformsadmin --------------------------------------------------------

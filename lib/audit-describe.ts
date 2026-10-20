@@ -78,6 +78,8 @@ export function describeAudit(row: Pick<AuditRow, "action" | "actor_email" | "en
     case "run.requeue": return `${a} lät ${kindWord(d.kind)} ${name} läsa om misslyckade webbplatser${typeof d.count === "number" ? ` (${d.count})` : ""}`;
     case "org.profile_access_on": return `${a} öppnade Spaning för bolaget ${name}`;
     case "org.profile_access_off": return `${a} stängde Spaning för bolaget ${name}`;
+    case "org.list_access_on": return `${a} öppnade fullständig bläddring i listorna för bolaget ${name}`;
+    case "org.list_access_off": return `${a} stängde fullständig bläddring i listorna för bolaget ${name}`;
     case "profile.create": return `${a} gjorde en spaning på ${name}`;
     case "profile.refresh": return `${a} uppdaterade spaningen på ${name}`;
     case "category.create": return `${a} skapade kategorin ${name}`;

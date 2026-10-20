@@ -3,13 +3,16 @@ import { Archive, ArchiveRestore, ArrowUpRight, PhoneCall } from "@/components/b
 import OutcomePill from "./OutcomePill";
 import SupplierFilter from "./SupplierFilter";
 import SupplierLogo from "@/components/ui/SupplierLogo";
-import { countCompanies, getSource, getSources, searchCompanies, type Filters } from "@/lib/queries";
+import { getSourceCached, getSourcesCached } from "@/lib/cached";
+import { countCompanies, searchCompanies, type Filters } from "@/lib/queries";
 import { archiveAction } from "@/app/app/actions";
 import { getAccess } from "@/lib/auth";
 import { checkRate } from "@/lib/access/meter";
 import { LIMIT_MESSAGE } from "@/lib/access/limits";
 
-export type ListSP = { supplier?: string; city?: string; phone?: string; q?: string };
+const PAGE_SIZE = 25;
+
+export type ListSP = { supplier?: string; city?: string; phone?: string; q?: string; page?: string };
 
 /** Postlista med filter och (valfritt) arkivläge. Delas av leverantörs- och listsidorna. Ingen export, och inga telefonnummer eller org.nr i tabellen: de visas bara på företagets egen sida och i ringläget, där gränserna gäller (lib/access). */
 export default async function ListView({
@@ -20,19 +23,30 @@ export default async function ListView({
   if (!rate.ok) return <div className="rounded-3xl bg-white p-6 text-[14px] text-gray-700">{LIMIT_MESSAGE.minute}</div>;
   const supplier = fixedSupplier ?? (sp.supplier || undefined);
   const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
-  const [suppliers, count, rows, source] = await Promise.all([
-    fixedSupplier ? Promise.resolve([]) : getSources(),
+  // Sidor kräver att en admin öppnat bläddringen för bolaget. Utan det ignoreras ?page= och bara första sidan visas.
+  const paged = who.listAccess || who.isAdmin;
+  const wanted = paged ? Math.max(1, Math.floor(Number(sp.page)) || 1) : 1;
+  const [suppliers, count, source] = await Promise.all([
+    fixedSupplier ? Promise.resolve([]) : getSourcesCached(),
     countCompanies(filters),
-    searchCompanies(filters, 25),
-    supplier ? getSource(supplier) : Promise.resolve(null),
+    supplier ? getSourceCached(supplier) : Promise.resolve(null),
   ]);
+  const pages = Math.max(1, Math.ceil(count / PAGE_SIZE));
+  const page = Math.min(wanted, pages);
+  const rows = await searchCompanies(filters, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const name = source?.name ?? null;
   const namesBrand = source ? (source.kind === "supplier" || source.category?.names_brand === true) : false;
   const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, q: sp.q }).filter(([, v]) => v) as [string, string][];
   const qs = new URLSearchParams(params).toString();
   const ringQs = new URLSearchParams(params.filter(([k]) => k === "supplier" || k === "city")).toString();
   const field = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
-  const here = `${basePath}${qs ? `?${qs}` : ""}`;
+  const pageHref = (n: number) => {
+    const q = new URLSearchParams(params);
+    if (n > 1) q.set("page", String(n));
+    const s = q.toString();
+    return `${basePath}${s ? `?${s}` : ""}`;
+  };
+  const here = pageHref(page); // arkivera/återställ landar på samma sida igen
 
   return (
     <>
@@ -103,7 +117,18 @@ export default async function ListView({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[12px] text-gray-500">Visar de första {rows.length} raderna.{!archived && <> Exporten innehåller alla {count.toLocaleString("sv-SE")}.</>}</p>
+      {paged ? (
+        <nav className="mt-4 flex items-center justify-between gap-3 text-[14px]" aria-label="Sidor">
+          <p className="text-[12px] text-gray-500">Rad {(count === 0 ? 0 : (page - 1) * PAGE_SIZE + 1).toLocaleString("sv-SE")} till {((page - 1) * PAGE_SIZE + rows.length).toLocaleString("sv-SE")} av {count.toLocaleString("sv-SE")}</p>
+          <div className="flex items-center gap-2">
+            {page > 1 ? <Link href={pageHref(page - 1)} className="rounded-full bg-white px-4 py-2 font-medium text-ink hover:bg-gray-100">Föregående</Link> : <span className="rounded-full bg-white px-4 py-2 font-medium text-gray-300">Föregående</span>}
+            <span className="px-2 text-gray-600">Sida {page.toLocaleString("sv-SE")} av {pages.toLocaleString("sv-SE")}</span>
+            {page < pages ? <Link href={pageHref(page + 1)} className="rounded-full bg-ink px-4 py-2 font-medium text-white">Nästa</Link> : <span className="rounded-full bg-white px-4 py-2 font-medium text-gray-300">Nästa</span>}
+          </div>
+        </nav>
+      ) : (
+        <p className="mt-3 text-[12px] text-gray-500">Visar de första {rows.length} raderna av {count.toLocaleString("sv-SE")}.</p>
+      )}
     </>
   );
 }

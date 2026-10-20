@@ -1,12 +1,12 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import { requireAdmin } from "@/lib/auth";
-import { adminNavCounts } from "@/lib/admin-data";
+import { adminNavCountsCached } from "@/lib/cached";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const a = await requireAdmin();
-  const counts = await adminNavCounts();
+  const counts = await adminNavCountsCached();
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-ink p-3 sm:p-4 lg:flex-row">
       <Sidebar isAdmin orgName={a.org?.name ?? null} isOwner={a.role === "owner"} adminCounts={counts} />

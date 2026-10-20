@@ -3,13 +3,13 @@ import Header from "@/components/dashboard/Header";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";
 import { requireMember } from "@/lib/auth";
-import { getLists } from "@/lib/queries";
+import { getListsCached } from "@/lib/cached";
 
 const sv = (n: number) => n.toLocaleString("sv-SE");
 
 export default async function ListsPage() {
   await requireMember();
-  const categories = await getLists();
+  const categories = await getListsCached();
   const total = categories.reduce((n, c) => n + c.lists.length, 0);
 
   return (

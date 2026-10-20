@@ -8,5 +8,5 @@ export const pool =
   (g.__pxPool = new Pool({
     connectionString: process.env.PROSPEX_DATABASE_URL,
     ssl: { rejectUnauthorized: false },
-    max: 3,
+    max: 10,
   }));

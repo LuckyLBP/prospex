@@ -3,9 +3,9 @@ import { ArrowUpRight, CalendarDays, PhoneCall } from "@/components/brand/icons"
 import Header from "@/components/dashboard/Header";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import SpaningWidget from "@/components/dashboard/SpaningWidget";
-import { orgHasProfileAccess, requireMember } from "@/lib/auth";
+import { requireMember } from "@/lib/auth";
 import { orgProfiles, sweepDeadProfiles } from "@/lib/profile/store";
-import { getStats, getSuppliers } from "@/lib/queries";
+import { getStatsCached, getSuppliersCached } from "@/lib/cached";
 import { homeStats, myCallStats, upcomingEvents } from "@/lib/workflow";
 import { kindMeta } from "@/lib/status";
 import { formatDateTime } from "@/lib/time";
@@ -15,10 +15,10 @@ const sv = (n: number) => n.toLocaleString("sv-SE");
 export default async function StartPage() {
   const m = await requireMember();
   const [me, week, events, cat, suppliers] = await Promise.all([
-    homeStats(m.org.id, m.user.id), myCallStats(m.org.id, m.user.id), upcomingEvents(m.user.id, 5), getStats(), getSuppliers(),
+    homeStats(m.org.id, m.user.id), myCallStats(m.org.id, m.user.id), upcomingEvents(m.user.id, 5), getStatsCached(), getSuppliersCached(),
   ]);
   // Spaning visas bara för bolag som en admin öppnat den för.
-  const hasSpaning = await orgHasProfileAccess(m.org.id).catch(() => false);
+  const hasSpaning = m.profileAccess;
   if (hasSpaning) await sweepDeadProfiles();
   const recentSpaningar = hasSpaning ? await orgProfiles(m.org.id, 4).catch(() => []) : [];
   const date = new Intl.DateTimeFormat("sv-SE", { weekday: "long", day: "numeric", month: "long" }).format(new Date());

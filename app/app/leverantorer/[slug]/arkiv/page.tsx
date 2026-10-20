@@ -3,13 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import Header from "@/components/dashboard/Header";
 import ListView, { type ListSP } from "@/components/dashboard/ListView";
 import { requireMember } from "@/lib/auth";
-import { getSource } from "@/lib/queries";
+import { getSourceCached } from "@/lib/cached";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 
 export default async function ArchivePage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<ListSP> }) {
   const { slug } = await params;
   const m = await requireMember();
-  const supplier = await getSource(slug);
+  const supplier = await getSourceCached(slug);
   if (!supplier) notFound();
   if (supplier.kind === "list") redirect(`/app/listor/${slug}/arkiv`);
   const name = supplier.name;

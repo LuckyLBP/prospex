@@ -36,6 +36,10 @@ describe("describeAudit", () => {
     expect(describeAudit(row("org.profile_access_off", null, "Test AB"))).toBe("Lucas stängde Spaning för bolaget Test AB");
     expect(describeAudit(row("profile.refresh", null, "Företaget AB"))).toBe("Lucas uppdaterade spaningen på Företaget AB");
   });
+  it("describes list access", () => {
+    expect(describeAudit(row("org.list_access_on", null, "Test AB"))).toBe("Lucas öppnade fullständig bläddring i listorna för bolaget Test AB");
+    expect(describeAudit(row("org.list_access_off", null, "Test AB"))).toBe("Lucas stängde fullständig bläddring i listorna för bolaget Test AB");
+  });
   it("falls back to something readable for an unknown action", () => {
     expect(describeAudit(row("thing.happened", null, "Y"))).toBe("Lucas utförde thing.happened på Y");
   });

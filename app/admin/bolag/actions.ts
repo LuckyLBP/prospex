@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { pool } from "@/lib/db";
 import { baseUrl } from "@/lib/url";
-import { cancelInvite, createOrganization, inviteMember, OrgError, removeMember, setMemberRole, setOrgActive, setProfileAccess } from "@/lib/orgs";
+import { cancelInvite, createOrganization, inviteMember, OrgError, removeMember, setMemberRole, setListAccess, setOrgActive, setProfileAccess } from "@/lib/orgs";
 import { slugify } from "@/lib/slug";
 
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -66,6 +66,15 @@ export async function toggleProfileAccessAction(f: FormData) {
   await onOrg(f, on ? "Spaning är öppnad för bolaget." : "Spaning är stängd för bolaget.", async (o) => {
     await setProfileAccess(o.id, on);
     await audit(a.user, on ? "org.profile_access_on" : "org.profile_access_off", "org", { id: o.slug, name: o.name });
+  });
+}
+
+export async function toggleListAccessAction(f: FormData) {
+  const a = await requireAdmin();
+  const on = f.get("on") === "1";
+  await onOrg(f, on ? "Bolaget kan nu bläddra i alla listor." : "Bolaget ser bara de första raderna i listorna.", async (o) => {
+    await setListAccess(o.id, on);
+    await audit(a.user, on ? "org.list_access_on" : "org.list_access_off", "org", { id: o.slug, name: o.name });
   });
 }
 

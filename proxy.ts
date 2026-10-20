@@ -16,8 +16,9 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) {
+  // getClaims förnyar sessionen vid behov och verifierar JWT:n lokalt när projektet har asymmetriska nycklar.
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";

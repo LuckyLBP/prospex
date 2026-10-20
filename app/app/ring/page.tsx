@@ -1,6 +1,6 @@
 import Dialer from "@/components/dialer/Dialer";
 import { requireMember } from "@/lib/auth";
-import { getSources } from "@/lib/queries";
+import { getSourcesCached } from "@/lib/cached";
 import { homeStats } from "@/lib/workflow";
 import { getQueueIds, getQueueOrder } from "@/lib/dialer/queue";
 import { loadList, saveNewList } from "@/lib/dialer/lists";
@@ -28,8 +28,13 @@ export default async function RingPage({ searchParams }: { searchParams: Promise
   const hasFilters = !!(sp.supplier || sp.city || sp.site || sp.mall || sp.queue);
   const wantsNew = sp.ny === "1";
 
-  const order = await getQueueOrder(m.user.id);
-  const [suppliers, stats] = await Promise.all([getSources(), homeStats(m.org.id, m.user.id)]);
+  // Allt som inte beror på något annat hämtas samtidigt. Den sparade listan behövs bara i läget "new".
+  const [order, suppliers, stats, saved] = await Promise.all([
+    getQueueOrder(m.user.id),
+    getSourcesCached(),
+    homeStats(m.org.id, m.user.id),
+    asked.mode === "new" ? loadList(m.org.id, m.user.id) : Promise.resolve(null),
+  ]);
 
   // "Att ringa" har en sparad lista: utan filter i adressen fortsätter den, och den fortsätter också när adressen
   // beskriver samma urval. Ett nytt urval, eller ny=1, bygger en ny lista som ersätter den. Återkomster och Mina sparas inte.
@@ -39,7 +44,6 @@ export default async function RingPage({ searchParams }: { searchParams: Promise
   let list: { offset: number; total: number; resumed: boolean } | null = null;
 
   if (asked.mode === "new") {
-    const saved = await loadList(m.org.id, m.user.id);
     // En adress utan filter och utan ny=1 betyder "öppna ringläget": då gäller den sparade listans urval. ny=1 betyder
     // alltid "bygg en ny lista med exakt de filter som står i adressen", även när de är inga alls.
     if (saved && !hasFilters && !wantsNew) scope = saved.scope;

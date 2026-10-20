@@ -1,12 +1,12 @@
 import Link from "next/link";
 import Header from "@/components/dashboard/Header";
-import { getSuppliers } from "@/lib/queries";
+import { getSuppliersCached } from "@/lib/cached";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import { requireMember } from "@/lib/auth";
 
 export default async function SuppliersPage() {
   await requireMember();
-  const suppliers = await getSuppliers();
+  const suppliers = await getSuppliersCached();
   return (
     <>
       <Header title="Leverantörer" subtitle={`${suppliers.length} leverantörer med signal i databasen`} />

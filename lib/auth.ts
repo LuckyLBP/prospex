@@ -7,7 +7,7 @@ import { pool } from "./db";
 export type Role = "owner" | "member";
 export type User = { id: string; email: string; name: string; avatarPath?: string | null };
 export type Org = { id: string; name: string; slug: string };
-export type Access = { user: User; org: Org | null; role: Role | null; isAdmin: boolean };
+export type Access = { user: User; org: Org | null; role: Role | null; isAdmin: boolean; profileAccess: boolean; listAccess: boolean };
 
 /** Plattformsadmins som bootstrap-listas i miljön (komma-separerade e-postadresser). */
 export const adminEmails = () =>
@@ -16,12 +16,14 @@ export const adminEmails = () =>
 /** Verifierad användare från sessionscookien, eller null. */
 export const getUserOrNull = cache(async (): Promise<User | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return null;
-  const email = data.user.email ?? "";
+  // getClaims verifierar JWT:n lokalt (asymmetriska nycklar) i stället för att fråga Supabase Auth varje gång.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const email = typeof claims.email === "string" ? claims.email : "";
   const local = email.split("@")[0] ?? "";
   const name = local ? local.charAt(0).toUpperCase() + local.slice(1) : "Du";
-  return { id: data.user.id, email, name };
+  return { id: claims.sub, email, name };
 });
 
 export async function requireUser(): Promise<User> {
@@ -41,30 +43,51 @@ export async function joinOrg(client: PoolClient, orgId: string, userId: string,
   await client.query(`update contacts set last_called_by = $1 where org_id = $2 and last_called_by is null and lower(last_called_by_email) = $3`, [userId, orgId, email.toLowerCase()]);
 }
 
+type AccessRow = {
+  email: string;
+  is_platform_admin: boolean;
+  active: boolean;
+  full_name: string | null;
+  avatar_path: string | null;
+  org_id: string | null;
+  org_name: string | null;
+  org_slug: string | null;
+  profile_access: boolean | null;
+  list_access: boolean | null;
+  role: Role | null;
+};
+
 async function loadAccess(user: User): Promise<Access> {
   const email = user.email.toLowerCase();
   const boot = adminEmails().includes(email);
 
-  const { rows: pr } = await pool.query(
-    `insert into profiles (user_id, email, is_platform_admin) values ($1,$2,$3)
-     on conflict (user_id) do update set email = excluded.email,
-       is_platform_admin = profiles.is_platform_admin or excluded.is_platform_admin
-     returning is_platform_admin, active, full_name, avatar_path`,
-    [user.id, email, boot],
-  );
-  const profile = pr[0] as { is_platform_admin: boolean; active: boolean; full_name: string | null; avatar_path: string | null };
-  if (!profile.active) return { user, org: null, role: null, isAdmin: false };
+  // En enda fråga för profil, medlemskap och bolag. Profilen skrivs bara när den saknas eller har ändrats.
+  const read = async () =>
+    (await pool.query(
+      `select p.email, p.is_platform_admin, p.active, p.full_name, p.avatar_path,
+              o.id as org_id, o.name as org_name, o.slug as org_slug, o.profile_access, o.list_access, m.role
+       from profiles p
+       left join memberships m on m.user_id = p.user_id
+       left join organizations o on o.id = m.org_id and o.active
+       where p.user_id = $1`,
+      [user.id],
+    )).rows[0] as AccessRow | undefined;
+
+  let row = await read();
+  if (!row || row.email !== email || (boot && !row.is_platform_admin)) {
+    await pool.query(
+      `insert into profiles (user_id, email, is_platform_admin) values ($1,$2,$3)
+       on conflict (user_id) do update set email = excluded.email,
+         is_platform_admin = profiles.is_platform_admin or excluded.is_platform_admin`,
+      [user.id, email, boot],
+    );
+    row = await read();
+  }
+  const profile = row!;
+  if (!profile.active) return { user, org: null, role: null, isAdmin: false, profileAccess: false, listAccess: false };
   const named = { ...user, name: profile.full_name || user.name, avatarPath: profile.avatar_path };
 
-  const lookup = async () =>
-    (await pool.query(
-      `select o.id, o.name, o.slug, m.role from memberships m join organizations o on o.id = m.org_id
-       where m.user_id = $1 and o.active`,
-      [user.id],
-    )).rows[0] as (Org & { role: Role }) | undefined;
-
-  let m = await lookup();
-  if (!m) {
+  if (!profile.org_id) {
     // Första inloggningen för en inbjuden: ta emot inbjudan.
     const { rows } = await pool.query(
       `select i.id, i.org_id, i.role from invitations i join organizations o on o.id = i.org_id
@@ -84,14 +107,17 @@ async function loadAccess(user: User): Promise<Access> {
       } finally {
         client.release();
       }
-      m = await lookup();
+      row = await read();
     }
   }
+  const r = row!;
   return {
     user: named,
-    org: m ? { id: m.id, name: m.name, slug: m.slug } : null,
-    role: m?.role ?? null,
-    isAdmin: profile.is_platform_admin,
+    org: r.org_id ? { id: r.org_id, name: r.org_name!, slug: r.org_slug! } : null,
+    role: r.org_id ? r.role : null,
+    isAdmin: r.is_platform_admin,
+    profileAccess: r.org_id ? r.profile_access === true : false,
+    listAccess: r.org_id ? r.list_access === true : false,
   };
 }
 
@@ -106,13 +132,13 @@ export const getAccess = cache(async (): Promise<Access> => {
   return loadAccess(user);
 });
 
-export type Member = { user: User; org: Org; role: Role; isAdmin: boolean };
+export type Member = { user: User; org: Org; role: Role; isAdmin: boolean; profileAccess: boolean; listAccess: boolean };
 
 /** Bolagssidan: kräver medlemskap i ett aktivt bolag. */
 export async function requireMember(): Promise<Member> {
   const a = await getAccess();
   if (!a.org || !a.role) redirect(a.isAdmin ? "/admin" : "/no-access");
-  return { user: a.user, org: a.org, role: a.role, isAdmin: a.isAdmin };
+  return { user: a.user, org: a.org, role: a.role, isAdmin: a.isAdmin, profileAccess: a.profileAccess, listAccess: a.listAccess };
 }
 
 /** Bolagets ägare (eller plattformsadmin som också är medlem). */
@@ -122,16 +148,10 @@ export async function requireOwner(): Promise<Member> {
   return m;
 }
 
-/** Har bolaget fått Företagsprofil öppnad av en admin? */
-export async function orgHasProfileAccess(orgId: string): Promise<boolean> {
-  const { rows } = await pool.query(`select profile_access from organizations where id = $1 and active`, [orgId]);
-  return rows[0]?.profile_access === true;
-}
-
 /** Företagsprofilen för bolag: kräver medlemskap i ett bolag som en admin öppnat den för. */
 export async function requireProfileAccess(): Promise<Member> {
   const m = await requireMember();
-  if (!(await orgHasProfileAccess(m.org.id))) redirect("/app");
+  if (!m.profileAccess) redirect("/app");
   return m;
 }
 

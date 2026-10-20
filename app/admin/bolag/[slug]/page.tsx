@@ -9,7 +9,7 @@ import FormSelect from "@/components/ui/FormSelect";
 import { getOrganizationBySlug } from "@/lib/admin-data";
 import { listInvites, listMembers } from "@/lib/orgs";
 import { formatDate, formatDateTime } from "@/lib/time";
-import { cancelInviteAction, inviteMemberAction, removeMemberAction, roleAction, toggleOrgAction, toggleProfileAccessAction } from "../actions";
+import { cancelInviteAction, inviteMemberAction, removeMemberAction, roleAction, toggleListAccessAction, toggleOrgAction, toggleProfileAccessAction } from "../actions";
 
 const ROLES = [{ value: "member", label: "Medlem" }, { value: "owner", label: "Ägare" }];
 
@@ -81,6 +81,14 @@ export default async function OrgDetailPage({ params, searchParams }: { params: 
             <input type="hidden" name="org_id" value={org.id} /><input type="hidden" name="on" value={org.profile_access ? "0" : "1"} />
             <StatusPill tone={org.profile_access ? "green" : "gray"}>{org.profile_access ? "Öppen" : "Stängd"}</StatusPill>
             {org.profile_access ? <ConfirmButton label="Stäng" confirmLabel="Ja, stäng" message="Stänga Spaning för bolaget?" /> : <button className={btnPrimary}>Öppna för bolaget</button>}
+          </form>
+        </FormSection>
+
+        <FormSection title="Bläddra i alla leads" description="Låter bolagets medlemmar bläddra sida för sida genom hela listan. Stängt ser de bara de första raderna. Dygns- och minutgränserna för att öppna företag gäller ändå.">
+          <form action={toggleListAccessAction} className="flex items-center gap-3">
+            <input type="hidden" name="org_id" value={org.id} /><input type="hidden" name="on" value={org.list_access ? "0" : "1"} />
+            <StatusPill tone={org.list_access ? "green" : "gray"}>{org.list_access ? "Öppen" : "Stängd"}</StatusPill>
+            {org.list_access ? <ConfirmButton label="Stäng" confirmLabel="Ja, stäng" message="Stänga bläddring i alla leads för bolaget?" /> : <button className={btnPrimary}>Öppna för bolaget</button>}
           </form>
         </FormSection>
 
