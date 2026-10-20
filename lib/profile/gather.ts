@@ -9,6 +9,7 @@ import { findLegalNames, type LegalNameCandidate } from "./legal-name";
 import { resolveOrgnrByName, type LookupResult } from "./orgnr-lookup";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { classifyDns, lookupDns } from "./dns";
+import { isClientRendered } from "./render";
 import { agencyKey, findFooterCredits, footerText, type CreditPhrase, type Creator } from "./creator";
 import { classifyCredit, adminPlatformDomains, type Classification } from "@/lib/agencies/classify";
 import { findCreditWithClaude, type FooterCreditResult } from "@/lib/agencies/footer-ai";
@@ -68,6 +69,8 @@ export interface GatherResult {
   creator: (Creator & { phrase: CreditPhrase; classification: Classification | null }) | null;
   platformLinks: PlatformLink[];
   dns: Detection[];
+  /** Webbplatsens IP-adresser (A-poster), för att kunna se vilken server den ligger på. */
+  ips: string[];
   contact: { phones: string[]; emails: string[]; companyName: string | null };
   pages: PageLog[];
   texts: PageText[];
@@ -220,12 +223,13 @@ export async function gather(i: GatherInput, deps?: GatherDeps): Promise<GatherR
   const log = (p: SafePage, via: "code" | "model" = "code") => pages.push({ url: p.url, status: p.status, bytes: p.html?.length ?? 0, via, problem: p.problem });
   const result: GatherResult = {
     facts: [], registry: { status: "no_orgnr", message: null, organisation: null, figures: null, figuresStatus: "not_fetched" }, site: emptySite("none", "Ingen webbplats känd.", null),
-    marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [], contact: { phones: [], emails: [], companyName: null }, pages, texts, peoplePages: [], orgnr, websiteVerified, siteDomain: null, warnings, boundary, budget,
+    marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [], ips: [], contact: { phones: [], emails: [], companyName: null }, pages, texts, peoplePages: [], orgnr, websiteVerified, siteDomain: null, warnings, boundary, budget,
   };
 
   // Webbplatsen och DNS parallellt med registret när org.nr redan är känt.
   const registryEarly = orgnr ? gatherRegistry({ ...i, orgnr }, d, book) : null;
-  const dnsPromise = domain ? d.lookupDns(domain).then(classifyDns).catch(() => [] as Detection[]) : Promise.resolve([] as Detection[]);
+  const dnsRaw = domain ? d.lookupDns(domain).catch(() => null) : Promise.resolve(null);
+  const dnsPromise = dnsRaw.then((r) => (r ? classifyDns(r) : ([] as Detection[])));
 
   if (domain) {
     let home = await d.safeFetch(`https://${domain}`, boundary!, budget);
@@ -283,6 +287,7 @@ export async function gather(i: GatherInput, deps?: GatherDeps): Promise<GatherR
 
       if (result.site.status !== "mismatch") {
         const rawAudit = auditSite(home.html, finalUrl);
+        if (isClientRendered(home.html)) warnings.push("Webbplatsen ritas med JavaScript, så sidfoten finns inte i källkoden och en byrå går inte att läsa ut ur den.");
         const tech = new Map<string, Detection>();
         for (const { page, html } of allHtml) for (const t of detectTech({ html, headers: page === home ? home.headers : undefined })) if (!tech.has(t.id)) tech.set(t.id, t);
 
@@ -353,6 +358,7 @@ export async function gather(i: GatherInput, deps?: GatherDeps): Promise<GatherR
   }
 
   const dnsDetections = await dnsPromise;
+  result.ips = (await dnsRaw)?.hosting?.a ?? [];
   if (dnsDetections.length) {
     book.addDetections(dnsDetections, "DNS", "dns");
     result.dns = dnsDetections;

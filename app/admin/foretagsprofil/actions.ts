@@ -9,6 +9,7 @@ import { failProfile, getProfile, ProfileStartError, requeueProfile, startProfil
 import { triggerProfileBuild } from "@/lib/profile/trigger";
 import { searchCompanies, type Candidate } from "@/lib/profile/name-search";
 import { setCreditKind, type CreditKind } from "@/lib/agencies/classify";
+import { learnFromReview } from "@/lib/agencies/server-guess";
 import { removePersonFromProfile, suppressPerson } from "@/lib/profile/people-store";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { triggerRun } from "@/lib/runs/start";
@@ -103,6 +104,7 @@ export async function setCreditKindAction(f: FormData) {
   const kind = str(f, "kind") as CreditKind;
   const name = str(f, "name").slice(0, 120) || (domain ?? "");
   if (!domain || !WRONG_KINDS.includes(kind)) redirect(`${backTo(f)}?error=${encodeURIComponent("Ogiltig rättelse.")}`);
+  await learnFromReview({ domain }, "rejected");
   await setCreditKind(domain, name, kind, kind === "platform" ? "Rättat av en admin: en plattform." : "Rättat av en admin: ingen byrå.");
   await audit(a.user, "source.update", "source", { id: domain, name, details: { kind: "supplier", changes: { credit_kind: kind } } });
   revalidatePath("/admin/foretagsprofil");

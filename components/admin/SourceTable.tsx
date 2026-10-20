@@ -1,6 +1,7 @@
 import DataTable, { type Column } from "./DataTable";
 import { StatusPill } from "./bits";
 import SupplierLogo from "@/components/ui/SupplierLogo";
+import { foundViaServer } from "@/lib/agencies/found-via";
 import { methodLabel } from "@/lib/runs/labels";
 import { formatDate } from "@/lib/time";
 import type { AdminSource } from "@/lib/lists-admin";
@@ -18,6 +19,7 @@ export default function SourceTable({ sources, basePath, withCategory, empty }: 
     { key: "status", header: "Status", cell: (s) => (
       <span className="flex flex-wrap gap-1.5">
         <StatusPill tone={s.published ? "green" : "amber"}>{s.published ? "Publicerad" : "Opublicerad"}</StatusPill>
+        {foundViaServer(s.config) && !s.published && <StatusPill tone="orange">Hittad via server</StatusPill>}
         {!s.logo_path && <StatusPill>Saknar logotyp</StatusPill>}
       </span>
     ) },

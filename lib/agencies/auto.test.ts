@@ -24,6 +24,11 @@ describe("maybeStartAgency", () => {
     expect(await maybeStartAgency(input(), d)).toEqual({ started: true, domain: "conseo.se" });
     expect(d.start).toHaveBeenCalledWith({ name: "Conseo Webb", domain: "conseo.se", logoPath: "logos/conseo.png" });
   });
+  it("passes on that the agency was found through its server, so an admin can see it", async () => {
+    const d = deps();
+    await maybeStartAgency(input({ foundVia: { ip: "81.2.3.4", sites: 130 } }), d);
+    expect(d.start).toHaveBeenCalledWith({ name: "Conseo Webb", domain: "conseo.se", logoPath: "logos/conseo.png", foundVia: { ip: "81.2.3.4", sites: 130 } });
+  });
   it("does nothing when off, without an agency, or when the profile is itself an agency's", async () => {
     expect(await maybeStartAgency(input(), deps({ enabled: () => false }))).toEqual({ started: false, reason: "disabled" });
     expect(await maybeStartAgency(input({ creator: null }), deps())).toEqual({ started: false, reason: "no-agency" });

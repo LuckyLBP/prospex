@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { guessAgencyByServer, type GuessResult } from "@/lib/agencies/server-guess";
 import type { Creator, CreditPhrase } from "./creator";
 import type { Classification } from "@/lib/agencies/classify";
 import { FactBook } from "./facts";
@@ -22,12 +23,15 @@ export interface NetworkDeps {
   resolveLogo: (i: { name?: string | null; domain: string | null; useCatalog?: boolean }) => Promise<LogoResult>;
   getPresence: (companyId: string | null) => Promise<PresenceItem[]>;
   suppliersByDomain: (domains: string[]) => Promise<Map<string, string>>;
+  /** Byrån bakom en sajt utan kredit, utifrån servern den ligger på. */
+  guessByServer: (i: { siteDomain: string; ips: string[] }) => Promise<GuessResult>;
 }
 
 export const defaultNetworkDeps: NetworkDeps = {
   resolveLogo: (i) => resolveLogo(i),
   // Profilen är för admin, som ska se alla källor, även de som ännu inte är publicerade.
   getPresence: (companyId) => getPresence(companyId, { includeUnpublished: true }),
+  guessByServer: (i) => guessAgencyByServer(i),
   async suppliersByDomain(domains) {
     if (domains.length === 0) return new Map();
     const { rows } = await pool.query(`select slug, domain from suppliers where domain = any($1)`, [domains]);
@@ -39,7 +43,7 @@ const safe = async <T>(p: Promise<T>, fallback: T): Promise<T> => p.catch(() => 
 const NO_LOGO: LogoResult = { path: null, source: "none", supplierSlug: null };
 
 export async function buildNetwork(
-  i: { creator: (Creator & { phrase?: CreditPhrase; classification?: Classification | null }) | null; siteDomain: string | null; companyName: string | null; platformLinks: PlatformLink[]; companyId: string | null },
+  i: { creator: (Creator & { phrase?: CreditPhrase; classification?: Classification | null }) | null; siteDomain: string | null; companyName: string | null; platformLinks: PlatformLink[]; companyId: string | null; siteIps?: string[] },
   deps: NetworkDeps = defaultNetworkDeps,
 ): Promise<Network> {
   const [creatorLogo, companyLogo, presence, suppliers] = await Promise.all([
@@ -51,9 +55,11 @@ export async function buildNetwork(
   // Ingen kredit i sidfoten: ligger företaget på en byrås egen server eller i dess kundlista är det byrån som skapat det.
   // Samma server räknas som säkert, eftersom en byrås egna servrar bara har byråns egna kunder (kontrollerat för Tundran:
   // adressen pekar på fore.tundran.se).
-  const creator: ProfileCreator | null = i.creator
+  let creator: ProfileCreator | null = i.creator
     ? { name: i.creator.name, url: i.creator.url, domain: i.creator.domain, logoPath: creatorLogo.path, supplierSlug: creatorLogo.supplierSlug, phrase: i.creator.phrase, kind: i.creator.classification?.kind ?? null, kindSource: i.creator.classification?.source ?? null, basis: "footer" }
     : agencyFromPresence(presence);
+  // Ingen kredit och ingen byrå i våra källor: titta på servern, och på sajterna som ligger på den.
+  if (!creator && i.siteDomain && i.siteIps && i.siteIps.length > 0) creator = await guessCreator(i.siteDomain, i.siteIps, deps);
   return {
     creator,
     companyLogoPath: companyLogo.path,
@@ -89,5 +95,27 @@ export function agencyFromPresence(presence: readonly PresenceItem[]): ProfileCr
     kind: "agency",
     kindSource: "rule",
     basis: hit.method === "agency" ? "agency-source" : "same-server",
+  };
+}
+
+/** Byrån som en server pekar ut, som en gissning med provet bakom sig. Tom om inget säkert svar finns. */
+async function guessCreator(siteDomain: string, ips: string[], deps: NetworkDeps): Promise<ProfileCreator | null> {
+  const r = await safe(deps.guessByServer({ siteDomain, ips }), { guess: null, reason: "error" } as GuessResult);
+  const g = r.guess;
+  if (!g) return null;
+  const [logo, slugs] = await Promise.all([safe(deps.resolveLogo({ name: g.name, domain: g.domain }), NO_LOGO), safe(deps.suppliersByDomain([g.domain]), new Map<string, string>())]);
+  return {
+    name: g.name,
+    url: g.url,
+    domain: g.domain,
+    logoPath: logo.path,
+    supplierSlug: slugs.get(g.domain) ?? logo.supplierSlug,
+    // En byrå som bara driver servern startar ingen kundsökning av sig själv: det gör bara en som sidfötterna pekat ut.
+    kind: g.via === "host" ? null : "agency",
+    kindSource: "rule",
+    basis: "server-guess",
+    likely: !g.confirmed,
+    confirmed: g.confirmed,
+    server: { ip: g.ip, sites: g.sites, credited: g.credited, examples: g.examples, reason: g.reason, via: g.via },
   };
 }

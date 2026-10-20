@@ -17,7 +17,7 @@ export interface AgencySource {
 }
 
 /** Skapar byråns källa, eller ger den som redan finns för domänen. Ett lås per domän, så att två profiler som hittar samma byrå samtidigt inte skapar två. */
-export async function ensureAgencySupplier(i: { name: string; domain: string; logoPath?: string | null }): Promise<AgencySource> {
+export async function ensureAgencySupplier(i: { name: string; domain: string; logoPath?: string | null; foundVia?: { ip: string; sites: number } | null }): Promise<AgencySource> {
   const domain = normalizeDomain(i.domain);
   const name = i.name.trim().replace(/\s+/g, " ");
   if (!domain) throw new AgencyError("Byråns domän är ogiltig.");
@@ -37,12 +37,13 @@ export async function ensureAgencySupplier(i: { name: string; domain: string; lo
     const base = slugify(agencyKey(name));
     const taken = base.length < 2 || (await client.query(`select 1 from suppliers where slug = $1`, [base])).rowCount! > 0;
     const slug = taken ? slugify(domain) : base;
-    const config = { agencyName: name, domain, maxCandidates: 1000, useViewdns: true, useClaude: true };
+    // Funnen via en server (en sajt utan kredit som låg på byråns server): admin ska granska innan något publiceras.
+    const config = { agencyName: name, domain, maxCandidates: 1000, useViewdns: true, useClaude: true, ...(i.foundVia ? { foundVia: "server", serverIp: i.foundVia.ip, serverSites: i.foundVia.sites } : {}) };
     const row = (await client.query(
       `insert into suppliers (id, slug, name, description, kind, category_id, published, sort, method, config, enrich_sites, logo_path, domain)
        values (gen_random_uuid(), $1, $2, $3, 'supplier', null, false, 0, 'agency', $4::jsonb, true, $5, $6)
        returning id, slug, name`,
-      [slug, name, `Byrå. Kunder som visar ${name} i sidfoten.`, JSON.stringify(config), i.logoPath ?? null, domain],
+      [slug, name, i.foundVia ? `Byrå funnen via servern ${i.foundVia.ip}. Kunder som visar ${name} i sidfoten.` : `Byrå. Kunder som visar ${name} i sidfoten.`, JSON.stringify(config), i.logoPath ?? null, domain],
     )).rows[0];
     await client.query("commit");
     return { id: row.id, slug: row.slug, name: row.name, domain, created: true };

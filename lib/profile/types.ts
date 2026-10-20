@@ -137,9 +137,16 @@ export interface ProfileCreator {
   kindSource?: "admin" | "saved" | "rule" | "ai" | null;
   /**
    * Varifrån byrån kommer: sidfoten (utelämnat eller "footer"), samma server eller namnserver som byråns kunder
-   * ("same-server"), eller byråns egen kundlista i katalogen ("agency-source").
+   * ("same-server"), byråns egen kundlista i katalogen ("agency-source"), eller en gissning utifrån att sajten ligger på en
+   * server vars andra sajter visar samma byrå i sidfoten ("server-guess").
    */
-  basis?: "footer" | "same-server" | "agency-source";
+  basis?: "footer" | "same-server" | "agency-source" | "server-guess";
+  /** Bara en gissning: texten säger "troligen". Gäller basis "server-guess". */
+  likely?: boolean;
+  /** Byrån syns också på sajten själv, eller servern har bekräftade kunder hos den. */
+  confirmed?: boolean;
+  /** Provet bakom en gissning: servern, hur många sajter som ligger på den, hur många av de lästa som nämner byrån, och några att öppna. */
+  server?: { ip: string; sites: number; credited: number; examples: string[]; reason: string; /** credits: sidfötterna pekar ut byrån. host: serverns ägare är själv en webbyrå (lösare gissning). */ via?: "credits" | "host" };
 }
 
 export interface ProfilePlatformLink {

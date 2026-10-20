@@ -32,7 +32,7 @@ const FACTS: Fact[] = [
 ];
 const gathered = (domain: string | null, over: Partial<GatherResult> = {}): GatherResult => ({
   facts: FACTS, registry: { status: "no_orgnr", message: "Inget organisationsnummer att slå upp.", organisation: null, figures: null, figuresStatus: "not_fetched" },
-  site: { status: domain ? "ok" : "none", message: null, domain, url: domain ? `https://${domain}` : null, audit: null, tech: [] }, marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [],
+  site: { status: domain ? "ok" : "none", message: null, domain, url: domain ? `https://${domain}` : null, audit: null, tech: [] }, marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [], ips: [],
   contact: { phones: ["+4640123456"], emails: ["info@zz-bygg-a.se"], companyName: "Bygg A AB" }, pages: [{ url: "https://zz-bygg-a.se", status: 200, bytes: 100, via: "code", problem: null }],
   texts: [{ id: "F1", url: "https://zz-bygg-a.se", text: "Vi bygger hus." }], peoplePages: [], orgnr: null, websiteVerified: true, siteDomain: domain, warnings: [], boundary: domain, budget: new PageBudget(), ...over,
 });

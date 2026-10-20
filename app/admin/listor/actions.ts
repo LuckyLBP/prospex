@@ -8,6 +8,7 @@ import { diff } from "@/lib/audit-describe";
 import { readCollection } from "@/lib/sources/collection";
 import { createList, getSourceById, ListError, listSlug, setLogoPath, updateSource } from "@/lib/lists-admin";
 import { deleteLogo, UploadError, uploadLogo } from "@/lib/storage";
+import { learnFromReview } from "@/lib/agencies/server-guess";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
@@ -86,6 +87,8 @@ export async function updateSourceAction(f: FormData) {
     if (category_id) (rest as Record<string, unknown>).category = category_id;
     if (Object.keys(rest).length) await audit(a.user, "source.update", "source", { id: before.slug, name: after.name, details: { kind: after.kind, changes: rest } });
     if (published) await audit(a.user, after.published ? "source.publish" : "source.unpublish", "source", { id: before.slug, name: after.name, details: { kind: after.kind } });
+    // En byrå som hittades via servern och nu publiceras har en admin sagt ja till: servern är byråns, och nästa sajt på den känns igen direkt.
+    if (published && after.published && after.method === "agency") await learnFromReview({ supplierId: after.id }, "confirmed");
     if (logo) await audit(a.user, "source.logo", "source", { id: before.slug, name: after.name, details: { kind: after.kind, removed: logo === "removed" } });
   } catch (e) {
     if (e instanceof ListError || e instanceof UploadError) {

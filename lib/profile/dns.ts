@@ -100,6 +100,12 @@ const HOST_IPS: [RegExp, string, string][] = [
   [/^23\.227\.38\./, "host-shopify", "Shopify"],
 ];
 
+/** Vem som är värd för en IP-adress, om den är en känd plattform eller ett känt webbhotell. Ren. */
+export function knownHostForIp(ip: string): { id: string; name: string } | null {
+  const hit = HOST_IPS.find(([re]) => re.test(ip));
+  return hit ? { id: hit[1], name: hit[2] } : null;
+}
+
 const DMARC_POLICY = /(?:^|;)\s*p\s*=\s*(none|quarantine|reject)\b/i;
 
 export function classifyDns(rec: DnsRecords): Detection[] {

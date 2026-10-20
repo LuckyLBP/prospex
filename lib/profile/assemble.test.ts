@@ -21,7 +21,7 @@ function input(over: Partial<AssembleInput> = {}): AssembleInput {
     resolved: { kind: "url", orgnr: "556503-8212", orgnrDisplay: "556503-8212", soleTrader: false, domain: "x.se", websiteSource: "input", websiteVerified: true, catalog: null, organisation: null, place: null, name: "X AB", city: null, warnings: ["Från resolve"] },
     gathered: {
       facts, registry: { status: "ok", message: null, organisation: { orgnr: "556503-8212", name: "X AB", legalForm: null, registeredAt: null, active: true, deregisteredAt: null, deregistrationReason: null, proceedings: [], description: null, sni: [], advertisingBlocked: null, address: { street: "Storgatan 1", postalCode: "211 11", city: "Malmö" } }, figures: { periodEnd: "2025-12-31", registeredAt: null, revenue: 12_345_000, profit: 1, employees: 9, equity: 1, totalAssets: 1, solidity: 40 }, figuresStatus: "ok" },
-      site: { status: "ok", message: null, domain: "x.se", url: "https://x.se", audit: null, tech: [] }, marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [], contact: { phones: ["+4640123456"], emails: ["info@x.se"], companyName: null },
+      site: { status: "ok", message: null, domain: "x.se", url: "https://x.se", audit: null, tech: [] }, marketingTech: [], social: [], inventory: [], creator: null, platformLinks: [], dns: [], ips: [], contact: { phones: ["+4640123456"], emails: ["info@x.se"], companyName: null },
       pages: [], texts, peoplePages: [], orgnr: "556503-8212", websiteVerified: true, siteDomain: "x.se", warnings: ["Från gather"], boundary: "x.se", budget: new PageBudget(),
     },
     companyId: "c1", model: model(), texts, place: null, facts,

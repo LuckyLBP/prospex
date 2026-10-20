@@ -11,6 +11,7 @@ function deps(over: Partial<NetworkDeps> & { calls?: string[] } = {}): NetworkDe
     resolveLogo: async (i) => { calls.push(`logo:${i.domain ?? i.name}:${i.useCatalog === false ? "own" : "cat"}`); return { path: `${i.domain}-1.png`, source: "fetched", supplierSlug: null }; },
     getPresence: async () => [item()],
     suppliersByDomain: async () => new Map([["bokadirekt.se", "bokadirekt"]]),
+    guessByServer: async () => ({ guess: null, reason: "no-ip" }),
     ...over,
     calls,
   } as NetworkDeps & { calls: string[] };
@@ -45,7 +46,7 @@ describe("buildNetwork", () => {
   });
   it("turns a failure in any part into an empty part, never an error", async () => {
     const boom = async () => { throw new Error("nere"); };
-    const n = await buildNetwork(base, { resolveLogo: boom, getPresence: boom, suppliersByDomain: boom });
+    const n = await buildNetwork(base, { resolveLogo: boom, getPresence: boom, suppliersByDomain: boom, guessByServer: boom });
     expect(n.creator).toMatchObject({ name: "Infront Media", logoPath: null });
     expect(n.companyLogoPath).toBeNull();
     expect(n.presence).toEqual([]);
@@ -92,6 +93,36 @@ describe("agencyFromPresence and the creator fallback", () => {
     const list = item({ slug: "wix", name: "Egen sida i Wix", kind: "list", method: "publicwww" });
     const guess = item({ slug: "swapi", name: "Swapi", method: "publicwww" });
     const n = await buildNetwork({ ...base, creator: null }, deps({ getPresence: async () => [list, guess] }));
+    expect(n.creator).toBeNull();
+  });
+});
+
+describe("the server guess", () => {
+  const guess = { ip: "1.2.3.4", name: "Sitea", domain: "sitea.se", url: "https://sitea.se", sites: 132, credited: 7, examples: ["foretagsmassage.se"], confirmed: false, via: "credits" as const, reason: "7 av 20 sidfötter nämner Sitea.", cached: false };
+  const none = { ...base, creator: null, siteIps: ["1.2.3.4"] };
+
+  it("names the agency a server points at, as a likely agency with its proof", async () => {
+    const n = await buildNetwork(none, deps({ getPresence: async () => [], guessByServer: async () => ({ guess }) }));
+    expect(n.creator).toMatchObject({ name: "Sitea", domain: "sitea.se", kind: "agency", basis: "server-guess", likely: true, confirmed: false, server: { ip: "1.2.3.4", sites: 132, credited: 7, examples: ["foretagsmassage.se"] } });
+  });
+  it("does not start a customer search for an agency that only runs the server", async () => {
+    const n = await buildNetwork(none, deps({ getPresence: async () => [], guessByServer: async () => ({ guess: { ...guess, name: "Forss IT AB", domain: "forss.se", via: "host" as const } }) }));
+    expect(n.creator).toMatchObject({ name: "Forss IT AB", basis: "server-guess", likely: true, kind: null, server: { via: "host" } });
+  });
+  it("is not asked when the footer already names an agency, or our own sources do", async () => {
+    let asked = 0;
+    const d = deps({ guessByServer: async () => { asked++; return { guess }; } });
+    await buildNetwork({ ...base, siteIps: ["1.2.3.4"] }, d);
+    await buildNetwork(none, { ...d, getPresence: async () => [item({ slug: "capace", name: "Capace", method: "agency", domain: "capace.se" })] });
+    expect(asked).toBe(0);
+  });
+  it("is not asked without an address", async () => {
+    let asked = 0;
+    await buildNetwork({ ...none, siteIps: [] }, deps({ getPresence: async () => [], guessByServer: async () => { asked++; return { guess }; } }));
+    expect(asked).toBe(0);
+  });
+  it("leaves the creator empty when the guess fails", async () => {
+    const n = await buildNetwork(none, deps({ getPresence: async () => [], guessByServer: async () => { throw new Error("nere"); } }));
     expect(n.creator).toBeNull();
   });
 });

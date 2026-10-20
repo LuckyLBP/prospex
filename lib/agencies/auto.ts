@@ -33,7 +33,7 @@ export interface AutoDeps {
   usage: () => Promise<{ newToday: number; activeRuns: number }>;
   /** Dygnets förbrukning av OpenSEO-krediter och Claude-kronor. */
   spend: () => Promise<Spend>;
-  start: (agency: { name: string; domain: string; logoPath: string | null }) => Promise<boolean>;
+  start: (agency: { name: string; domain: string; logoPath: string | null; foundVia?: { ip: string; sites: number } | null }) => Promise<boolean>;
 }
 
 export interface AutoInput {
@@ -42,6 +42,8 @@ export interface AutoInput {
   customerDomain: string | null;
   /** Profilen som byggs är själv en byrås: kedjan fortsätter inte. */
   isAgencyProfile: boolean;
+  /** Byrån hittades via servern, inte via en kredit: noteras på källan så att en admin ser det. */
+  foundVia?: { ip: string; sites: number } | null;
 }
 
 /**
@@ -115,7 +117,7 @@ export async function maybeStartAgency(i: AutoInput, deps: AutoDeps = defaultAut
     if (usage.newToday >= MAX_NEW_AGENCIES_PER_DAY || overDailyCap(await deps.spend())) return { started: false, reason: "daily-cap" };
     if (usage.activeRuns >= MAX_ACTIVE_AGENCY_RUNS) return { started: false, reason: "busy" };
 
-    return (await deps.start({ name: i.creator.name, domain, logoPath: i.creator.logoPath })) ? { started: true, domain } : { started: false, reason: "known" };
+    return (await deps.start({ name: i.creator.name, domain, logoPath: i.creator.logoPath, ...(i.foundVia ? { foundVia: i.foundVia } : {}) })) ? { started: true, domain } : { started: false, reason: "known" };
   } catch (e) {
     console.error("[byrå] kunde inte starta byrån automatiskt:", e instanceof Error ? e.message : e);
     return { started: false, reason: "error" };

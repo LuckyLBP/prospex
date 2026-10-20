@@ -5,6 +5,7 @@ import { findCompanyById, upsertCompany } from "@/lib/companies/upsert";
 import { agencyModel, agencyModelId, estimateCostSek, isAiConfigured, isAnthropicConfigured } from "@/lib/ai/model";
 import { maybeStartAgency } from "@/lib/agencies/auto";
 import { getAgencyByDomain } from "@/lib/agencies/store";
+import { linkServerToAgencyDomain, recordSiteIps } from "@/lib/agencies/server-guess";
 import { runAgent, type AgentContext } from "./agent";
 import { assembleProfile } from "./assemble";
 import { FactBook } from "./facts";
@@ -138,10 +139,13 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
     // 4. Kopplingar: logotyper, vilka av våra källor som har företaget, plattformar sajten länkar till. Ett fel här
     //    ger en tom del och aldrig ett misslyckat bygge.
     await setStage(id, "network");
-    const network = await deps.buildNetwork({ creator: gathered.creator, siteDomain: gathered.site.status === "ok" ? gathered.siteDomain : null, companyName: name, platformLinks: gathered.platformLinks, companyId }).catch((e) => {
+    const network = await deps.buildNetwork({ creator: gathered.creator, siteDomain: gathered.site.status === "ok" ? gathered.siteDomain : null, companyName: name, platformLinks: gathered.platformLinks, companyId, siteIps: gathered.ips }).catch((e) => {
       console.error(`[profil ${id}] kopplingarna misslyckades:`, e instanceof Error ? e.message : e);
       return { creator: null, companyLogoPath: null, platformLinks: [], presence: [] } as Awaited<ReturnType<typeof buildNetwork>>;
     });
+
+    // Servern minns vi för nästa gång: varje profil gör uppslaget "vilka sajter ligger på samma server" billigare.
+    if (gathered.site.status === "ok") await recordSiteIps(gathered.siteDomain, gathered.ips);
 
     // 5. AI.
     const book = FactBook.from(gathered.facts);
@@ -158,7 +162,9 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
     // En byrås egen profil skrivs av Claude när det finns en nyckel, annars av standardmodellen.
     const isAgency = isAnthropicConfigured() && !!(await getAgencyByDomain(gathered.siteDomain).catch(() => null));
     // Hittade profilen en byrå vi inte känner? Då startas den (egen källa, profil och kundsökning), inom tak.
-    const auto = await (deps.maybeStartAgency ?? maybeStartAgency)({ creator: network.creator, customerDomain: resolved.domain, isAgencyProfile: isAgency });
+    const server = network.creator?.basis === "server-guess" ? network.creator.server ?? null : null;
+    const auto = await (deps.maybeStartAgency ?? maybeStartAgency)({ creator: network.creator, customerDomain: resolved.domain, isAgencyProfile: isAgency, foundVia: server ? { ip: server.ip, sites: server.sites } : null });
+    if (server && network.creator?.domain) await linkServerToAgencyDomain(server.ip, network.creator.domain);
     if (auto.started) console.log(`[profil ${id}] startade byrån ${auto.domain}`);
     const modelChoice = isAgency ? { id: agencyModelId(), model: agencyModel() } : undefined;
     if (!modelChoice && !deps.aiConfigured()) aiStatus = "disabled";
