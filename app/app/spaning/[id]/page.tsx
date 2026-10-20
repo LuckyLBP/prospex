@@ -5,6 +5,8 @@ import ProfileView from "@/components/admin/profile/ProfileView";
 import RunPoller from "@/components/admin/RunPoller";
 import { Flash, StatusPill } from "@/components/admin/bits";
 import { btnPrimary, btnSecondary } from "@/components/admin/ui";
+import CustomerListCard from "@/components/dashboard/CustomerListCard";
+import { getListState, displayName } from "@/lib/agencies/request";
 import { requireProfileAccess } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { personKey } from "@/lib/profile/people";
@@ -23,6 +25,8 @@ export default async function TenantProfilePage({ params, searchParams }: { para
   if (!row) notFound();
 
   const profile = row.profile as CompanyProfile | null;
+  // Plattformar och byråer vars kunder är leads: har vi listan, söker vi efter den, eller kan vi börja söka.
+  const listState = row.status === "done" && row.domain ? await getListState(row.domain) : null;
   const active = row.status === "queued" || row.status === "running";
   const title = profile?.company.name ?? row.name ?? row.input;
   const people = profile?.contact.people ?? [];
@@ -40,7 +44,7 @@ export default async function TenantProfilePage({ params, searchParams }: { para
 
   return (
     <>
-      <RunPoller active={active} />
+      <RunPoller active={active || listState?.state === "searching"} />
       <Link href="/app/spaning" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Spaning</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
@@ -58,6 +62,7 @@ export default async function TenantProfilePage({ params, searchParams }: { para
       )}
 
       {profile && <ProfileView profile={profile} pages={[]} presence={[]} fallbackName={title} actions={actions} tenant photoUrls={photoUrls} />}
+      {listState && row.domain && <CustomerListCard state={listState} profileId={row.id} domain={row.domain} name={displayName(profile?.company.name ?? row.name, row.domain)} />}
       {profile && <p className="mt-5 text-[12px] text-gray-400">Validerad {formatDateTime(profile.generatedAt)}</p>}
     </>
   );

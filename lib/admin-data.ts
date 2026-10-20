@@ -39,9 +39,10 @@ export async function getOverview() {
       (select count(*)::int from organizations o where o.active and not exists (select 1 from memberships m where m.org_id = o.id and m.role = 'owner')
          and not exists (select 1 from invitations i where i.org_id = o.id and i.role = 'owner' and i.accepted_at is null)) as orgs_without_owner,
       (select count(*)::int from suppliers where not published) as unpublished_sources,
-      (select count(*)::int from suppliers where published and logo_path is null) as missing_logos
+      (select count(*)::int from suppliers where published and logo_path is null) as missing_logos,
+      (select count(distinct r.supplier_id)::int from list_requests r join suppliers s on s.id = r.supplier_id where not s.published) as open_list_requests
   `);
-  return rows[0] as { orgs: number; users: number; companies: number; calls_7d: number; pending_invites: number; orgs_without_owner: number; unpublished_sources: number; missing_logos: number };
+  return rows[0] as { orgs: number; users: number; companies: number; calls_7d: number; pending_invites: number; orgs_without_owner: number; unpublished_sources: number; missing_logos: number; open_list_requests: number };
 }
 
 export async function getOrganizationBySlug(slug: string) {

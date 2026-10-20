@@ -2,7 +2,7 @@ import { pool } from "./db";
 import type { AuditRow } from "./audit-describe";
 import { groupPrefixes } from "./audit-describe";
 
-type Actor = { id: string; email: string };
+type Actor = { id: string | null; email: string };
 
 /**
  * Skriver en rad i aktivitetsloggen. Anropas efter en lyckad adminåtgärd. Misslyckas loggningen

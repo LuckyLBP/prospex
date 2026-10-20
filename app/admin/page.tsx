@@ -16,6 +16,7 @@ export default async function AdminHome() {
     { n: o.pending_invites, text: (n: number) => `${n} väntande ${n === 1 ? "inbjudan" : "inbjudningar"}`, href: "/admin/anvandare?status=inbjuden" },
     { n: o.orgs_without_owner, text: (n: number) => `${n} ${n === 1 ? "bolag saknar" : "bolag saknar"} ägare`, href: "/admin/bolag?status=utan-agare" },
     { n: o.unpublished_sources, text: (n: number) => `${n} ${n === 1 ? "källa är" : "källor är"} opublicerade`, href: "/admin/leverantorer?status=opublicerad" },
+    { n: o.open_list_requests, text: (n: number) => `${n} ${n === 1 ? "listönskemål väntar" : "listönskemål väntar"} på granskning`, href: "/admin/leverantorer?status=opublicerad" },
     { n: o.missing_logos, text: (n: number) => `${n} ${n === 1 ? "publicerad källa saknar" : "publicerade källor saknar"} logotyp`, href: "/admin/leverantorer?status=saknar-logotyp" },
     { n: late, text: (n: number) => `${n} ${n === 1 ? "källa är" : "källor är"} försenade i insamlingen`, href: "/admin/insamling" },
   ].filter((t) => t.n > 0);

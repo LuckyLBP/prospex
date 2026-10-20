@@ -101,7 +101,7 @@ export default function SidePanel({ profile, presence, agency, returnTo, tenant 
               <li key={l.domain} className="flex items-center gap-3">
                 <BrandIcon name={l.name} size={28} />
                 <div className="min-w-0 flex-1"><a href={l.url} target="_blank" rel="noreferrer" className="block truncate text-[14px] font-medium text-ink hover:underline">{l.name}</a><p className="text-[12px] text-gray-400">{l.kind}</p></div>
-                {l.supplierSlug && <Link href={sourceHref(l.supplierSlug, "supplier")}><StatusPill tone="orange">Källa hos oss</StatusPill></Link>}
+                {!tenant && l.supplierSlug && <Link href={sourceHref(l.supplierSlug, "supplier")}><StatusPill tone="orange">Källa hos oss</StatusPill></Link>}
               </li>
             ))}
           </ul>

@@ -70,6 +70,7 @@ export function describeAudit(row: Pick<AuditRow, "action" | "actor_email" | "en
       const f = changedFields(row.details);
       return `${a} ändrade ${kindWord(d.kind)} ${name}${f.length ? ` (${list(f)})` : ""}`;
     }
+    case "source.autopublish": return `${a} publicerade ${kindWord(d.kind)} ${name} automatiskt efter ett önskemål${typeof d.customers === "number" ? ` (${d.customers} kunder)` : ""}`;
     case "source.publish": return `${a} publicerade ${kindWord(d.kind)} ${name}`;
     case "source.unpublish": return `${a} avpublicerade ${kindWord(d.kind)} ${name}`;
     case "source.logo": return d.removed ? `${a} tog bort logotypen för ${name}` : `${a} bytte logotyp för ${name}`;

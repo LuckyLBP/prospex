@@ -4,12 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireProfileAccess } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { requestCustomerList } from "@/lib/agencies/request";
 import { parseProfileInput } from "@/lib/profile/input";
 import { failProfile, getOrgProfile, grantOrgAccess, ProfileStartError, requeueProfile, startProfile, sweepDeadProfiles } from "@/lib/profile/store";
 import { triggerProfileBuild } from "@/lib/profile/trigger";
 import { searchCompanies, type Candidate } from "@/lib/profile/name-search";
 import { findCompanyById } from "@/lib/companies/upsert";
 import { normalizeDomain } from "@/lib/scrapers/domain";
+import type { CompanyProfile } from "@/lib/profile/types";
 import type { ProfileProgress, StartResult } from "@/app/admin/foretagsprofil/actions";
 
 // Spaning (företagsprofilen) för bolag som en admin öppnat den för. Samma bygge som adminens, men varje anrop kräver att
@@ -41,6 +43,18 @@ export async function createProfileAction(raw: string): Promise<StartResult> {
   }
   revalidatePath("/app/spaning");
   return { ok: true, id };
+}
+
+/** "Hitta företagen": ber om kundlistan för webbplatsen en spaning gjorts på. Sidan visar sedan läget. */
+export async function requestCustomerListAction(f: FormData): Promise<void> {
+  const m = await requireProfileAccess();
+  const id = String(f.get("id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+  const row = await getOrgProfile(id, m.org.id);
+  if (!row?.domain) return;
+  const profile = row.profile as CompanyProfile | null;
+  await requestCustomerList({ domain: row.domain, name: profile?.company.name ?? row.name, orgId: m.org.id, userId: m.user.id, profileId: id });
+  revalidatePath(`/app/spaning/${id}`);
 }
 
 export async function searchCompaniesAction(query: string): Promise<{ ok: true; candidates: Candidate[] } | { ok: false; error: string }> {

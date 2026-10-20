@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { autoPublishRequested } from "@/lib/agencies/publish";
 import { invalidateCatalogue } from "@/lib/catalogue-tag";
 import { pool } from "@/lib/db";
 import { getCollector } from "@/lib/scrapers/registry";
@@ -99,6 +100,8 @@ export async function executeRun(runId: string, options: { budgetMs?: number; ex
     if ((await runRegistryStage(runId, source, deadline)) === "budget") return { kind: "continue", leaseToken };
 
     await pool.query(`update scrape_runs set status = 'success', stage = 'done', finished_at = now(), heartbeat_at = now() where id = $1 and status = 'running'`, [runId]);
+    // Ett bolag som bett om byråns kunder får listan publicerad när den har tillräckligt många.
+    if (source.method === "agency") await autoPublishRequested(source.id);
     invalidateCatalogue();
     return { kind: "done" };
   } catch (cause) {

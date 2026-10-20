@@ -36,6 +36,9 @@ describe("describeAudit", () => {
     expect(describeAudit(row("org.profile_access_off", null, "Test AB"))).toBe("Lucas stängde Spaning för bolaget Test AB");
     expect(describeAudit(row("profile.refresh", null, "Företaget AB"))).toBe("Lucas uppdaterade spaningen på Företaget AB");
   });
+  it("describes an automatic publish", () => {
+    expect(describeAudit({ ...row("source.autopublish", { kind: "supplier", customers: 12 }, "Leads"), actor_email: "system" })).toBe("System publicerade leverantören Leads automatiskt efter ett önskemål (12 kunder)");
+  });
   it("describes list access", () => {
     expect(describeAudit(row("org.list_access_on", null, "Test AB"))).toBe("Lucas öppnade fullständig bläddring i listorna för bolaget Test AB");
     expect(describeAudit(row("org.list_access_off", null, "Test AB"))).toBe("Lucas stängde fullständig bläddring i listorna för bolaget Test AB");

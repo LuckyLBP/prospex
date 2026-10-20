@@ -109,6 +109,37 @@ export async function getAgencyByDomain(domain: string | null): Promise<{ id: st
   return rows[0] ?? null;
 }
 
+export interface SourceState {
+  id: string;
+  slug: string;
+  name: string;
+  kind: "supplier" | "list";
+  published: boolean;
+  method: string | null;
+  customers: number;
+  /** Senaste körningen: `at` är när den avslutades (annars när den skapades). */
+  lastRun: { status: string; error: string | null; note: string | null; at: Date } | null;
+}
+
+/** Källan för en domän, av vilken metod som helst, med antal kunder och senaste körning. En publicerad källa går före. */
+export async function getSourceByDomain(domain: string | null): Promise<SourceState | null> {
+  if (!domain) return null;
+  const { rows } = await pool.query(
+    `select s.id, s.slug, s.name, s.kind, s.published, s.method,
+       (select count(*)::int from company_signals cs where cs.supplier_id = s.id) as customers,
+       (select jsonb_build_object('status', r.status, 'error', r.error, 'note', r.note, 'at', coalesce(r.finished_at, r.created_at))
+          from scrape_runs r where r.supplier_id = s.id order by r.created_at desc limit 1) as last_run
+     from suppliers s where s.domain = $1 order by s.published desc, s.created_at limit 1`,
+    [domain],
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    id: r.id, slug: r.slug, name: r.name, kind: r.kind, published: r.published, method: r.method, customers: r.customers,
+    lastRun: r.last_run ? { ...r.last_run, at: new Date(r.last_run.at) } : null,
+  };
+}
+
 // ---------------------------------------------------------------------------- minne över kontroller och förlorade kunder
 // Tabellerna kommer med migrationen 0016. Utan dem fungerar allt som förut, men en stor byrå fylls inte på över flera
 // körningar och en kund som slutat visa byrån tas inte bort.
