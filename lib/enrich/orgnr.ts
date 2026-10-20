@@ -69,8 +69,8 @@ function luhnCheck(digits: string): boolean {
 const CANDIDATE = /\b(\d{6})[\s-]?(\d{4})\b/g;
 const KEYWORD = /(organisationsnummer|orgnr|org\.?\s*nr|org\.?nummer|momsreg|vat)/i;
 const KEYWORD_WINDOW = 60;
-/** Legal-form groups (first digit) that real organisation numbers use. */
-export const ORG_GROUP = /^[235789]/;
+/** Legal-form groups (first digit) that real organisation numbers use. Not a placeholder like 999999-9999, which passes Luhn. */
+export const ORG_GROUP = /^(?!(\d)\1{9}$)[235789]/;
 
 /** The org number a page states about itself, or null. */
 export function findOrgNumber(text: string): string | null {

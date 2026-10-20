@@ -38,6 +38,10 @@ describe("findOrgNumber", () => {
     expect(findOrgNumber("Food KAM +4642178141 mattias@example.se")).toBeNull();
   });
 
+  it("never takes a placeholder number", () => {
+    expect(findOrgNumber("Org.nr 999999-9999")).toBeNull();
+  });
+
   it("never returns a personnummer", () => {
     // Third digit is a month (0-1 leading), so this is a personal identity
     // number even though it is Luhn-valid -- and a sole trader's org number.
