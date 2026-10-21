@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Archive, ArchiveRestore, ArrowUpRight, PhoneCall } from "@/components/brand/icons";
-import OutcomePill from "./OutcomePill";
+import OutcomeCell from "./OutcomeCell";
 import SupplierFilter from "./SupplierFilter";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import { getSourceCached, getSourcesCached } from "@/lib/cached";
@@ -97,7 +97,7 @@ export default async function ListView({
                 <td className="max-w-[240px] truncate px-5 py-3 font-medium text-ink"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "-"}</Link></td>
                 <td className="px-5 py-3 text-gray-600">{r.city ?? "-"}</td>
                 <td className="px-5 py-3 text-gray-900"><span className="flex items-center gap-2"><SupplierLogo name={r.supplier} logo={r.supplier_logo} size={24} />{r.supplier}</span></td>
-                <td className="px-5 py-3"><OutcomePill outcome={r.outcome as never} /></td>
+                <td className="px-5 py-3"><OutcomeCell companyId={r.id} outcome={r.outcome as never} /></td>
                 <td className="px-5 py-3">
                   {r.source_url ? <a href={r.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 underline underline-offset-4">Öppna <ArrowUpRight size={13} /></a> : "-"}
                 </td>

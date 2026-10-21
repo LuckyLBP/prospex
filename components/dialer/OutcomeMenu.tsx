@@ -17,7 +17,7 @@ const DOT: Record<string, string> = {
  * Stängs med Esc, ett klick utanför eller ett val. Siffertangenterna fungerar som förut, med eller utan menyn, och
  * nästa-tangenten (S eller →) öppnar den och hoppar till nästa företag när den trycks igen.
  */
-export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { selected: CallOutcome | null; onPick: (o: CallOutcome) => void; onSkip?: () => void; onClose: () => void }) {
+export default function OutcomeMenu({ selected, onPick, onSkip, onClose, className = "dialer-toast absolute inset-x-0 bottom-full z-40 mb-2" }: { selected: CallOutcome | null; onPick: (o: CallOutcome) => void; onSkip?: () => void; onClose: () => void; /** Placeringen. Som standard öppnas menyn uppåt från knappen i ringläget; listan lägger den på ett eget ställe. */ className?: string }) {
   const root = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function OutcomeMenu({ selected, onPick, onSkip, onClose }: { sel
   }, [onClose]);
 
   return (
-    <div ref={root} role="menu" aria-label="Hur gick samtalet?" className="dialer-toast absolute inset-x-0 bottom-full z-40 mb-2 max-h-[min(70dvh,520px)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-xl">
+    <div ref={root} role="menu" aria-label="Hur gick samtalet?" className={`${className} max-h-[min(70dvh,520px)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-xl`}>
       <p className="px-3 pb-1 pt-2 text-[12px] font-medium text-gray-500">Hur gick samtalet?</p>
       {OUTCOME_GROUPS.map((g) => (
         <div key={g.value} className="py-1">
