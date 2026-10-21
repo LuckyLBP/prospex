@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { afterRecheck, MISSES_BEFORE_LOST, NO_CREDIT_RETRY_MS, recentlyChecked, UNREADABLE_RETRY_MS } from "./recheck";
+import { VERIFY_RULES } from "./verify";
 
 const NOW = Date.parse("2026-10-12T10:00:00Z");
-const row = (verdict: string, agoMs: number) => ({ verdict, misses: 0, checkedAt: new Date(NOW - agoMs) });
+const row = (verdict: string, agoMs: number, rules = VERIFY_RULES) => ({ verdict, misses: 0, checkedAt: new Date(NOW - agoMs), rules });
 
 describe("recentlyChecked", () => {
   it("skips a domain without credit for 30 days, and an unreadable one for 7", () => {
@@ -11,6 +12,13 @@ describe("recentlyChecked", () => {
     expect(recentlyChecked(row("other-agency", 10 * 86_400_000), NOW)).toBe(true);
     expect(recentlyChecked(row("blocked", UNREADABLE_RETRY_MS - 1000), NOW)).toBe(true);
     expect(recentlyChecked(row("unreachable", UNREADABLE_RETRY_MS + 1000), NOW)).toBe(false);
+  });
+  it("checks a domain again when the rules have improved since it was judged, but not an unreadable one", () => {
+    expect(recentlyChecked(row("no-credit", 1000, VERIFY_RULES - 1), NOW)).toBe(false);
+    expect(recentlyChecked(row("other-agency", 1000, VERIFY_RULES - 1), NOW)).toBe(false);
+    expect(recentlyChecked(row("no-credit", 1000, VERIFY_RULES), NOW)).toBe(true);
+    // Att en sida inte svarade säger inget om reglerna.
+    expect(recentlyChecked(row("unreachable", 1000, VERIFY_RULES - 1), NOW)).toBe(true);
   });
   it("never skips a domain that was never checked", () => {
     expect(recentlyChecked(undefined, NOW)).toBe(false);

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Candidate } from "@/lib/agencies/discover";
 import type { CheckedRow } from "@/lib/agencies/store";
-import type { Verdict } from "@/lib/agencies/verify";
+import { VERIFY_RULES, type Verdict } from "@/lib/agencies/verify";
 import { createAgencyCollector, FRESH_BATCH, planSameServer, summary, type AgencyDeps } from "./agency";
 import type { CollectBatch, CollectContext, Json } from "./types";
 
@@ -34,7 +34,7 @@ function harness(domains: string[], verify: AgencyDeps["verify"], over: Partial<
     proven: async () => new Map(),
     serverCustomers: async () => [],
     onServer: async () => true,
-    record: async (_id, rows) => { for (const r of rows) store.set(r.domain, { verdict: r.verdict, misses: r.misses, checkedAt: new Date(NOW) }); },
+    record: async (_id, rows) => { for (const r of rows) store.set(r.domain, { verdict: r.verdict, misses: r.misses, checkedAt: new Date(NOW), rules: VERIFY_RULES }); },
     markLost: async (_id, domain, kind, to) => { lost.push({ domain, kind, to }); return true; },
     spend: async () => ({ credits: 0, costSek: 0 }),
     now: () => NOW,
@@ -132,8 +132,8 @@ describe("agency collector", () => {
     const verify = vi.fn(async (d: string, _a?: unknown, _p?: unknown, _h?: unknown): Promise<Verdict> => (d === "bytte.se" ? { accepted: false, reason: "other-agency", to: "Infront Media" } : reject("blocked")));
     const h = harness([], verify);
     h.existingDomains = ["bytte.se", "blockerad.se"];
-    h.store.set("bytte.se", { verdict: "no-credit", misses: 1, checkedAt: new Date(NOW - 7 * 86_400_000) });
-    h.store.set("blockerad.se", { verdict: "no-credit", misses: 1, checkedAt: new Date(NOW - 7 * 86_400_000) });
+    h.store.set("bytte.se", { verdict: "no-credit", misses: 1, checkedAt: new Date(NOW - 7 * 86_400_000), rules: VERIFY_RULES });
+    h.store.set("blockerad.se", { verdict: "no-credit", misses: 1, checkedAt: new Date(NOW - 7 * 86_400_000), rules: VERIFY_RULES });
     await runAll(createAgencyCollector(h));
     expect(h.lost).toEqual([{ domain: "bytte.se", kind: "switched", to: "Infront Media" }]);
     expect(h.store.get("blockerad.se")).toMatchObject({ verdict: "blocked", misses: 1 });
@@ -252,5 +252,22 @@ describe("same server", () => {
 describe("summary", () => {
   it("lists the reasons, largest first, and the customers that stopped showing the agency", () => {
     expect(summary({ checked: 10, accepted: 6, lost: 1, rejected: { "no-credit": 2, unreachable: 1, "other-agency": 1 } })).toBe("Kontrollerade 10: 6 godkända, 2 utan kredit, 1 svarade inte, 1 annan byrå, 1 kunder har slutat visa byrån.");
+  });
+});
+
+describe("learning from fingerprints", () => {
+  it("keeps the code trace that proved a customer, so it can be searched for later", async () => {
+    const traced: Verdict = { accepted: true, confidence: "fingerprint", evidenceUrl: "https://a.se/", evidence: "Kod: conseo_design_data", trace: { kind: "identifier", token: "conseo_design_data" } };
+    const h = harness(["a.se"], async () => traced);
+    const { batches } = await runAll(createAgencyCollector(h));
+    const item = batches.flatMap((b) => b.items).find((i) => i.domain === "a.se");
+    expect(item?.raw).toMatchObject({ confidence: "fingerprint", trace: { kind: "identifier", token: "conseo_design_data" } });
+  });
+  it("gives the traces it has learned to discovery", async () => {
+    const seen: unknown[] = [];
+    const h = harness(["a.se"], async (d) => accept(d), { learned: async () => ["conseo_design_data"] });
+    h.discover.publicwww = async (_a, _c, learned) => { seen.push(learned); return { domains: [], truncated: false }; };
+    await runAll(createAgencyCollector(h));
+    expect(seen).toEqual([["conseo_design_data"]]);
   });
 });

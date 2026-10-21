@@ -3,7 +3,7 @@ import { discoveryDone, finishDiscovery, newDiscovery, runDiscoveryStep, default
 import type { Agency } from "@/lib/agencies/match";
 import { afterRecheck, recentlyChecked } from "@/lib/agencies/recheck";
 import { spendLast24h, type Spend } from "@/lib/agencies/spend";
-import { existingCustomerDomains, loadChecked, markCustomerLost, provenServers, recordChecked, rejectedDomains, serverCustomers, type CheckedRow } from "@/lib/agencies/store";
+import { existingCustomerDomains, learnedTraceTokens, loadChecked, markCustomerLost, provenServers, recordChecked, rejectedDomains, serverCustomers, type CheckedRow } from "@/lib/agencies/store";
 import { verifyCandidate, type BacklinkHint, type PortfolioProof, type Verdict } from "@/lib/agencies/verify";
 import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
 import { agencyConfigSchema, type AgencyConfig } from "@/lib/sources/schema";
@@ -54,6 +54,8 @@ export interface AgencyDeps {
   /** Domänerna på byråns nuvarande kunder. */
   existing: (supplierId: string) => Promise<string[]>;
   checked: (supplierId: string) => Promise<Map<string, CheckedRow>>;
+  /** Spår i koden som styrkt många av byråns kunder, att söka på i källkod. */
+  learned?: (supplierId: string) => Promise<string[]>;
   record: (supplierId: string, rows: { domain: string; verdict: string; misses: number }[]) => Promise<void>;
   markLost: (supplierId: string, domain: string, kind: "lost" | "switched", toName: string | null) => Promise<boolean>;
   spend: () => Promise<Spend>;
@@ -77,6 +79,7 @@ const defaultDeps = (): AgencyDeps => ({
   },
   existing: existingCustomerDomains,
   checked: loadChecked,
+  learned: learnedTraceTokens,
   record: recordChecked,
   markLost: markCustomerLost,
   spend: spendLast24h,
@@ -137,10 +140,11 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
       if (cursor.stage === "discover") {
         const rejected = await deps.rejected(supplierId);
         const spend = await deps.spend();
+        const learned = await (deps.learned?.(supplierId) ?? Promise.resolve([] as string[])).catch(() => [] as string[]);
         let state = cursor.state;
         while (!discoveryDone(state)) {
           const before = state.usage;
-          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend }, ctx, deps.discover);
+          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend, learned }, ctx, deps.discover);
           // Markören skrivs efter varje steg, så att en omgång som tar slut fortsätter vid nästa steg och inte från början.
           if (!discoveryDone(state)) yield { items: [], cursor: asJson({ stage: "discover", state }), usage: { credits: state.usage.credits - before.credits, costSek: state.usage.costSek - before.costSek } };
         }
@@ -205,7 +209,7 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
               domain: c.domain,
               website: websiteUrl(c.domain),
               sourceUrl: verdict.evidenceUrl,
-              raw: { confidence: verdict.confidence, evidence: verdict.evidence, via: c.via, agency: agency.domain, ...(c.server ? { server: c.server.ip } : {}), ...(c.evidence?.quote ? { quote: c.evidence.quote } : {}), ...(c.hint ? { anchor: c.hint.anchor, urlFrom: c.hint.urlFrom } : {}) },
+              raw: { confidence: verdict.confidence, evidence: verdict.evidence, ...(verdict.trace ? { trace: verdict.trace } : {}), via: c.via, agency: agency.domain, ...(c.server ? { server: c.server.ip } : {}), ...(c.evidence?.quote ? { quote: c.evidence.quote } : {}), ...(c.hint ? { anchor: c.hint.anchor, urlFrom: c.hint.urlFrom } : {}) },
               prefilled: false,
             });
             continue;

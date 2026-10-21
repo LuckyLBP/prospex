@@ -1,5 +1,6 @@
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { agencyKey, footerText } from "@/lib/profile/creator";
+import { findTraces, type Trace } from "./traces";
 
 // Är det här byrån? Rena regler som verifieringen och katalogsökningen delar. Ett namn räcker aldrig ensamt när det är
 // för kort eller för vanligt: "Webb" eller "Media" ska inte matcha en annan byrå.
@@ -106,26 +107,16 @@ export function footerTextCredit(html: string, agency: Agency): string | null {
 }
 
 /**
- * Byråns fingeravtryck i sajtens kod, för kunder som inte visar något synligt: en generator-tagg, ett temaprefix under
- * /wp-content/themes/, en variabel i sidans skript som är döpt efter byrån (window.byran_design_data) eller resurser från
- * byråns egna domän. Returnerar vad som hittades, eller null.
+ * Byråns fingeravtryck i sajtens kod, för kunder som inte visar något synligt: en generator-tagg, ett tema eller tillägg som
+ * bär namnet, en variabel i sidans skript (window.byran_design_data), datafält, filer eller anrop till byråns egna adresser,
+ * en kommentar. Se traces.ts. Returnerar det första spåret som belägg, eller null.
  */
+export function agencyTrace(html: string, agency: Agency): Trace | null {
+  return findTraces(html, agency, agencyBrands(agency))[0] ?? null;
+}
+
 export function agencyFingerprint(html: string, agency: Agency): string | null {
-  const brands = agencyBrands(agency);
-  const generator = /<meta\b[^>]*\bname\s*=\s*["']generator["'][^>]*\bcontent\s*=\s*["']([^"']*)["']|<meta\b[^>]*\bcontent\s*=\s*["']([^"']*)["'][^>]*\bname\s*=\s*["']generator["']/i.exec(html);
-  const gen = generator?.[1] ?? generator?.[2];
-  if (gen && brands.some((b) => gen.toLowerCase().includes(b))) return `Generator: ${gen.slice(0, 60)}`;
-  for (const brand of brands) {
-    const theme = new RegExp(`/wp-content/themes/([a-z0-9_-]*${brand.replace(/[^a-z0-9]/gi, "")}[a-z0-9_-]*)/`, "i").exec(html);
-    if (theme) return `Tema: ${theme[1]}`;
-  }
-  // Plattformar och byråer lägger ofta sina egna variabler i sidan, döpta efter sig: smartproduktion_design_data.
-  for (const brand of brands) {
-    const id = new RegExp(`(?<![a-z0-9_])(${brand.replace(/[^a-z0-9]/gi, "")}_[a-z][a-z0-9_]{2,})`, "i").exec(html);
-    if (id) return `Kod: ${id[1]}`;
-  }
-  const own = new RegExp(`<(?:link|script|img)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'][^"']*//[a-z0-9.-]*\\.${agency.domain.replace(/\./g, "\\.")}/`, "i").exec(html);
-  return own ? `Resurs från ${agency.domain}` : null;
+  return agencyTrace(html, agency)?.evidence ?? null;
 }
 
 /** Vad länktexten i ett bakåtlänkssvar säger: en kreditrad som nämner byrån, bara byråns namn, eller inget om den. */

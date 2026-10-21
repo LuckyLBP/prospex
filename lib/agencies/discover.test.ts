@@ -134,3 +134,16 @@ describe("discoverCandidates", () => {
   });
 });
 
+
+describe("learned traces", () => {
+  it("hands the traces that proved many customers to the source-code search", async () => {
+    const d = deps();
+    await discoverCandidates(agency, { max: 100, useViewdns: false, rejected: new Set(), learned: ["conseo_design_data"] }, ctx, d);
+    expect(d.publicwww).toHaveBeenCalledWith(agency, ctx, ["conseo_design_data"]);
+  });
+  it("passes none when nothing is learned yet", async () => {
+    const d = deps();
+    await discoverCandidates(agency, { max: 100, useViewdns: false, rejected: new Set() }, ctx, d);
+    expect(d.publicwww).toHaveBeenCalledWith(agency, ctx, []);
+  });
+});

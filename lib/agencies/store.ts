@@ -3,6 +3,7 @@ import { agencyKey } from "@/lib/profile/creator";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { invalidateCatalogue } from "@/lib/catalogue-tag";
 import { slugify } from "@/lib/slug";
+import { VERIFY_RULES } from "./verify";
 
 // Byrån som källa i katalogen. En byrå är en leverantör (kind = 'supplier') med metoden 'agency', och dess kunder är
 // företagen som har den som signal. Källan skapas opublicerad: ingen kund ser den förrän en admin granskat kunderna.
@@ -150,13 +151,16 @@ export interface CheckedRow {
   verdict: string;
   misses: number;
   checkedAt: Date;
+  /** Versionen på reglerna som gav utslaget (VERIFY_RULES). Äldre rader och tabeller utan kolumnen räknas som version 1. */
+  rules: number;
 }
 
 /** Vad vi vet om redan kontrollerade domäner för byrån. Tom när tabellen saknas. */
 export async function loadChecked(supplierId: string): Promise<Map<string, CheckedRow>> {
   try {
-    const { rows } = await pool.query(`select domain, verdict, misses, checked_at from supplier_checked where supplier_id = $1`, [supplierId]);
-    return new Map(rows.map((r) => [r.domain as string, { verdict: r.verdict as string, misses: r.misses as number, checkedAt: new Date(r.checked_at) }]));
+    // Kolumnen `rules` kommer med migrationen 0028. Utan den räknas allt som version 1.
+    const { rows } = await pool.query(`select domain, verdict, misses, checked_at, rules from supplier_checked where supplier_id = $1`, [supplierId]).catch(() => pool.query(`select domain, verdict, misses, checked_at, 1 as rules from supplier_checked where supplier_id = $1`, [supplierId]));
+    return new Map(rows.map((r) => [r.domain as string, { verdict: r.verdict as string, misses: r.misses as number, checkedAt: new Date(r.checked_at), rules: Number(r.rules) }]));
   } catch {
     return new Map();
   }
@@ -165,12 +169,19 @@ export async function loadChecked(supplierId: string): Promise<Map<string, Check
 export async function recordChecked(supplierId: string, rows: { domain: string; verdict: string; misses: number }[]): Promise<void> {
   if (rows.length === 0) return;
   try {
-    await pool.query(
-      `insert into supplier_checked (supplier_id, domain, verdict, misses, checked_at)
-       select $1, x.domain, x.verdict, x.misses, now() from jsonb_to_recordset($2::jsonb) as x(domain text, verdict text, misses int)
-       on conflict (supplier_id, domain) do update set verdict = excluded.verdict, misses = excluded.misses, checked_at = now()`,
-      [supplierId, JSON.stringify(rows)],
-    );
+    const write = (withRules: boolean) =>
+      pool.query(
+        withRules
+          ? `insert into supplier_checked (supplier_id, domain, verdict, misses, checked_at, rules)
+             select $1, x.domain, x.verdict, x.misses, now(), $3 from jsonb_to_recordset($2::jsonb) as x(domain text, verdict text, misses int)
+             on conflict (supplier_id, domain) do update set verdict = excluded.verdict, misses = excluded.misses, checked_at = now(), rules = excluded.rules`
+          : `insert into supplier_checked (supplier_id, domain, verdict, misses, checked_at)
+             select $1, x.domain, x.verdict, x.misses, now() from jsonb_to_recordset($2::jsonb) as x(domain text, verdict text, misses int)
+             on conflict (supplier_id, domain) do update set verdict = excluded.verdict, misses = excluded.misses, checked_at = now()`,
+        withRules ? [supplierId, JSON.stringify(rows), VERIFY_RULES] : [supplierId, JSON.stringify(rows)],
+      );
+    // Utan kolumnen (migrationen 0028 inte körd) sparas utslaget som förut.
+    await write(true).catch(() => write(false));
   } catch (e) {
     console.error("[byrå] kunde inte spara kontrollerna:", e instanceof Error ? e.message : e);
   }
@@ -310,4 +321,33 @@ export async function adoptSupplierLogo(domain: string | null, logoPath: string 
   const { rowCount } = await pool.query(`update suppliers set logo_path = $2, updated_at = now() where domain = $1 and logo_path is null`, [d, logoPath]);
   if (rowCount) invalidateCatalogue();
   return Boolean(rowCount);
+}
+
+/**
+ * Spår i koden som redan styrkt många av byråns kunder (en variabel, ett tema, ett datafält döpt efter byrån), och som går att
+ * söka på i källkod. Ett spår med minst fem kunder är byråns eget märke, och en sökning på det hittar kunder som aldrig
+ * länkat till byrån. Äldre kunder har spåret bara i beläggstexten ("Kod: namn"), så den läses också.
+ */
+export const MIN_LEARNED_CUSTOMERS = 5;
+export const MAX_LEARNED_TOKENS = 3;
+
+export async function learnedTraceTokens(supplierId: string): Promise<string[]> {
+  try {
+    const { rows } = await pool.query(
+      `select token, count(*)::int n from (
+         select coalesce(
+           case when cs.raw->'trace'->>'kind' in ('identifier','attribute','plugin','theme') then cs.raw->'trace'->>'token' end,
+           case when cs.raw->>'evidence' like 'Kod: %' then substr(cs.raw->>'evidence', 6) end
+         ) as token
+         from company_signals cs where cs.supplier_id = $1 and cs.raw->>'confidence' = 'fingerprint'
+       ) t
+       where token ~ '^[A-Za-z0-9_.:-]{6,80}$'
+       group by token having count(*) >= $2 order by n desc, token limit $3`,
+      [supplierId, MIN_LEARNED_CUSTOMERS, MAX_LEARNED_TOKENS],
+    );
+    return rows.map((r) => r.token as string);
+  } catch (e) {
+    console.error("[byrå] kunde inte läsa de inlärda spåren:", e instanceof Error ? e.message : e);
+    return [];
+  }
 }

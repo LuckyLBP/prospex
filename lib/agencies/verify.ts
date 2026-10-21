@@ -2,7 +2,7 @@ import { auditSite } from "@/lib/enrich/audit";
 import { isInterstitial, toText } from "@/lib/enrich/extract";
 import { findCreator } from "@/lib/profile/creator";
 import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
-import { agencyFingerprint, anchorNamesAgency, contactsAgency, creatorMatchesAgency, footerLinksTo, footerTextCredit, isSameOrSubdomain, pageMentionsDomain, type Agency } from "./match";
+import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, footerLinksTo, footerTextCredit, isSameOrSubdomain, pageMentionsDomain, type Agency } from "./match";
 
 // Kontrollen som gör att ingen kund läggs in på någon annans ord: kandidatens EGEN sida hämtas, och byrån måste synas
 // där. Det gäller oavsett om kandidaten kom från bakåtlänkar, PublicWWW, ViewDNS, vår katalog eller Claude.
@@ -17,10 +17,16 @@ import { agencyFingerprint, anchorNamesAgency, contactsAgency, creatorMatchesAge
 //                inte en annan byrå
 //   backlink     kundens sida släpper inte in oss, men en bakåtlänk med en tydlig kredittext pekar ut den. Svagast.
 
+/**
+ * Versionen på reglerna som bedömer en kandidat. Höj den varje gång reglerna blir bättre: domäner som tidigare bedömts
+ * som "utan kredit" eller "annan byrå" med äldre regler kontrolleras då om i nästa körning, och inte först efter 30 dagar.
+ */
+export const VERIFY_RULES = 2;
+
 export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "portfolio" | "backlink";
 
 export type Verdict =
-  | { accepted: true; confidence: Confidence; evidenceUrl: string; evidence: string }
+  | { accepted: true; confidence: Confidence; evidenceUrl: string; evidence: string; /** Vilket spår i koden som styrkte kunden (bara för "fingerprint"), så att det går att söka efter fler. */ trace?: { kind: string; token: string } }
   | { accepted: false; reason: "unreachable" | "blocked" | "no-credit" | "own-domain" }
   /** Sidan visar en annan byrå. `to` är dess namn, för att kunna notera ett byte. */
   | { accepted: false; reason: "other-agency"; to: string };
@@ -55,8 +61,8 @@ function checkPage(html: string, finalUrl: string, domain: string, agency: Agenc
   if (footerLinksTo(html, agency.domain)) return { verdict: { accepted: true, confidence: "footer-link", evidenceUrl: finalUrl, evidence: `Sidfoten länkar till ${agency.domain}` } };
   const mail = contactsAgency(html, agency.domain);
   if (mail) return { verdict: { accepted: true, confidence: "contact", evidenceUrl: finalUrl, evidence: `Sidan länkar till e-postadressen ${mail}` } };
-  const print = agencyFingerprint(html, agency);
-  if (print) return { verdict: { accepted: true, confidence: "fingerprint", evidenceUrl: finalUrl, evidence: print } };
+  const trace = agencyTrace(html, agency);
+  if (trace) return { verdict: { accepted: true, confidence: "fingerprint", evidenceUrl: finalUrl, evidence: trace.evidence, trace: { kind: trace.kind, token: trace.token } } };
   // Visar sidan en annan byrå är byråns portfölj fel eller föråldrad.
   return creator ? { contradicted: creator.name } : null;
 }

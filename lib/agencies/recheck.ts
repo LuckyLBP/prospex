@@ -1,4 +1,5 @@
 import type { CheckedRow } from "./store";
+import { VERIFY_RULES } from "./verify";
 
 // När en redan kontrollerad domän behöver kontrolleras igen. Utan det skulle en stor byrå kontrollera samma första
 // kandidater i varje körning och aldrig nå resten.
@@ -16,6 +17,8 @@ export const UNREADABLE = new Set(["blocked", "unreachable"]);
 /** Ska en ny kandidat hoppas över eftersom den kontrollerats nyligen? Ren. */
 export function recentlyChecked(row: CheckedRow | undefined, now: number): boolean {
   if (!row) return false;
+  // Ett utslag som gavs med äldre regler gäller inte längre: reglerna har blivit bättre sedan dess.
+  if ((row.verdict === "no-credit" || row.verdict === "other-agency") && row.rules < VERIFY_RULES) return false;
   const age = now - row.checkedAt.getTime();
   return age < (UNREADABLE.has(row.verdict) ? UNREADABLE_RETRY_MS : NO_CREDIT_RETRY_MS);
 }

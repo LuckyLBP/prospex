@@ -82,7 +82,8 @@ export interface Usage {
 export interface DiscoverDeps {
   /** Företag i vår katalog vars egen profil anger den här byrån. */
   catalog: (agency: Agency) => Promise<string[]>;
-  publicwww: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domains: { domain: string; url: string | null }[]; truncated: boolean }>;
+  /** `learned`: spår i koden som styrkt många kunder, att söka på i källkod förutom byråns domän. */
+  publicwww: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">, learned?: readonly string[]) => Promise<{ domains: { domain: string; url: string | null }[]; truncated: boolean }>;
   viewdns: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<ViewdnsHit[]>;
   viewdnsConfigured: () => boolean;
   /** Bakåtlänkar till byråns domän (OpenSEO), rensade av triage. Dyrare än katalogen men det som hittar flest kunder. */
@@ -107,9 +108,24 @@ export const defaultDiscoverDeps: DiscoverDeps = {
       .filter((r) => creatorMatchesAgency(r.creator as { name: string; domain: string | null } | null, agency))
       .map((r) => r.domain as string);
   },
-  async publicwww(agency, ctx) {
+  async publicwww(agency, ctx, learned = []) {
     const body = await searchPublicwww(`"${agency.domain}"`, 1000, ctx);
-    return { domains: (body.results ?? []).map((r) => ({ domain: r.domain ?? r.url ?? "", url: r.url ?? null })), truncated: body.truncated === true };
+    const domains = (body.results ?? []).map((r) => ({ domain: r.domain ?? r.url ?? "", url: r.url ?? null }));
+    let truncated = body.truncated === true;
+    // Spår som redan styrkt många av byråns kunder: sök på dem i källkod. Det hittar kunder som aldrig länkat till byrån.
+    // Ett fel här (kvoten tar slut) ger bara färre förslag.
+    for (const token of learned) {
+      try {
+        const more = await searchPublicwww(`"${token}"`, 1000, ctx);
+        const hits = (more.results ?? []).map((r) => ({ domain: r.domain ?? r.url ?? "", url: r.url ?? null }));
+        ctx.log(`Byrå ${agency.name}: spåret ${token} gav ${hits.length} sajter hos PublicWWW`);
+        domains.push(...hits);
+        truncated ||= more.truncated === true;
+      } catch (e) {
+        ctx.log(`Byrå ${agency.name}: sökningen på spåret ${token} hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
+      }
+    }
+    return { domains, truncated };
   },
   async viewdns(agency, ctx) {
     const rec = await lookupDns(agency.domain);
@@ -191,6 +207,8 @@ export interface DiscoverOpts {
   /** Dygnets förbrukning hittills, för taken. */
   spend?: Spend;
   claudeBelow?: number;
+  /** Spår i koden som styrkt många av byråns kunder, att söka på i PublicWWW. */
+  learned?: readonly string[];
 }
 
 /**
@@ -265,7 +283,7 @@ export async function runDiscoveryStep(
 
     case "publicwww":
       try {
-        const pw = await deps.publicwww(agency, ctx);
+        const pw = await deps.publicwww(agency, ctx, opts.learned ?? []);
         for (const r of pw.domains) add(r.domain, "publicwww", r.url);
         if (pw.truncated) next.truncated = true;
         next.externalOk++;
