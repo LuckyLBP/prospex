@@ -53,12 +53,29 @@ export function footerLinksTo(html: string, agencyDomain: string): boolean {
   return false;
 }
 
-/** Länkar sidan till en e-postadress hos byrån (mailto:offert@byran.se)? Då styr byrån sidans förfrågningar, vilket en kund sällan har. */
+/**
+ * Länkar sidan till en e-postadress hos byrån (mailto:offert@byran.se), eller anger den som sidans egen e-postadress i
+ * strukturerad data ("email": "info@byran.se")? Då styr byrån sidans förfrågningar, vilket en kund sällan har.
+ */
 export function contactsAgency(html: string, agencyDomain: string): string | null {
-  for (const m of html.matchAll(/\bhref\s*=\s*["']mailto:([^"'?]+)/gi)) {
-    const address = decodeURIComponent(m[1]).trim().toLowerCase();
+  const own = (address: string) => {
     const host = address.split("@")[1];
-    if (host && isSameOrSubdomain(host, agencyDomain)) return address;
+    return !!host && isSameOrSubdomain(host, agencyDomain);
+  };
+  for (const m of html.matchAll(/\bhref\s*=\s*["']mailto:([^"'?]+)/gi)) {
+    let address = m[1];
+    try {
+      address = decodeURIComponent(address);
+    } catch {
+      /* en trasig procentkodning: använd texten som den är */
+    }
+    address = address.trim().toLowerCase();
+    if (own(address)) return address;
+  }
+  // JSON-LD och andra datablock: bara fältet "email", så att en adress som nämns i löptext inte räknas.
+  for (const m of html.matchAll(/["']email["']\s*:\s*["']([^"'\s]+@[^"'\s]+)["']/gi)) {
+    const address = m[1].trim().toLowerCase();
+    if (own(address)) return address;
   }
   return null;
 }
@@ -90,7 +107,8 @@ export function footerTextCredit(html: string, agency: Agency): string | null {
 
 /**
  * Byråns fingeravtryck i sajtens kod, för kunder som inte visar något synligt: en generator-tagg, ett temaprefix under
- * /wp-content/themes/ eller resurser från byråns egna domän. Returnerar vad som hittades, eller null.
+ * /wp-content/themes/, en variabel i sidans skript som är döpt efter byrån (window.byran_design_data) eller resurser från
+ * byråns egna domän. Returnerar vad som hittades, eller null.
  */
 export function agencyFingerprint(html: string, agency: Agency): string | null {
   const brands = agencyBrands(agency);
@@ -100,6 +118,11 @@ export function agencyFingerprint(html: string, agency: Agency): string | null {
   for (const brand of brands) {
     const theme = new RegExp(`/wp-content/themes/([a-z0-9_-]*${brand.replace(/[^a-z0-9]/gi, "")}[a-z0-9_-]*)/`, "i").exec(html);
     if (theme) return `Tema: ${theme[1]}`;
+  }
+  // Plattformar och byråer lägger ofta sina egna variabler i sidan, döpta efter sig: smartproduktion_design_data.
+  for (const brand of brands) {
+    const id = new RegExp(`(?<![a-z0-9_])(${brand.replace(/[^a-z0-9]/gi, "")}_[a-z][a-z0-9_]{2,})`, "i").exec(html);
+    if (id) return `Kod: ${id[1]}`;
   }
   const own = new RegExp(`<(?:link|script|img)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'][^"']*//[a-z0-9.-]*\\.${agency.domain.replace(/\./g, "\\.")}/`, "i").exec(html);
   return own ? `Resurs från ${agency.domain}` : null;

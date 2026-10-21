@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { creatorMatchesAgency, footerLinksTo, isSameOrSubdomain } from "./match";
+import { agencyFingerprint, contactsAgency, creatorMatchesAgency, footerLinksTo, isSameOrSubdomain } from "./match";
 
 const conseo = { name: "Conseo Webb", domain: "conseo.se" };
 
@@ -35,5 +35,33 @@ describe("footerLinksTo", () => {
     expect(footerLinksTo(page(`© Företaget`, `<a href="https://conseo.se">Vår partner</a>`), "conseo.se")).toBe(false);
     expect(footerLinksTo(page(`<a href="https://annan.se">x</a>`), "conseo.se")).toBe(false);
     expect(footerLinksTo(page(`<a href="/conseo.se">x</a>`), "conseo.se")).toBe(false);
+  });
+});
+
+// Kunder till Smartproduktion visar ingen kredit i sidfoten, men sidans kod bär deras namn: en variabel i ett skript och
+// byråns e-postadress i den strukturerade datan. Utdragen är från riktiga sajter som körningen räknade som "utan kredit".
+describe("a platform's own variable and the agency's email in structured data", () => {
+  const agency = { name: "Smartproduktion Sverige AB", domain: "smartproduktion.se" };
+
+  it("finds a variable named after the agency as a fingerprint", () => {
+    const html = `<script> window.addEventListener("DOMContentLoaded", function () { window.smartproduktion_design_data = {"color_primary":"#246ae0"}; }); </script>`;
+    expect(agencyFingerprint(html, agency)).toBe("Kod: smartproduktion_design_data");
+  });
+  it("does not take the agency's name in plain text, in a longer word or as a prefix of another name", () => {
+    expect(agencyFingerprint(`<p>Vi har jobbat med smartproduktion tidigare.</p>`, agency)).toBeNull();
+    expect(agencyFingerprint(`<script>var mysmartproduktion_x = 1;</script>`, agency)).toBeNull();
+    expect(agencyFingerprint(`<script>var smartproduktion = 1; var smartproduktion_ = 2;</script>`, agency)).toBeNull();
+  });
+  it("finds the agency's address as the page's own email in structured data", () => {
+    const html = `<script type="application/ld+json">{"@type": "LocalBusiness", "name": "Alla Rörmokare", "url": "https://www.allarormokare.se/", "email": "info@smartproduktion.se"}</script>`;
+    expect(contactsAgency(html, "smartproduktion.se")).toBe("info@smartproduktion.se");
+  });
+  it("does not take an address that is only mentioned in text, or an email at another domain", () => {
+    expect(contactsAgency(`<p>Skriv till info@smartproduktion.se om du vill ha en hemsida.</p>`, "smartproduktion.se")).toBeNull();
+    expect(contactsAgency(`{"email": "kontakt@rormokare.se"}`, "smartproduktion.se")).toBeNull();
+  });
+  it("still reads a mailto link, also with a broken percent sign", () => {
+    expect(contactsAgency(`<a href="mailto:offert@smartproduktion.se?subject=hej">Mejla</a>`, "smartproduktion.se")).toBe("offert@smartproduktion.se");
+    expect(contactsAgency(`<a href="mailto:50%@smartproduktion.se">x</a>`, "smartproduktion.se")).toBe("50%@smartproduktion.se");
   });
 });
