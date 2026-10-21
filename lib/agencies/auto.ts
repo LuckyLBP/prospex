@@ -2,7 +2,7 @@ import { isAnthropicConfigured } from "@/lib/ai/model";
 import { pool } from "@/lib/db";
 import { parseProfileInput } from "@/lib/profile/input";
 import { isPlacesConfigured, searchPlaces, nameMatches } from "@/lib/profile/places";
-import { failProfile, startProfile } from "@/lib/profile/store";
+import { failProfile, ProfileStartError, startProfile } from "@/lib/profile/store";
 import { triggerProfileBuild } from "@/lib/profile/trigger";
 import type { ProfileCreator } from "@/lib/profile/types";
 import { triggerRun } from "@/lib/runs/start";
@@ -137,4 +137,76 @@ export async function getAgencyState(i: { domain: string | null; slug: string | 
   );
   const r = rows[0];
   return r ? { id: r.id, slug: r.slug, published: r.published, customers: r.customers, profiling: r.profiling, lastRun: r.last_run ?? null } : null;
+}
+
+// ---------------------------------------------------------------- profil för byrån som hittats
+
+/** Så många profiler per dygn som skapas av sig själva (inte av en person), alla vägar in. */
+export const MAX_AUTO_PROFILES_PER_DAY = 20;
+
+export type CreatorProfileResult =
+  | { started: true; domain: string }
+  | { started: false; reason: "disabled" | "no-creator" | "not-agency" | "no-domain" | "own-site" | "system-profile" | "has-profile" | "daily-cap" | "busy" | "error" };
+
+export interface CreatorProfileDeps {
+  enabled: () => boolean;
+  /** Finns redan en profil för domänen (köad, pågående, klar, eller ett misslyckande det senaste dygnet)? */
+  hasProfile: (domain: string) => Promise<boolean>;
+  /** Profiler som skapats av systemet det senaste dygnet. */
+  autoToday: () => Promise<number>;
+  /** Startar profilen. False om någon hann före. */
+  start: (domain: string) => Promise<boolean>;
+}
+
+export const defaultCreatorProfileDeps: CreatorProfileDeps = {
+  enabled: () => process.env.AGENCY_AUTOSTART !== "off",
+  async hasProfile(domain) {
+    const { rows } = await pool.query(
+      `select exists (select 1 from company_profiles where domain = $1 and (status in ('queued','running','done') or (status = 'error' and created_at > now() - interval '24 hours'))) as has`,
+      [domain],
+    );
+    return Boolean(rows[0]?.has);
+  },
+  async autoToday() {
+    const { rows } = await pool.query(`select count(*)::int n from company_profiles where requested_by is null and created_at > now() - interval '24 hours'`);
+    return rows[0].n as number;
+  },
+  async start(domain) {
+    const parsed = parseProfileInput(domain);
+    if (parsed.kind !== "url") return false;
+    const profile = await startProfile(parsed, { id: null });
+    if (profile.reused) return false;
+    try {
+      await triggerProfileBuild(profile.id, { orgnr: null });
+    } catch (e) {
+      await failProfile(profile.id, `Kunde inte starta bygget: ${e instanceof Error ? e.message : "okänt fel"}`);
+    }
+    return true;
+  },
+};
+
+/**
+ * Har profilen en byrå (utpekad av sidfoten eller av servern) som vi inte har någon profil för, skapas den av sig själv.
+ * En byrå som bara driver servern får en profil men ingen kundsökning: det är `maybeStartAgency` som startar sådan, och
+ * den gör det bara för en byrå som sidfötterna pekat ut. Profiler som skapats av systemet startar inga nya, så att det
+ * inte blir en kedja, och dygnets tak gäller. Ett fel stoppar aldrig bygget av kundens profil.
+ */
+export async function maybeStartCreatorProfile(i: { creator: ProfileCreator | null; customerDomain: string | null; isSystemProfile: boolean }, deps: CreatorProfileDeps = defaultCreatorProfileDeps): Promise<CreatorProfileResult> {
+  try {
+    if (!deps.enabled()) return { started: false, reason: "disabled" };
+    if (!i.creator) return { started: false, reason: "no-creator" };
+    if (i.isSystemProfile) return { started: false, reason: "system-profile" };
+    // En byrå som sidfoten pekat ut och bedömts vara en byrå, eller en som servern pekat ut. Plattformar och verktyg får ingen.
+    if (!(i.creator.kind === "agency" || i.creator.basis === "server-guess")) return { started: false, reason: "not-agency" };
+    const domain = normalizeDomain(i.creator.domain);
+    if (!domain) return { started: false, reason: "no-domain" };
+    if (i.customerDomain && isSameOrSubdomain(i.customerDomain, domain)) return { started: false, reason: "own-site" };
+    if (await deps.hasProfile(domain)) return { started: false, reason: "has-profile" };
+    if ((await deps.autoToday()) >= MAX_AUTO_PROFILES_PER_DAY) return { started: false, reason: "daily-cap" };
+    return (await deps.start(domain)) ? { started: true, domain } : { started: false, reason: "has-profile" };
+  } catch (e) {
+    if (e instanceof ProfileStartError && (e.code === "BUSY" || e.code === "RATE")) return { started: false, reason: "busy" };
+    console.error("[byrå] kunde inte skapa profilen för byrån:", e instanceof Error ? e.message : e);
+    return { started: false, reason: "error" };
+  }
 }

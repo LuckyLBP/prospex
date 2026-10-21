@@ -15,7 +15,9 @@ import { getAgencyByDomain, listAgencyCustomers } from "@/lib/agencies/store";
 import { getPresence } from "@/lib/profile/presence";
 import { STAGE_LABEL, getProfile, sweepDeadProfiles } from "@/lib/profile/store";
 import type { CompanyProfile, PageLog } from "@/lib/profile/types";
-import { refreshProfileAction } from "../actions";
+import FindListButton from "@/components/dashboard/FindListButton";
+import { displayName } from "@/lib/agencies/request";
+import { findCustomersAction, refreshProfileAction } from "../actions";
 
 export default async function ProfilePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string }> }) {
   const a = await requireAdmin();
@@ -40,6 +42,9 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
   const photoUrls = Object.fromEntries(people.flatMap((p) => (p.photoPath && signed.get(p.photoPath) ? [[personKey(p.name), signed.get(p.photoPath)!]] : [])));
   const creatorAgency = profile?.creator ? await getAgencyState({ domain: profile.creator.domain, slug: profile.creator.supplierSlug }).catch(() => null) : null;
   const customers = agency ? await listAgencyCustomers(agency.id).catch(() => []) : [];
+  // Letar vi efter kunderna åt den här webbplatsen just nu? Då uppdateras sidan av sig själv tills sökningen är klar.
+  const ownAgency = agency ? await getAgencyState({ domain: profile?.company.domain ?? row.domain, slug: null }).catch(() => null) : null;
+  const searching = ownAgency?.lastRun?.status === "queued" || ownAgency?.lastRun?.status === "running";
   const statusPill = (
     <StatusPill tone={row.status === "done" ? "green" : row.status === "error" ? "red" : "orange"}>{row.status === "done" ? "Klar" : row.status === "error" ? "Misslyckades" : row.stage ? STAGE_LABEL[row.stage] : "I kö"}</StatusPill>
   );
@@ -54,7 +59,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
 
   return (
     <>
-      <RunPoller active={active} />
+      <RunPoller active={active || searching} />
       <Link href="/admin/foretagsprofil" className="mb-3 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 hover:text-ink"><ChevronLeft size={15} />Spaning</Link>
       <Flash error={sp.error} />
       {row.status === "error" && <Flash error={row.error ?? "Bygget misslyckades."} />}
@@ -74,6 +79,19 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
 
       {profile && <ProfileView profile={profile} pages={pages} presence={presence} fallbackName={title} actions={actions} agency={creatorAgency} returnTo={`/admin/foretagsprofil/${row.id}`} profileId={row.id} photoUrls={photoUrls} />}
 
+      {!agency && row.status === "done" && row.domain && (
+        <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white px-6 py-5">
+          <div>
+            <p className="text-[15px] font-semibold text-ink">Vi har ingen kundlista för {row.domain} än</p>
+            <p className="mt-0.5 max-w-[560px] text-[13px] text-gray-500">Vi kan leta efter företag som visar {displayName(profile?.company.name ?? row.name, row.domain)} i sidfoten eller på annat sätt är kopplade till webbplatsen. Det skapar en opublicerad byrå som du granskar innan något visas för kunder.</p>
+          </div>
+          <form action={findCustomersAction}>
+            <input type="hidden" name="id" value={row.id} />
+            <FindListButton />
+          </form>
+        </section>
+      )}
+
       {agency && (
         <section className="mt-5 rounded-3xl bg-white p-6">
           <div className="mb-3 flex items-baseline justify-between gap-4">
@@ -81,7 +99,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
             <Link href={`/admin/leverantorer/${agency.slug}`} className="text-[13px] font-medium text-accent-text underline underline-offset-4">Granska i källan</Link>
           </div>
           {customers.length === 0 ? (
-            <p className="text-[14px] text-gray-500">Inga kunder än. Kör insamlingen på byråns källa.</p>
+            <p className="text-[14px] text-gray-500">{searching ? "Vi letar efter kunder just nu. Sidan uppdateras av sig själv." : "Inga kunder än. Kör insamlingen på byråns källa."}</p>
           ) : (
             <>
               <p className="mb-3 text-[13px] text-gray-500">{customers.length} {customers.length === 1 ? "kund" : "kunder"}{agency.published ? "" : ", ej publicerade än"}. De senaste:</p>

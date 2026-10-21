@@ -10,6 +10,9 @@ import { triggerProfileBuild } from "@/lib/profile/trigger";
 import { searchCompanies, type Candidate } from "@/lib/profile/name-search";
 import { setCreditKind, type CreditKind } from "@/lib/agencies/classify";
 import { learnFromReview } from "@/lib/agencies/server-guess";
+import { displayName } from "@/lib/agencies/request";
+import { AgencyError, ensureAgencySupplier } from "@/lib/agencies/store";
+import type { CompanyProfile } from "@/lib/profile/types";
 import { removePersonFromProfile, suppressPerson } from "@/lib/profile/people-store";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { triggerRun } from "@/lib/runs/start";
@@ -139,4 +142,32 @@ export async function removePersonAction(f: FormData) {
   await audit(a.user, "company.person_remove", "company", { id: row.company_id ?? profileId, name: row.name ?? row.input, details: { key } });
   revalidatePath(back);
   redirect(`${back}?ok=${encodeURIComponent("Personen togs bort och läggs inte tillbaka.")}`);
+}
+
+/**
+ * "Leta efter kunder" på en profil: skapar byrån som källa (opublicerad) och startar sökningen efter dess kunder.
+ * Admin har ingen bolagskoppling, så det går inte via bolagens "Hitta företagen". Inget visas för kunder förrän en admin publicerat.
+ */
+export async function findCustomersAction(f: FormData) {
+  const a = await requireAdmin();
+  const id = String(f.get("id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) redirect(backTo(f));
+  const back = `/admin/foretagsprofil/${id}`;
+  const row = await getProfile(id);
+  const domain = normalizeDomain(row?.domain);
+  if (!row || !domain) redirect(`${back}?error=${encodeURIComponent("Profilen har ingen webbplats att leta kunder för.")}`);
+  const profile = row.profile as CompanyProfile | null;
+  try {
+    const source = await ensureAgencySupplier({ name: displayName(profile?.company.name ?? row.name, domain), domain, logoPath: profile?.companyLogoPath ?? null });
+    if (source.created) await audit(a.user, "source.create", "source", { id: source.slug, name: source.name, details: { kind: "supplier", method: "agency", domain, from: "profile" } });
+    await triggerRun(source.id);
+  } catch (e) {
+    // En körning som redan pågår är precis vad vi vill ha.
+    if (!(e instanceof RunStartError)) {
+      const message = e instanceof AgencyError ? e.message : `Kunde inte starta sökningen: ${e instanceof Error ? e.message : "okänt fel"}`;
+      redirect(`${back}?error=${encodeURIComponent(message)}`);
+    }
+  }
+  revalidatePath(back);
+  redirect(back);
 }

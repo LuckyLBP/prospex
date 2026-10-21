@@ -1,6 +1,7 @@
 import { pool } from "@/lib/db";
 import { agencyKey } from "@/lib/profile/creator";
 import { normalizeDomain } from "@/lib/scrapers/domain";
+import { invalidateCatalogue } from "@/lib/catalogue-tag";
 import { slugify } from "@/lib/slug";
 
 // Byrån som källa i katalogen. En byrå är en leverantör (kind = 'supplier') med metoden 'agency', och dess kunder är
@@ -297,4 +298,16 @@ export async function removeAgencyCustomersByConfidence(supplierId: string, conf
   } finally {
     client.release();
   }
+}
+
+/**
+ * Byråns källa får byråns logotyp när profilen för den är klar, om källan saknar en. Så syns logotypen i listorna utan att
+ * någon behöver ladda upp den, också för en byrå som skapats för hand. En logotyp som någon redan satt rörs aldrig.
+ */
+export async function adoptSupplierLogo(domain: string | null, logoPath: string | null): Promise<boolean> {
+  const d = normalizeDomain(domain);
+  if (!d || !logoPath) return false;
+  const { rowCount } = await pool.query(`update suppliers set logo_path = $2, updated_at = now() where domain = $1 and logo_path is null`, [d, logoPath]);
+  if (rowCount) invalidateCatalogue();
+  return Boolean(rowCount);
 }

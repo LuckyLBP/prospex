@@ -86,6 +86,8 @@ describe("findCredit", () => {
 
   it("does not credit the tool", () => {
     expect(findCredit("Proudly powered by WordPress")).toBeNull();
+    expect(findCredit("Powered by GDPR Cookie Compliance Dataskydd")).toBeNull();
+    expect(findCredit("Powered by Cookiebot")).toBeNull();
   });
 });
 

@@ -3,8 +3,8 @@ import { isBolagsverketTest } from "@/lib/bolagsverket/client";
 import type { CompanyRegistry } from "@/lib/bolagsverket/types";
 import { findCompanyById, upsertCompany } from "@/lib/companies/upsert";
 import { agencyModel, agencyModelId, estimateCostSek, isAiConfigured, isAnthropicConfigured } from "@/lib/ai/model";
-import { maybeStartAgency } from "@/lib/agencies/auto";
-import { getAgencyByDomain } from "@/lib/agencies/store";
+import { maybeStartAgency, maybeStartCreatorProfile } from "@/lib/agencies/auto";
+import { adoptSupplierLogo, getAgencyByDomain } from "@/lib/agencies/store";
 import { linkServerToAgencyDomain, recordSiteIps } from "@/lib/agencies/server-guess";
 import { runAgent, type AgentContext } from "./agent";
 import { assembleProfile } from "./assemble";
@@ -37,6 +37,8 @@ export interface BuildDeps {
   buildNetwork: typeof buildNetwork;
   /** Startar en byrå som profilen hittat. Utbytbar så att tester inte når databasen eller nätet. */
   maybeStartAgency?: typeof maybeStartAgency;
+  /** Startar en profil för byrån som utpekats, om vi saknar en. Utbytbar av samma skäl. */
+  maybeStartCreatorProfile?: typeof maybeStartCreatorProfile;
   /** Kontaktpersoner ur sidorna. Utbytbar så att tester inte når modellen. */
   extractPeople?: (pages: ReturnType<typeof condensePage>[], company: { name: string | null; domain: string | null }) => Promise<PeopleResult>;
 }
@@ -166,6 +168,9 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
     const auto = await (deps.maybeStartAgency ?? maybeStartAgency)({ creator: network.creator, customerDomain: resolved.domain, isAgencyProfile: isAgency, foundVia: server ? { ip: server.ip, sites: server.sites } : null });
     if (server && network.creator?.domain) await linkServerToAgencyDomain(server.ip, network.creator.domain);
     if (auto.started) console.log(`[profil ${id}] startade byrån ${auto.domain}`);
+    // Byrån som utpekats får en profil av sig själv om vi saknar en (profilen för en byrå vi sett först här, till exempel via servern).
+    const made = await (deps.maybeStartCreatorProfile ?? maybeStartCreatorProfile)({ creator: network.creator, customerDomain: resolved.domain, isSystemProfile: row.requested_by === null });
+    if (made.started) console.log(`[profil ${id}] startade profilen för ${made.domain}`);
     const modelChoice = isAgency ? { id: agencyModelId(), model: agencyModel() } : undefined;
     if (!modelChoice && !deps.aiConfigured()) aiStatus = "disabled";
     else if (!hasMaterial) aiStatus = "skipped";
@@ -191,6 +196,9 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
 
     // Kontaktuppgifterna från webbplatsen fyller på katalogens post, utan att skriva över något känt.
     await upsertCompany({ dedupeKey: resolved.catalog?.dedupe_key ?? key, domain: resolved.domain, name, phone: gathered.contact.phones[0] ?? null, email: gathered.contact.emails[0] ?? null });
+
+    // Är det här profilen för en byrå vi har som källa, och källan saknar logotyp? Då får den profilens.
+    if (profile.companyLogoPath && gathered.siteDomain) await adoptSupplierLogo(gathered.siteDomain, profile.companyLogoPath).catch(() => false);
 
     await finishProfile(id, {
       companyId, name: profile.company.name, orgnr: resolved.orgnrDisplay, domain: profile.company.domain, profile, facts, pages: gathered.pages,

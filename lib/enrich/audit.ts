@@ -121,7 +121,8 @@ const CREDIT_NAME = new RegExp(`^(${CREDIT_WORD}(?:\\s+${CREDIT_WORD}){0,3})`);
 
 // Credits that name the tool, not the agency: "Powered by WordPress" tells a
 // seller nothing the CMS field does not already say.
-const TOOL_CREDIT = /^(wordpress|wix|squarespace|shopify|webflow|joomla|drupal|elementor|jimdo|weebly|one\.com)\b/i;
+// Inte heller tillägg som cookiebannern och formulären ("Powered by GDPR Cookie Compliance"): de är verktyg, inte byrån.
+const TOOL_CREDIT = /^(wordpress|wix|squarespace|shopify|webflow|joomla|drupal|elementor|jimdo|weebly|one\.com)\b|\b(cookie\w*|gdpr|consent\w*|samtycke|plugin\w*)\b/i;
 
 /** "Hemsida skapad av Conseo" → "Conseo". */
 export function findCredit(text: string): string | null {
