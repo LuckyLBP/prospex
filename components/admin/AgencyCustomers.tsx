@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, Trash2 } from "@/components/brand/icons";
 import { StatusPill } from "@/components/admin/bits";
 import { FormSection } from "@/components/admin/FormSection";
-import type { AgencyCustomer, CustomerEvent } from "@/lib/agencies/store";
+import type { AgencyCustomer, CheckedDomain, CustomerEvent } from "@/lib/agencies/store";
 import { formatDate } from "@/lib/time";
 import { removeAgencyCustomerAction, removeCustomersByTierAction } from "@/app/admin/leverantorer/actions";
 
@@ -18,6 +18,15 @@ const CONFIDENCE: Record<string, { label: string; tone: "green" | "amber" }> = {
 };
 const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "PublicWWW", viewdns: "ViewDNS", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
 const WEAK = ["backlink", "portfolio", "fingerprint", "same-server"];
+const VERDICT: Record<string, { label: string; tone: "gray" | "amber" | "red" }> = {
+  "no-credit": { label: "Utan kredit", tone: "amber" },
+  "other-agency": { label: "Annan byrå", tone: "red" },
+  unreachable: { label: "Svarade inte", tone: "gray" },
+  blocked: { label: "Blockerade", tone: "gray" },
+  "own-domain": { label: "Byråns egen domän", tone: "gray" },
+};
+
+type Tab = "kunder" | "tidigare" | "kontrollerade";
 
 export interface CustomerView {
   rows: AgencyCustomer[];
@@ -27,15 +36,19 @@ export interface CustomerView {
   pageSize: number;
   tier: string | null;
   q: string | null;
-  tab: "kunder" | "tidigare";
+  tab: Tab;
   events: CustomerEvent[];
+  /** Kontrollerade men inte godkända domäner, för fliken Kontrollerade. */
+  checked: { rows: CheckedDomain[]; total: number; byVerdict: Record<string, number> };
+  verdict: string | null;
 }
 
-const href = (slug: string, o: { tab?: string; page?: number; tier?: string | null; q?: string | null }) => {
+const href = (slug: string, o: { tab?: Tab; page?: number; tier?: string | null; verdict?: string | null; q?: string | null }) => {
   const p = new URLSearchParams();
   if (o.tab && o.tab !== "kunder") p.set("tab", o.tab);
   if (o.page && o.page > 1) p.set("sida", String(o.page));
   if (o.tier) p.set("bevis", o.tier);
+  if (o.verdict) p.set("utslag", o.verdict);
   if (o.q) p.set("q", o.q);
   const qs = p.toString();
   return `/admin/leverantorer/${slug}${qs ? `?${qs}` : ""}`;
@@ -54,9 +67,12 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <Link href={href(slug, { tab: "kunder" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "kunder" ? "bg-ink text-white" : "bg-canvas text-gray-600 hover:text-ink"}`}>Kunder ({all})</Link>
         <Link href={href(slug, { tab: "tidigare" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "tidigare" ? "bg-ink text-white" : "bg-canvas text-gray-600 hover:text-ink"}`}>Tidigare kunder ({view.events.length})</Link>
+        <Link href={href(slug, { tab: "kontrollerade" })} className={`rounded-full px-3 py-1 font-medium ${view.tab === "kontrollerade" ? "bg-ink text-white" : "bg-canvas text-gray-600 hover:text-ink"}`}>Kontrollerade ({Object.values(view.checked.byVerdict).reduce((n, c) => n + c, 0)})</Link>
       </div>
 
-      {view.tab === "tidigare" ? (
+      {view.tab === "kontrollerade" ? (
+        <CheckedList slug={slug} view={view} />
+      ) : view.tab === "tidigare" ? (
         view.events.length === 0 ? <p className="text-[14px] text-gray-500">Ingen kund har slutat visa byrån än. Kunderna kontrolleras om vid varje körning.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-[13px]">
@@ -142,5 +158,59 @@ export default function AgencyCustomers({ supplierId, slug, view, published }: {
         </>
       )}
     </FormSection>
+  );
+}
+
+/** Domänerna som kontrollerats men inte godkänts, med länk till sajten så att de kan granskas för hand. */
+function CheckedList({ slug, view }: { slug: string; view: CustomerView }) {
+  const { rows, total, byVerdict } = view.checked;
+  const verdicts = Object.entries(byVerdict).sort((a, b) => b[1] - a[1]);
+  const all = verdicts.reduce((n, [, c]) => n + c, 0);
+  const pages = Math.max(1, Math.ceil(total / view.pageSize));
+  return (
+    <>
+      <p className="text-[13px] text-gray-500">Kandidater som kontrollerats utan att visa byrån. De kontrolleras om efter 30 dagar.</p>
+      <div className="flex flex-wrap items-center gap-2 text-[12px]">
+        <Link href={href(slug, { tab: "kontrollerade", q: view.q })} className={`rounded-full px-2.5 py-1 ${!view.verdict ? "bg-accent-tint font-medium text-accent-text" : "bg-canvas text-gray-600"}`}>Alla ({all})</Link>
+        {verdicts.map(([v, n]) => <Link key={v} href={href(slug, { tab: "kontrollerade", verdict: v, q: view.q })} className={`rounded-full px-2.5 py-1 ${view.verdict === v ? "bg-accent-tint font-medium text-accent-text" : "bg-canvas text-gray-600"}`}>{VERDICT[v]?.label ?? v} ({n})</Link>)}
+        <form className="ml-auto" action={`/admin/leverantorer/${slug}`}>
+          <input type="hidden" name="tab" value="kontrollerade" />
+          {view.verdict && <input type="hidden" name="utslag" value={view.verdict} />}
+          <input name="q" defaultValue={view.q ?? ""} placeholder="Sök domän" aria-label="Sök kontrollerad domän" className="rounded-full border border-gray-200 px-3 py-1 text-[12px] outline-none focus:border-accent" />
+        </form>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-[14px] text-gray-500">{view.q || view.verdict ? "Inga domäner matchar." : "Inget har kontrollerats utan att godkännas än."}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[13px]">
+            <thead className="text-[12px] text-gray-400"><tr><th className="pb-2 pr-4 font-medium">Domän</th><th className="pb-2 pr-4 font-medium">Utslag</th><th className="pb-2 font-medium">Kontrollerad</th></tr></thead>
+            <tbody className="divide-y divide-gray-50">
+              {rows.map((r) => {
+                const v = VERDICT[r.verdict];
+                return (
+                  <tr key={r.domain}>
+                    <td className="py-2.5 pr-4"><a href={`https://${r.domain}/`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-0.5 font-medium text-ink underline-offset-4 hover:underline">{r.domain}<ArrowUpRight size={12} /></a></td>
+                    <td className="py-2.5 pr-4"><StatusPill tone={v?.tone ?? "gray"}>{v?.label ?? r.verdict}</StatusPill>{r.misses > 0 && <span className="ml-2 text-[12px] text-gray-400">{r.misses === 1 ? "Kund som missade senaste kontrollen" : `Kund som missat ${r.misses} kontroller i rad`}</span>}</td>
+                    <td className="py-2.5 text-gray-600">{formatDate(new Date(r.checkedAt))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {pages > 1 && (
+        <nav className="flex items-center justify-between text-[13px] text-gray-500" aria-label="Sidor">
+          <span>Sida {view.page} av {pages} · {total} domäner</span>
+          <span className="flex gap-3">
+            {view.page > 1 && <Link href={href(slug, { tab: "kontrollerade", page: view.page - 1, verdict: view.verdict, q: view.q })} className="font-medium text-accent-text underline underline-offset-4">Föregående</Link>}
+            {view.page < pages && <Link href={href(slug, { tab: "kontrollerade", page: view.page + 1, verdict: view.verdict, q: view.q })} className="font-medium text-accent-text underline underline-offset-4">Nästa</Link>}
+          </span>
+        </nav>
+      )}
+    </>
   );
 }

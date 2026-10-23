@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { pool } from "../db";
-import { learnedTraceTokens, loadChecked, recordChecked } from "./store";
+import { learnedTraceTokens, listCheckedPage, loadChecked, recordChecked } from "./store";
 import { VERIFY_RULES } from "./verify";
 
 // Spår som styrkt många kunder, och reglerversionen på kontrollerna. Egna testrader som städas bort efteråt.
@@ -46,5 +46,27 @@ describe("rule version on checks", () => {
     await recordChecked(supplierId, [{ domain: "zz-learned-x.se", verdict: "no-credit", misses: 0 }]);
     const row = (await loadChecked(supplierId)).get("zz-learned-x.se");
     expect(row).toMatchObject({ verdict: "no-credit", rules: VERIFY_RULES });
+  });
+});
+
+describe("listCheckedPage", () => {
+  it("lists checked domains that were not accepted, filtered by verdict and search, with counts per verdict", async () => {
+    await recordChecked(supplierId, [
+      { domain: "zz-learned-ok.se", verdict: "accepted", misses: 0 },
+      { domain: "zz-learned-nc1.se", verdict: "no-credit", misses: 0 },
+      { domain: "zz-learned-nc2.se", verdict: "no-credit", misses: 1 },
+      { domain: "zz-learned-dead.se", verdict: "unreachable", misses: 0 },
+    ]);
+    const all = await listCheckedPage(supplierId);
+    expect(all.rows.map((r) => r.domain)).not.toContain("zz-learned-ok.se");
+    expect(all.byVerdict).toMatchObject({ "no-credit": 3, unreachable: 1 });
+    expect(all.byVerdict.accepted).toBeUndefined();
+
+    const noCredit = await listCheckedPage(supplierId, { verdict: "no-credit" });
+    expect(noCredit.total).toBe(3);
+    expect(noCredit.rows.every((r) => r.verdict === "no-credit")).toBe(true);
+
+    const searched = await listCheckedPage(supplierId, { verdict: "no-credit", q: "NC2" });
+    expect(searched.rows).toEqual([expect.objectContaining({ domain: "zz-learned-nc2.se", misses: 1 })]);
   });
 });

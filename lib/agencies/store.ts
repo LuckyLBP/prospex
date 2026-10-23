@@ -289,6 +289,35 @@ export async function listAgencyCustomersPage(supplierId: string, f: CustomerFil
   return { rows, total: count.rows[0].n as number, byConfidence: Object.fromEntries(tiers.rows.map((r) => [r.c as string, r.n as number])) };
 }
 
+export interface CheckedDomain {
+  domain: string;
+  verdict: string;
+  misses: number;
+  checkedAt: string;
+}
+
+/**
+ * En sida av de domäner som kontrollerats men inte godkänts (utan kredit, annan byrå, svarade inte ...), för att granska
+ * dem för hand. Godkända finns redan bland kunderna. Tom när tabellen saknas.
+ */
+export async function listCheckedPage(supplierId: string, f: { page?: number; pageSize?: number; verdict?: string | null; q?: string | null } = {}): Promise<{ rows: CheckedDomain[]; total: number; byVerdict: Record<string, number> }> {
+  const pageSize = Math.min(200, Math.max(10, f.pageSize ?? 100));
+  const offset = (Math.max(1, f.page ?? 1) - 1) * pageSize;
+  const q = f.q?.trim().toLowerCase() || null;
+  const where = `supplier_id = $1 and verdict <> 'accepted' and ($2::text is null or verdict = $2) and ($3::text is null or domain like '%' || $3 || '%')`;
+  try {
+    const [list, count, verdicts] = await Promise.all([
+      pool.query(`select domain, verdict, misses, checked_at from supplier_checked where ${where} order by checked_at desc, domain limit $4 offset $5`, [supplierId, f.verdict ?? null, q, pageSize, offset]),
+      pool.query(`select count(*)::int n from supplier_checked where ${where}`, [supplierId, f.verdict ?? null, q]),
+      pool.query(`select verdict, count(*)::int n from supplier_checked where supplier_id = $1 and verdict <> 'accepted' group by 1`, [supplierId]),
+    ]);
+    const rows = list.rows.map((r) => ({ domain: r.domain as string, verdict: r.verdict as string, misses: r.misses as number, checkedAt: new Date(r.checked_at).toISOString() }));
+    return { rows, total: count.rows[0].n as number, byVerdict: Object.fromEntries(verdicts.rows.map((r) => [r.verdict as string, r.n as number])) };
+  } catch {
+    return { rows: [], total: 0, byVerdict: {} };
+  }
+}
+
 /** Tar bort alla kunder med en viss bevisnivå och minns domänerna, så att nästa körning inte lägger tillbaka dem. */
 export async function removeAgencyCustomersByConfidence(supplierId: string, confidence: string): Promise<number> {
   const client = await pool.connect();
