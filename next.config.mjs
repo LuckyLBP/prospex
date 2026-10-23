@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Solar har över 8 000 ikoner. Det här gör att bara de som används följer med.
-  experimental: { optimizePackageImports: ["@solar-icons/react"] },
+  experimental: { optimizePackageImports: ["@solar-icons/react"], agentUpgrade: "security" },
   distDir: process.env.NEXT_DIST_DIR || ".next",
   async redirects() {
     return [
