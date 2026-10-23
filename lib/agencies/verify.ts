@@ -21,7 +21,7 @@ import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, f
  * Versionen på reglerna som bedömer en kandidat. Höj den varje gång reglerna blir bättre: domäner som tidigare bedömts
  * som "utan kredit" eller "annan byrå" med äldre regler kontrolleras då om i nästa körning, och inte först efter 30 dagar.
  */
-export const VERIFY_RULES = 2;
+export const VERIFY_RULES = 3;
 
 export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "portfolio" | "backlink";
 
@@ -67,14 +67,21 @@ function checkPage(html: string, finalUrl: string, domain: string, agency: Agenc
   return creator ? { contradicted: creator.name } : null;
 }
 
+/**
+ * Kreditraden ligger sist på sidan, så hela sidan läses. Med det vanliga taket på 512 kB försvann sidfoten på stora
+ * Elementor-sidor (elosak.se 600 kB, pizzeriaroma.se 680 kB) och kunden blev "utan kredit".
+ */
+const PAGE_BYTES = 2_000_000;
+
 export async function verifyCandidate(domain: string, agency: Agency, deps: VerifyDeps = defaultVerifyDeps, proof?: PortfolioProof | null, hint?: BacklinkHint | null): Promise<Verdict> {
   if (isSameOrSubdomain(domain, agency.domain)) return { accepted: false, reason: "own-domain" };
+  const fetchPage = (url: string) => deps.safeFetch(url, domain, new PageBudget(1, 0), "code", { maxBytes: PAGE_BYTES });
 
   // En adress som inte svarar provas med http och med www, eftersom en del sajter bara svarar på en av dem.
-  let page = await deps.safeFetch(`https://${domain}`, domain, new PageBudget(1, 0));
+  let page = await fetchPage(`https://${domain}`);
   if (!page.html && page.status === 0 && !page.problem?.includes("inte en offentlig")) {
-    page = await deps.safeFetch(`http://${domain}`, domain, new PageBudget(1, 0));
-    if (!page.html && page.status === 0) page = await deps.safeFetch(`https://www.${domain}`, domain, new PageBudget(1, 0));
+    page = await fetchPage(`http://${domain}`);
+    if (!page.html && page.status === 0) page = await fetchPage(`https://www.${domain}`);
   }
   const blocked = !page.html ? [401, 403, 429, 503].includes(page.status) : isInterstitial(page.html);
   if (!page.html || blocked) {
@@ -98,7 +105,7 @@ export async function verifyCandidate(domain: string, agency: Agency, deps: Veri
   // Bakåtlänksindexet vet vilken sida som länkar till byrån. Kreditraden ligger ofta i en sidfot som finns på alla
   // sidor, men den sidan är den säkraste att titta på när startsidan inte visar något.
   if (!contradicted && hint?.urlFrom && sameSite(hint.urlFrom, domain) && normPage(hint.urlFrom) !== normPage(page.finalUrl)) {
-    const other = await deps.safeFetch(hint.urlFrom, domain, new PageBudget(1, 0)).catch(() => null);
+    const other = await fetchPage(hint.urlFrom).catch(() => null);
     if (other?.html && !isInterstitial(other.html)) {
       const found = checkPage(other.html, other.finalUrl, domain, agency);
       if (found && "verdict" in found) return found.verdict;

@@ -79,8 +79,8 @@ export async function fetchPage(
   }
 }
 
-/** Reads at most MAX_BYTES, then stops pulling from the stream. */
-export async function readCapped(response: Response): Promise<string | null> {
+/** Reads at most `max` bytes (MAX_BYTES by default), then stops pulling from the stream. */
+export async function readCapped(response: Response, max = MAX_BYTES): Promise<string | null> {
   const body = response.body;
   if (!body) return null;
 
@@ -90,7 +90,7 @@ export async function readCapped(response: Response): Promise<string | null> {
   let total = 0;
 
   try {
-    while (total < MAX_BYTES) {
+    while (total < max) {
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;

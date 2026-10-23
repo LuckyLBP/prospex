@@ -65,8 +65,11 @@ export interface SafePage {
 
 const miss = (url: string, problem: string, status = 0, finalUrl = url): SafePage => ({ url, finalUrl, status, html: null, headers: {}, problem });
 
-/** Hämtar en sida inom `boundary`. Kastar aldrig: allt som går fel blir en `problem`. */
-export async function safeFetch(url: string, boundary: string, budget: PageBudget, via: "code" | "model" = "code"): Promise<SafePage> {
+/**
+ * Hämtar en sida inom `boundary`. Kastar aldrig: allt som går fel blir en `problem`. `maxBytes` höjer taket på 512 kB
+ * för den som behöver slutet av sidan, där sidfoten ligger.
+ */
+export async function safeFetch(url: string, boundary: string, budget: PageBudget, via: "code" | "model" = "code", opts: { maxBytes?: number } = {}): Promise<SafePage> {
   if (!isAllowedUrl(url, boundary)) return miss(url, "Adressen ligger utanför företagets webbplats.");
   if (!budget.take(via)) return miss(url, "Gränsen för antal sidor är nådd.");
 
@@ -115,7 +118,7 @@ export async function safeFetch(url: string, boundary: string, budget: PageBudge
       await response.body?.cancel().catch(() => {});
       return { url, finalUrl: current, status: response.status, html: null, headers, problem: "Svaret var inte en webbsida." };
     }
-    const html = await readCapped(response as unknown as Response);
+    const html = await readCapped(response as unknown as Response, opts.maxBytes);
     return { url, finalUrl: current, status: response.status, html, headers, problem: html ? null : "Sidan var tom." };
   }
   return miss(url, "För många omdirigeringar.");

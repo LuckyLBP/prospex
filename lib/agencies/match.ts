@@ -1,5 +1,5 @@
 import { normalizeDomain } from "@/lib/scrapers/domain";
-import { agencyKey, footerText } from "@/lib/profile/creator";
+import { agencyKey, footerRegion, footerText } from "@/lib/profile/creator";
 import { findTraces, type Trace } from "./traces";
 
 // Är det här byrån? Rena regler som verifieringen och katalogsökningen delar. Ett namn räcker aldrig ensamt när det är
@@ -30,8 +30,6 @@ export function creatorMatchesAgency(creator: { name: string; domain: string | n
   return a.length >= 4 && a === b && !VAGUE.has(a);
 }
 
-const FOOTER_WINDOW = 12_000;
-
 /** Nämner sidan domänen, som länk eller som text? Används för att styrka att byråns egen sida listar en kund. */
 export function pageMentionsDomain(html: string, domain: string): boolean {
   for (const m of html.matchAll(/\bhref\s*=\s*["']([^"']+)["']/gi)) {
@@ -44,9 +42,7 @@ export function pageMentionsDomain(html: string, domain: string): boolean {
 
 /** Länkar sidfoten (sist i dokumentet om det saknas en) till byråns domän? */
 export function footerLinksTo(html: string, agencyDomain: string): boolean {
-  const footerAt = html.toLowerCase().lastIndexOf("<footer");
-  const region = footerAt >= 0 ? html.slice(footerAt) : html.slice(Math.max(0, html.length - FOOTER_WINDOW));
-  for (const m of region.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)) {
+  for (const m of footerRegion(html).matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']/gi)) {
     const href = m[1].trim();
     if (!/^(?:https?:)?\/\//i.test(href)) continue;
     if (isSameOrSubdomain(href.startsWith("//") ? `https:${href}` : href, agencyDomain)) return true;
@@ -89,7 +85,7 @@ export function agencyBrands(agency: Agency): string[] {
 }
 
 const wordRe = (brand: string) => new RegExp(`(?:^|[^a-zåäö0-9])${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-zåäö0-9])`, "gi");
-const CREDIT_CUE = /(?:byggd|skapad|gjord|utvecklad|designad|producerad|levererad|drivs|driven|hemsida|webbplats|webbyrå|webbdesign|e-handel|powered|made|built|created|design|\bav\b|\bby\b|♥|❤)/i;
+const CREDIT_CUE = /(?:byggd|skapad|gjord|utvecklad|designad|producerad|levererad|drivs|driven|hemsida|webbplats|webbyrå|webbdesign|e-handel|powered|made|built|created|design|\bseo\b|\bav\b|\bby\b|♥|❤)/i;
 
 /**
  * En kredit som bara är text: "Byggd med ♥ av Capace Media" utan länk. Byråns namn i sidfoten, med ett kreditord strax före.

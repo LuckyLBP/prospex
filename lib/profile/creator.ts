@@ -17,9 +17,9 @@ export interface Creator {
 // Substantiv i kreditrader som "Design / Utveckling av ARLY" eller "Webbdesign & produktion av X". De som inte är rena
 // designord (utveckling, produktion ...) kan också stå i vanlig text ("utveckling av bostäder") och får därför en
 // snävare gräns för hur nära länken ska ligga, se NOUN_ONLY.
-const NOUN = String.raw`(?:web[a-zåäö]*\s*)?(?:design|utveckling|produktion|programmering|koncept|idé|teknik|lösning)`;
+const NOUN = String.raw`(?:web[a-zåäö]*\s*)?(?:design|seo|utveckling|produktion|programmering|koncept|idé|teknik|lösning|sökmotoroptimering|marknadsföring)`;
 const MADE_BY = String.raw`(?:skapad|gjord|utvecklad|producerad|byggd|designad|levererad)\s+(?:med\s+\S{1,4}\s+)?av|${NOUN}(?:\s*(?:/|&amp;|&|\+|och|,)\s*${NOUN})*\s+av|hemsida\s+av|webbplats\s+av|sajt\s+av|webbyrå\s*:?|webbbyrå\s*:?`;
-const NOUN_ONLY = /utveckling|produktion|programmering|koncept|idé|teknik|lösning/i;
+const NOUN_ONLY = /utveckling|produktion|programmering|koncept|idé|teknik|lösning|sökmotoroptimering|marknadsföring/i;
 /** Hur nära efter en substantivfras länken måste börja, i tecken. */
 const NOUN_WINDOW = 6;
 const POWERED_BY = String.raw`powered\s+by|(?:driven|drivs)\s+av|by`;
@@ -33,6 +33,17 @@ const WINDOW = 320;
 const FOOTER_WINDOW = 12_000;
 
 const strip = (s: string) => decodeEntities(s.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+
+/**
+ * Sidfoten: från det sista <footer> och framåt, annars slutet av sidan. Skript och stilar tas bort först. Utan det kan
+ * en sida utan <footer> ha så mycket skript efter kreditraden att raden hamnar utanför fönstret (esosbygg.se: 24 000
+ * tecken skript efter "SEO av Webb of Sweden"). Ren.
+ */
+export function footerRegion(html: string): string {
+  const clean = html.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ");
+  const footerAt = clean.toLowerCase().lastIndexOf("<footer");
+  return footerAt >= 0 ? clean.slice(footerAt) : clean.slice(Math.max(0, clean.length - FOOTER_WINDOW));
+}
 
 function cleanName(raw: string): string | null {
   const name = raw.replace(/^[\s:–—\-|·•©❤♥]+|[\s.,;:|·•–—\-]+$/g, "").replace(/\s+/g, " ").trim();
@@ -125,9 +136,7 @@ function creditsIn(region: string, siteDomain: string, isPlatform: (domain: stri
 
 /** Sidfotens text (sist i dokumentet om det saknas en sidfot), som underlag när en kredit ska bedömas. */
 export function footerText(html: string, max = 1500): string {
-  const footerAt = html.toLowerCase().lastIndexOf("<footer");
-  const region = footerAt >= 0 ? html.slice(footerAt) : html.slice(Math.max(0, html.length - 12_000));
-  return strip(region.replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, " ")).slice(0, max);
+  return strip(footerRegion(html)).slice(0, max);
 }
 
 export interface FooterLink {
@@ -141,8 +150,7 @@ export interface FooterLink {
  * en AI ska avgöra vem som byggt sajten och reglerna inte hittat en kredit. Högst `max`, en per domän. Ren.
  */
 export function footerExternalLinks(html: string, siteDomain: string, max = 12): FooterLink[] {
-  const footerAt = html.toLowerCase().lastIndexOf("<footer");
-  const region = footerAt >= 0 ? html.slice(footerAt) : html.slice(Math.max(0, html.length - FOOTER_WINDOW));
+  const region = footerRegion(html);
   const out: FooterLink[] = [];
   const seen = new Set<string>();
   for (const a of anchorsIn(region)) {
@@ -168,9 +176,7 @@ export interface FooterCredits {
  * ut kända plattformsdomäner. `fallbackName` är namnet `auditSite` hittat, som används när ingen länk kunde kopplas.
  */
 export function findFooterCredits(html: string, siteDomain: string, fallbackName?: string | null, siteIsPlatform: (domain: string) => boolean = () => false): FooterCredits {
-  const footerAt = html.toLowerCase().lastIndexOf("<footer");
-  const region = footerAt >= 0 ? html.slice(footerAt) : html.slice(Math.max(0, html.length - 12_000));
-  const credits = creditsIn(region, siteDomain, siteIsPlatform);
+  const credits = creditsIn(footerRegion(html), siteDomain, siteIsPlatform);
 
   const platforms = credits.filter((c) => c.platform).map(({ name, url, domain }) => ({ name, url, domain }));
   const agencies = credits.filter((c) => !c.platform);

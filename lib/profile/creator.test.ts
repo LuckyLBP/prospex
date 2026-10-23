@@ -37,6 +37,21 @@ describe("findCreator", () => {
   it("uses the end of the page when there is no footer element", () => {
     expect(findCreator(`<html><body>${"x".repeat(100)}<div>Hemsida av <a href="https://byra.se">Byrå Ett</a></div></body></html>`, "foretag.se")).toMatchObject({ name: "Byrå Ett" });
   });
+  it("finds a credit with no footer element even when lots of script follows it", () => {
+    // esosbygg.se: GeneratePress utan <footer>, och 24 000 tecken skript efter kreditraden.
+    const html = `<html><body><main><p>SEO av <a href="https://www.webbofsweden.se/seo">Webb of Sweden</a></p></main><script>${"var x=1;".repeat(3000)}</script><style>${"a{b:c}".repeat(1000)}</style></body></html>`;
+    expect(findCreator(html, "esosbygg.se")).toMatchObject({ name: "Webb of Sweden", domain: "webbofsweden.se" });
+  });
+  it("ignores a footer element that only appears inside a script", () => {
+    const html = `<html><body><footer>Hemsida av <a href="https://byra.se">Byrån</a></footer><script>const t = "<footer></footer>";</script></body></html>`;
+    expect(findCreator(html, "foretag.se")).toMatchObject({ name: "Byrån" });
+  });
+  it("reads SEO and marketing credits", () => {
+    expect(findCreator(page(`SEO av <a href="https://byra.se">Byrån</a>`), "foretag.se")).toMatchObject({ name: "Byrån" });
+    expect(findCreator(page(`Webbdesign &amp; SEO av <a href="https://byra.se">Byrån</a>`), "foretag.se")).toMatchObject({ name: "Byrån" });
+    expect(findCreator(page(`Sökmotoroptimering av <a href="https://byra.se">Byrån</a>`), "foretag.se")).toMatchObject({ name: "Byrån" });
+    expect(findCreator(page(`Vi hjälper till med marknadsföring av fastigheter i hela landet, läs mer hos <a href="https://partner.se">Partner</a>`), "foretag.se")).toBeNull();
+  });
   it("falls back to the name audit found when no link belongs to the phrase", () => {
     expect(findCreator(page(`Hemsida skapad av Infront Media`), "foretag.se", "Infront Media")).toEqual({ name: "Infront Media", url: null, domain: null });
     expect(findCreator(page(`Inget alls`), "foretag.se")).toBeNull();
