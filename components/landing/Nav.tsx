@@ -6,7 +6,7 @@ const LINKS = [
   { label: "I appen", href: "#i-appen" },
 ];
 
-export default function Nav() {
+export default function Nav({ signedIn }: { signedIn: boolean }) {
   return (
     <nav aria-label="Huvudmeny" className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-5 py-4 sm:px-8 lg:px-12">
       <div className="flex items-center gap-8">
@@ -18,8 +18,14 @@ export default function Nav() {
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Link href="/login" className="hidden text-[14px] font-medium text-ink underline-offset-4 hover:underline sm:block">Logga in</Link>
-        <a href="#atkomst" className="rounded-full bg-ink px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-gray-800">Be om åtkomst</a>
+        {signedIn ? (
+          <Link href="/app" className="rounded-full bg-ink px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-gray-800">Gå till portalen</Link>
+        ) : (
+          <>
+            <Link href="/login" className="hidden text-[14px] font-medium text-ink underline-offset-4 hover:underline sm:block">Logga in</Link>
+            <a href="#atkomst" className="rounded-full bg-ink px-5 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-gray-800">Be om åtkomst</a>
+          </>
+        )}
       </div>
     </nav>
   );

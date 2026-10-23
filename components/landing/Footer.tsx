@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 
-export default function Footer({ verified }: { verified: string | null }) {
+export default function Footer({ verified, signedIn }: { verified: string | null; signedIn: boolean }) {
   return (
     <footer className="mx-auto max-w-[1200px] px-5 pb-10 pt-6 text-[12px] leading-relaxed text-white/50 sm:px-8 lg:px-12">
       <div className="flex items-center justify-between">
         <Logo height={44} theme="dark" className="-ml-1" />
-        <Link href="/login" className="text-[13px] text-white/70 underline underline-offset-4 hover:text-white">Logga in</Link>
+        <Link href={signedIn ? "/app" : "/login"} className="text-[13px] text-white/70 underline underline-offset-4 hover:text-white">{signedIn ? "Gå till portalen" : "Logga in"}</Link>
       </div>
       <p className="mt-3">Listorna beskriver företag och vad som syns på deras webbplatser och profiler.{verified ? ` Data verifierat ${verified}.` : ""}</p>
       <p>Leverantörer nämns endast som text. Vi har ingen koppling till någon namngiven leverantör.</p>

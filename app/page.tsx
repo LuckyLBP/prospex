@@ -5,6 +5,7 @@ import Steps from "@/components/landing/Steps";
 import Features from "@/components/landing/Features";
 import AccessForm from "@/components/landing/AccessForm";
 import Footer from "@/components/landing/Footer";
+import { getUserOrNull } from "@/lib/auth";
 import { getStatsCached } from "@/lib/cached";
 
 const sv = (n: number) => n.toLocaleString("sv-SE");
@@ -30,18 +31,19 @@ async function facts() {
 }
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ atkomst?: string; wait?: string }> }) {
-  const [sp, { pill, verified, stats }] = await Promise.all([searchParams, facts()]);
+  const [sp, { pill, verified, stats }, user] = await Promise.all([searchParams, facts(), getUserOrNull().catch(() => null)]);
+  const signedIn = !!user;
   return (
     <main className="min-h-screen bg-ink p-3 sm:p-4">
       <div className="rounded-[28px] bg-canvas">
-        <Nav />
-        <Hero pill={pill} />
+        <Nav signedIn={signedIn} />
+        <Hero pill={pill} signedIn={signedIn} />
         <Stats items={stats} />
         <Steps />
         <Features />
       </div>
       <AccessForm status={sp.atkomst} wait={sp.wait} />
-      <Footer verified={verified} />
+      <Footer verified={verified} signedIn={signedIn} />
     </main>
   );
 }

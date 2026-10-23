@@ -1,7 +1,7 @@
 import RollButton from "@/components/RollButton";
 import ListPreview from "./ListPreview";
 
-export default function Hero({ pill }: { pill: string | null }) {
+export default function Hero({ pill, signedIn }: { pill: string | null; signedIn: boolean }) {
   return (
     <section className="mx-auto w-full max-w-[1200px] px-5 pb-16 pt-14 text-center sm:px-8 sm:pt-20 lg:px-12 lg:pb-24 lg:pt-24">
       {pill && (
@@ -20,8 +20,8 @@ export default function Hero({ pill }: { pill: string | null }) {
       </p>
       <div className="mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-4">
         <RollButton
-          label="Be om åtkomst"
-          href="#atkomst"
+          label={signedIn ? "Gå till portalen" : "Be om åtkomst"}
+          href={signedIn ? "/app" : "#atkomst"}
           className="bg-accent py-2.5 pl-6 pr-2.5 text-[14px] text-ink hover:bg-accent-hover"
           circleClassName="h-8 w-8"
           arrowClassName="text-accent"
