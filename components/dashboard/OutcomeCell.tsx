@@ -42,7 +42,8 @@ export default function OutcomeCell({ companyId, outcome }: { companyId: string;
   // Rullning och ändrad fönsterstorlek flyttar knappen: stäng hellre än att lämna menyn kvar på fel ställe.
   useEffect(() => {
     if (!open) return;
-    const onMove = () => close();
+    // Rullning inne i menyn (den är högre än fönstret på låga skärmar) ska inte stänga den.
+    const onMove = (e: Event) => { if (e.type === "scroll" && layer.current?.contains(e.target as Node)) return; close(); };
     window.addEventListener("scroll", onMove, true);
     window.addEventListener("resize", onMove);
     return () => { window.removeEventListener("scroll", onMove, true); window.removeEventListener("resize", onMove); };

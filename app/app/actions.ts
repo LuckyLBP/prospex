@@ -65,6 +65,8 @@ export async function saveCall(input: {
   callbackTime: string | null;
   meetingAt: string | null;
   archive: boolean;
+  /** Företagssidan (ett enda företag): gör listorna bakom den ogiltiga, så att "tillbaka" visar det nya utfallet. Ringläget lämnar kön orörd. */
+  revalidate?: boolean;
 }): Promise<SaveResult> {
   const m = await requireMember();
   if (!UUID.test(input.companyId)) return { ok: false, error: "Ogiltigt företag." };
@@ -82,6 +84,7 @@ export async function saveCall(input: {
       meetingAt: input.meetingAt && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input.meetingAt) ? stockholmToUtc(input.meetingAt) : null,
       archive: input.archive,
     });
+    if (input.revalidate) revalidatePath("/app", "layout");
     return { ok: true, logId };
   } catch (e) {
     if (e instanceof CallError) return { ok: false, error: e.message };
@@ -90,11 +93,12 @@ export async function saveCall(input: {
   }
 }
 
-export async function undoCallAction(logId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function undoCallAction(logId: string, revalidate = false): Promise<{ ok: true } | { ok: false; error: string }> {
   const m = await requireMember();
   if (!UUID.test(logId)) return { ok: false, error: "Ogiltigt samtal." };
   try {
     await undoCall(m.org.id, m.user.id, logId);
+    if (revalidate) revalidatePath("/app", "layout");
     return { ok: true };
   } catch (e) {
     if (e instanceof CallError) return { ok: false, error: e.message };

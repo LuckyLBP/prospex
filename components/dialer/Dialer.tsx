@@ -191,7 +191,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
 
     const r = await saveCall({
       companyId: card.id, outcome: f.outcome, note, archive: f.archive,
-      callbackDate: f.cbDate || null, callbackTime: f.cbTime || null, meetingAt: f.meeting || null,
+      callbackDate: f.cbDate || null, callbackTime: f.cbTime || null, meetingAt: f.meeting || null, revalidate: init.single,
     });
     if (!r.ok) {
       setSession((s) => ({ calls: s.calls - 1, meetings: s.meetings - (i.meeting ? 1 : 0) }));
@@ -203,7 +203,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
     }
     setToast((t) => (t && t.kind === "undo" && t.key === key ? { ...t, logId: r.logId } : t));
     refreshCard(snapshot.id);
-  }, [card, form, draft, index, go, say, refreshCard, setDraft]);
+  }, [card, form, draft, index, go, say, refreshCard, setDraft, init.single]);
 
   // Ett val i menyn sparar och går vidare direkt. Ett möte kräver en tid, så det väljs bara och tiden fylls i först.
   const choose = useCallback((o: CallOutcome) => {
@@ -216,14 +216,14 @@ export default function Dialer({ init }: { init: DialerInit }) {
     if (!toast || toast.kind !== "undo" || !toast.logId) return;
     const t = toast;
     setToast(null);
-    const r = await undoCallAction(t.logId!);
+    const r = await undoCallAction(t.logId!, init.single);
     if (!r.ok) { say("error", r.error); return; }
     setSession((s) => ({ calls: Math.max(0, s.calls - 1), meetings: Math.max(0, s.meetings - (t.meeting ? 1 : 0)) }));
     const at = ids.indexOf(t.companyId);
     if (at >= 0) go(at, "back");
     refreshCard(t.companyId);
     say("info", "Samtalet är ångrat.");
-  }, [toast, ids, go, say, refreshCard]);
+  }, [toast, ids, go, say, refreshCard, init.single]);
 
   const copy = useCallback(async () => {
     if (!card?.phone) return;
