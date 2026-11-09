@@ -35,6 +35,17 @@ describe("findTraces", () => {
     none(`<a href="/foretag/digipartner-sverige-ab/5591414148/">Digipartner Sverige AB</a>`); // firmainfo.se, a directory
     none(`<script type="application/json">{"link":"https://digipartner.se/","title":"Trakk.ai"}</script>`); // 20seven.xyz, a list
   });
+  it("does not count canonical links, other sites' addresses or look-alike domains (real: directories and digipartner.eu)", () => {
+    const dp = { name: "Digipartner Sverige AB", domain: "digipartner.se" };
+    const none = (html: string) => expect(kinds(html, dp)).toEqual([]);
+    none(`<link rel="canonical" href="/sv/company/se/digipartner-sverige-ab-5591414148">`); // funnelfeedr.com
+    none(`<link rel="alternate" hreflang="sv" href="/d/companies/digipartner/__8N4u">`); // tracxn.com
+    none(`<link rel="stylesheet" href="https://www.digipartner.eu/style.css"><link rel="canonical" href="https://www.digipartner.eu">`); // digipartner.eu
+  });
+  it("still counts a stylesheet or script the site itself loads from a path named after the agency", () => {
+    const dp = { name: "Digipartner Sverige AB", domain: "digipartner.se" };
+    expect(kinds(`<link rel="stylesheet" href="/wp-content/digipartner-ui/main.css">`, dp)).toEqual(["asset"]);
+  });
   it("finds a comment in the code that names the agency", () => {
     expect(findTraces(`<!-- Byggd av Smartproduktion --><body></body>`, smart, agencyBrands(smart))[0]).toMatchObject({ kind: "comment" });
   });

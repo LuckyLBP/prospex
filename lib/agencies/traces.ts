@@ -53,8 +53,19 @@ export function findTraces(html: string, agency: Agency, brands: readonly string
     // En skript- eller stilfil med byråns namn på kundens egen domän: /assets/smartproduktion/form.js. Bilder och vanliga
     // länkar räknas inte: en logotyp (/images/Digipartner.png) eller en länk (/foretag/digipartner-ab/) visar bara att
     // sidan nämner byrån, som en katalog, en konkurrent eller en kund som visar en leverantör.
-    const asset = new RegExp(`<(?:script|link)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'](?!https?:\\/\\/[a-z0-9.-]*${domain}[\\/"'])([^"']*[/_.-]${b}[/_.-][^"']*)["']`, "i").exec(html);
-    if (asset) add({ kind: "asset", token: asset[1].slice(0, 80), evidence: `Fil: ${asset[1].slice(0, 80)}` });
+    // Bara filer som sidan själv laddar och som ligger på dess egen adress (relativ sökväg): ett skript, en stilfil eller
+    // en förladdad fil. Canonical- och alternate-länkar och adresser till andra sajter räknas inte, och inte heller en
+    // domän som bara liknar byråns (digipartner.eu är ett annat bolag än digipartner.se).
+    const tagRe = new RegExp(`<(script|link)\\b([^>]*)>`, "gi");
+    for (const tag of html.matchAll(tagRe)) {
+      const attrs = tag[2];
+      if (tag[1].toLowerCase() === "link" && !/\brel\s*=\s*["']?(?:stylesheet|preload|modulepreload)/i.test(attrs)) continue;
+      const ref = /\b(?:src|href)\s*=\s*["']((?!(?:https?:)?\/\/)[^"']*)["']/i.exec(attrs)?.[1];
+      if (ref && new RegExp(`[/_.-]${b}[/_.-]`, "i").test(ref)) {
+        add({ kind: "asset", token: ref.slice(0, 80), evidence: `Fil: ${ref.slice(0, 80)}` });
+        break;
+      }
+    }
   }
 
   // Resurser och anrop till byråns egna adresser. Vanliga länkar (<a>) tas bort först: de säger bara att sidan hänvisar dit.
