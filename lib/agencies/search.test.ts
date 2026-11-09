@@ -51,3 +51,27 @@ describe("searchAgencyMentions", () => {
     await expect(searchAgencyMentions(dp, ctx, { fetch: vi.fn() as never, apiKey: undefined })).rejects.toThrow(/BRAVE_SEARCH_API_KEY/);
   });
 });
+
+describe("the hard limit", () => {
+  it("reserves a slot before every request and stops sending once the limit is reached", async () => {
+    let left = 2;
+    const reserve = vi.fn(async () => left-- > 0);
+    const fetchFn = vi.fn(async () => json(results("https://skogma.se/"))) as unknown as typeof fetch;
+    const r = await searchAgencyMentions(dp, ctx, { fetch: fetchFn, apiKey: "k", reserve });
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+    expect(r).toMatchObject({ queries: 2, limited: true });
+    expect(reserve).toHaveBeenCalledTimes(3);
+  });
+  it("sends nothing at all when the limit is already reached", async () => {
+    const fetchFn = vi.fn() as unknown as typeof fetch;
+    const r = await searchAgencyMentions(dp, ctx, { fetch: fetchFn, apiKey: "k", reserve: async () => false });
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(r).toEqual({ hits: [], queries: 0, limited: true });
+  });
+  it("counts a request that failed, since the provider may count it too", async () => {
+    const reserve = vi.fn(async () => true);
+    const fetchFn = vi.fn(async () => json({}, 429)) as unknown as typeof fetch;
+    await expect(searchAgencyMentions(dp, ctx, { fetch: fetchFn, apiKey: "k", reserve })).rejects.toThrow();
+    expect(reserve).toHaveBeenCalledTimes(1);
+  });
+});

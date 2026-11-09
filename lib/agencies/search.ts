@@ -1,6 +1,7 @@
 import { CollectorError } from "@/lib/scrapers/types";
 import { agencyBrands, isSameOrSubdomain, type Agency } from "./match";
 import { customerDomainOf } from "./site-reader";
+import { reserveSearchQuery } from "./search-usage";
 
 // Webbsökning (Brave Search) som källa till kundförslag: sidor som nämner byrån i en kreditrad ("Skapad av ...") eller
 // länkar till dess domän. Brave tar betalt per sökning, så antalet är litet och dygnet har ett tak (se spend.ts).
@@ -49,8 +50,10 @@ export function hitsFromResponse(body: BraveResponse, agency: Agency): SearchHit
 export interface SearchDeps {
   fetch: typeof globalThis.fetch;
   apiKey: string | undefined;
+  /** Reserverar ett anrop mot det hårda taket (search-usage.ts). False = taket är nått och inget mer får skickas. */
+  reserve?: () => Promise<boolean>;
 }
-export const defaultSearchDeps = (): SearchDeps => ({ fetch: globalThis.fetch, apiKey: process.env.BRAVE_SEARCH_API_KEY });
+export const defaultSearchDeps = (): SearchDeps => ({ fetch: globalThis.fetch, apiKey: process.env.BRAVE_SEARCH_API_KEY, reserve: () => reserveSearchQuery() });
 export const isSearchConfigured = (d: SearchDeps = defaultSearchDeps()): boolean => !!d.apiKey;
 
 /**
@@ -61,11 +64,17 @@ export async function searchAgencyMentions(
   agency: Agency,
   ctx: { signal: AbortSignal; log: (message: string) => void },
   deps: SearchDeps = defaultSearchDeps(),
-): Promise<{ hits: SearchHit[]; queries: number }> {
+): Promise<{ hits: SearchHit[]; queries: number; limited: boolean }> {
   if (!deps.apiKey) throw new CollectorError("BRAVE_SEARCH_API_KEY saknas i miljön.");
   const hits = new Map<string, SearchHit>();
   let queries = 0;
+  let limited = false;
   for (const q of searchQueries(agency)) {
+    // Platsen reserveras före anropet. Är taket nått skickas ingenting.
+    if (deps.reserve && !(await deps.reserve())) {
+      limited = true;
+      break;
+    }
     const url = `${ENDPOINT}?${new URLSearchParams({ q, count: String(COUNT), country: "SE", search_lang: "sv" })}`;
     let res: Response;
     try {
@@ -88,5 +97,5 @@ export async function searchAgencyMentions(
     for (const h of hitsFromResponse(body, agency)) if (!hits.has(h.domain)) hits.set(h.domain, h);
     ctx.log(`Byrå ${agency.name}: sökningen ${q} gav ${hits.size} domäner hittills`);
   }
-  return { hits: [...hits.values()], queries };
+  return { hits: [...hits.values()], queries, limited };
 }

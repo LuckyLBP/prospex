@@ -98,7 +98,7 @@ export interface DiscoverDeps {
   claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
   /** Webbsökning (Brave): sidor som nämner byrån i en kreditrad eller länkar till den. Valfri, betalas per sökning. */
-  search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number }>;
+  search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number; limited?: boolean }>;
   searchConfigured?: () => boolean;
 }
 
@@ -344,6 +344,7 @@ export async function runDiscoveryStep(
         const r = await deps.search(agency, ctx);
         for (const h of r.hits) add(h.domain, "search", h.url, undefined, { urlFrom: h.url, anchor: null });
         report({ costSek: r.queries * SEARCH_QUERY_SEK });
+        if (r.limited) next.notes.push("Webbsökningen nådde det hårda taket på antal anrop och stannade. Höj BRAVE_SEARCH_LIMIT när planen förnyas.");
         if (r.hits.length > 0) next.externalOk++;
         ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter webbsökningen (${r.queries} sökningar)`);
       } catch (e) {
