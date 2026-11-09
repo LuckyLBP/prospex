@@ -8,7 +8,7 @@ import { isWebPlatformDomain } from "@/lib/profile/platforms";
 import { isClientRendered } from "@/lib/profile/render";
 import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
 import { normalizeDomain } from "@/lib/scrapers/domain";
-import { reverseLookup } from "@/lib/scrapers/viewdns";
+import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { classifyCredit, type CreditKind } from "./classify";
 import { findCreditWithClaude } from "./footer-ai";
 import { isSameOrSubdomain } from "./match";
@@ -461,8 +461,7 @@ export const defaultGuessDeps: GuessDeps = {
     return rows.map((r) => r.domain as string);
   },
   async reverseIp(ip, signal) {
-    const { domains } = await reverseLookup("reverseip", ip, 1, 1, { signal, log: () => {} });
-    return domains;
+    return (await reverseIp(ip, { signal, log: () => {} })).domains;
   },
   async reverseDns(ip) {
     try {

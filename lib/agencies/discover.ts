@@ -4,6 +4,7 @@ import { classifyDns, lookupDns, type DnsRecords } from "@/lib/profile/dns";
 import { normalizeDomain } from "@/lib/scrapers/domain";
 import { searchPublicwww } from "@/lib/scrapers/publicwww";
 import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
+import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -132,26 +133,46 @@ export const defaultDiscoverDeps: DiscoverDeps = {
     const rec = await lookupDns(agency.domain);
     const out: ViewdnsHit[] = [];
     const hits = (domains: string[], ip: string | null): ViewdnsHit[] => domains.map((domain) => ({ domain, server: ip ? { ip, size: domains.length } : null }));
+    const hasKey = !!process.env.VIEWDNS_API_KEY;
+    let failed: unknown = null;
     for (const lookup of chooseViewdnsLookups({ ns: rec.ns, a: rec.hosting?.a ?? [] }, agency.domain)) {
-      const page = await reverseLookup(lookup.endpoint, lookup.target, 1, 1, ctx);
-      // Ett för stort svar är delad drift, inte byråns egna kunder.
-      if (page.domains.length <= MAX_SHARED_RESULTS) out.push(...hits(page.domains, lookup.endpoint === "reverseip" ? lookup.target : null));
-    }
-    // Byrån har ofta flyttat sin egen sajt men lämnat kunderna på den gamla servern. IP-historiken är en tilläggskälla:
-    // saknas den (ViewDNS Pro) eller felar den ger det bara färre förslag.
-    try {
-      const now = rec.hosting?.a ?? [];
-      for (const ip of chooseHistoryIps(await ipHistory(agency.domain, ctx), now)) {
-        const page = await reverseLookup("reverseip", ip, 1, 1, ctx);
-        ctx.log(`Byrå ${agency.name}: gamla adressen ${ip} gav ${page.domains.length} domäner`);
-        if (page.domains.length <= MAX_SHARED_RESULTS) out.push(...hits(page.domains, ip));
+      try {
+        let domains: string[];
+        if (lookup.endpoint === "reverseip") {
+          // ViewDNS när det går, annars HackerTarget (gratis, utan nyckel).
+          domains = (await reverseIp(lookup.target, ctx)).domains;
+        } else {
+          // Reverse NS finns bara hos ViewDNS.
+          if (!hasKey) continue;
+          domains = (await reverseLookup(lookup.endpoint, lookup.target, 1, 1, ctx)).domains;
+        }
+        // Ett för stort svar är delad drift, inte byråns egna kunder.
+        if (domains.length <= MAX_SHARED_RESULTS) out.push(...hits(domains, lookup.endpoint === "reverseip" ? lookup.target : null));
+      } catch (e) {
+        failed = e;
+        ctx.log(`Byrå ${agency.name}: uppslaget ${lookup.endpoint} ${lookup.target} hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
       }
-    } catch (e) {
-      ctx.log(`Byrå ${agency.name}: IP-historiken hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
     }
+    // Byrån har ofta flyttat sin egen sajt men lämnat kunderna på den gamla servern. IP-historiken är en tilläggskälla
+    // (bara ViewDNS har den): saknas den eller felar den ger det bara färre förslag.
+    if (hasKey) {
+      try {
+        const now = rec.hosting?.a ?? [];
+        for (const ip of chooseHistoryIps(await ipHistory(agency.domain, ctx), now)) {
+          const domains = (await reverseIp(ip, ctx)).domains;
+          ctx.log(`Byrå ${agency.name}: gamla adressen ${ip} gav ${domains.length} domäner`);
+          if (domains.length <= MAX_SHARED_RESULTS) out.push(...hits(domains, ip));
+        }
+      } catch (e) {
+        ctx.log(`Byrå ${agency.name}: IP-historiken hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
+      }
+    }
+    // Inget uppslag lyckades och inget gav något: låt steget räknas som överhoppat med skälet.
+    if (out.length === 0 && failed) throw failed;
     return out;
   },
-  viewdnsConfigured: () => !!process.env.VIEWDNS_API_KEY,
+  // HackerTarget kräver ingen nyckel, så steget kan alltid köras: ViewDNS när nyckeln finns, annars den gratis reserven.
+  viewdnsConfigured: () => true,
   async backlinks(agency, ctx, opts) {
     const r = await fetchBacklinks(agency.domain, { signal: ctx.signal, budget: opts.budget });
     const t = triageBacklinks(r.rows, agency);
