@@ -44,20 +44,25 @@ export function findTraces(html: string, agency: Agency, brands: readonly string
     const plugin = new RegExp(`/wp-content/plugins/([a-z0-9_-]*${b}[a-z0-9_-]*)/`, "i").exec(html);
     if (plugin) add({ kind: "plugin", token: plugin[1], evidence: `Tillägg: ${plugin[1]}` });
     // En variabel eller funktion döpt efter byrån: smartproduktion_design_data.
-    const id = new RegExp(`(?<![a-z0-9_])(${b}_[a-z][a-z0-9_]{2,})`, "i").exec(html);
+    // Inte ett filnamn eller en sökväg: Digipartner_Logo_black_800px.png är en logotyp, ingen variabel.
+    const id = new RegExp(`(?<![a-z0-9_/\\-])(${b}_[a-z][a-z0-9_]{2,})(?![a-z0-9_]*\\.(?:png|jpe?g|webp|svg|gif|avif|ico))`, "i").exec(html);
     if (id) add({ kind: "identifier", token: id[1], evidence: `Kod: ${id[1]}` });
     // Datafält, CSS-variabler och klasser med byråns namn: data-smartproduktion-id, --smartproduktion-color.
     const attr = new RegExp(`(?<![a-z0-9])((?:data-|--)${b}-[a-z0-9-]{2,})`, "i").exec(html);
     if (attr) add({ kind: "attribute", token: attr[1], evidence: `Kod: ${attr[1]}` });
-    // En fil eller mapp med byråns namn på kundens egen domän: /assets/smartproduktion/form.js.
-    const asset = new RegExp(`\\b(?:src|href|data-src)\\s*=\\s*["'](?!https?:\\/\\/[a-z0-9.-]*${domain}[\\/"'])([^"']*[/_.-]${b}[/_.-][^"']*)["']`, "i").exec(html);
+    // En skript- eller stilfil med byråns namn på kundens egen domän: /assets/smartproduktion/form.js. Bilder och vanliga
+    // länkar räknas inte: en logotyp (/images/Digipartner.png) eller en länk (/foretag/digipartner-ab/) visar bara att
+    // sidan nämner byrån, som en katalog, en konkurrent eller en kund som visar en leverantör.
+    const asset = new RegExp(`<(?:script|link)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'](?!https?:\\/\\/[a-z0-9.-]*${domain}[\\/"'])([^"']*[/_.-]${b}[/_.-][^"']*)["']`, "i").exec(html);
     if (asset) add({ kind: "asset", token: asset[1].slice(0, 80), evidence: `Fil: ${asset[1].slice(0, 80)}` });
   }
 
   // Resurser och anrop till byråns egna adresser. Vanliga länkar (<a>) tas bort först: de säger bara att sidan hänvisar dit.
   const withoutLinks = html.replace(/<a\b[^>]*>/gi, "<a>").replace(/mailto:[^"'\s>]*/gi, "");
-  if (new RegExp(`<(?:link|script|img)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'][^"']*//[a-z0-9.-]*\\.${domain}/`, "i").test(html)) add({ kind: "resource", token: agency.domain, evidence: `Resurs från ${agency.domain}` });
-  else if (new RegExp(`["'](?:https?:)?//(?:[a-z0-9-]+\\.)*${domain}[/:?"']`, "i").test(withoutLinks)) add({ kind: "endpoint", token: agency.domain, evidence: `Anrop till ${agency.domain}` });
+  if (new RegExp(`<(?:link|script)\\b[^>]*\\b(?:src|href)\\s*=\\s*["'][^"']*//[a-z0-9.-]*\\.${domain}/`, "i").test(html)) add({ kind: "resource", token: agency.domain, evidence: `Resurs från ${agency.domain}` });
+  // Ett anrop är ett formulär som skickas dit eller kod som anropar adressen. Adressen som text i data (en lista, en
+  // pressrelease) är inget anrop.
+  else if (new RegExp(`(?:\\baction\\s*=\\s*|fetch\\(\\s*|axios(?:\\.[a-z]+)?\\(\\s*|\\.open\\(\\s*["'][A-Z]+["']\\s*,\\s*|\\bsendBeacon\\(\\s*)["']?(?:https?:)?//(?:[a-z0-9-]+\\.)*${domain}[/:?"']`, "i").test(withoutLinks)) add({ kind: "endpoint", token: agency.domain, evidence: `Anrop till ${agency.domain}` });
 
   // En kommentar som nämner byrån: <!-- Byggd av Smartproduktion -->.
   for (const brand of brands) {

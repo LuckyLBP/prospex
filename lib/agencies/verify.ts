@@ -21,7 +21,7 @@ import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, f
  * Versionen på reglerna som bedömer en kandidat. Höj den varje gång reglerna blir bättre: domäner som tidigare bedömts
  * som "utan kredit" eller "annan byrå" med äldre regler kontrolleras då om i nästa körning, och inte först efter 30 dagar.
  */
-export const VERIFY_RULES = 3;
+export const VERIFY_RULES = 4;
 
 export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "portfolio" | "backlink";
 

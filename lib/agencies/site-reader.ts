@@ -45,6 +45,12 @@ export function customerDomainOf(url: string, agency: Agency): string | null {
   return d;
 }
 
+/** Länkarna i sidans <footer>. Där står moderbolaget, verktyg och märken, aldrig kunderna. Utan <footer> är listan tom. Ren. */
+export function footerHrefs(html: string): string[] {
+  const at = html.toLowerCase().lastIndexOf("<footer");
+  return at >= 0 ? hrefs(html.slice(at)) : [];
+}
+
 /** Namn ur bildernas alt-texter på en sida, utan beskrivande bildtexter och dubbletter. Ren. */
 export function logoNames(html: string): string[] {
   const names = new Set<string>();
@@ -93,6 +99,28 @@ export async function readAgencySite(agency: Agency, deps: SiteReaderDeps = defa
   }
 
   const findings = new Map<string, SiteFinding>();
+  // Vilka av byråns sidor som länkar till varje extern domän. En domän som står på nästan alla sidor sitter i sidhuvudet
+  // eller sidfoten (moderbolaget, ett verktyg, ett betygsmärke) och är ingen kund.
+  const linkedFrom = new Map<string, Set<string>>();
+  // Startsidans egna länkar är menyn och sidfoten. En sida som bara nås därifrån är en vanlig sida, inte ett kundcase.
+  const homeLinks = new Set(hrefs(home.html).map((h) => abs(h, home.finalUrl)?.replace(/#.*$/, "")).filter((u): u is string => !!u));
+  const chrome = new Set<string>();
+  const noteChrome = (html: string, base: string) => {
+    for (const h of footerHrefs(html)) { const u = abs(h, base); const d = u ? customerDomainOf(u, agency) : null; if (d) chrome.add(d); }
+  };
+  noteChrome(home.html, home.finalUrl);
+  const harvest = (html: string, base: string, sourceUrl: string) => {
+    for (const h of hrefs(html)) {
+      const u = abs(h, base);
+      const domain = u ? customerDomainOf(u, agency) : null;
+      if (!domain) continue;
+      if (!linkedFrom.has(domain)) linkedFrom.set(domain, new Set());
+      linkedFrom.get(domain)!.add(sourceUrl);
+      if (!findings.has(domain)) findings.set(domain, { domain, sourceUrl, how: "case-link" });
+    }
+  };
+  // Kundlogotyperna ligger ofta på startsidan själv ("Våra kunder" med länkar), så den läses också.
+  harvest(home.html, home.finalUrl, home.finalUrl);
   const names = new Map<string, string>();
   for (const n of logoNames(home.html)) names.set(n.toLowerCase(), n);
 
@@ -104,21 +132,26 @@ export async function readAgencySite(agency: Agency, deps: SiteReaderDeps = defa
     const url = queue[i];
     const page = await fetchHtml(url);
     if (!page) continue;
+    noteChrome(page.html, page.finalUrl);
     if (LISTING_PATH.test(new URL(url).pathname)) {
       for (const h of hrefs(page.html)) {
         const u = abs(h, page.finalUrl)?.replace(/#.*$/, "");
-        if (u && sameSite(u) && !seen.has(u) && !/\.(?:pdf|jpe?g|png|webp|svg|xml)$/i.test(u) && !/\/(?:feed|wp-json|category|tag|author)\b/i.test(u)) {
+        if (u && sameSite(u) && !seen.has(u) && !homeLinks.has(u) && !/\.(?:pdf|jpe?g|png|webp|svg|xml)$/i.test(u) && !/\/(?:feed|wp-json|category|tag|author)\b/i.test(u)) {
           seen.add(u);
           queue.push(u);
         }
       }
     }
-    for (const h of hrefs(page.html)) {
-      const u = abs(h, page.finalUrl);
-      const domain = u ? customerDomainOf(u, agency) : null;
-      if (domain && !findings.has(domain)) findings.set(domain, { domain, sourceUrl: url, how: "case-link" });
-    }
+    harvest(page.html, page.finalUrl, url);
     for (const n of logoNames(page.html)) names.set(n.toLowerCase(), n);
+  }
+
+  for (const d of chrome) findings.delete(d);
+
+  // Sidhuvudets och sidfotens länkar ligger på de flesta sidor. Med för få sidor att jämföra med går det inte att avgöra.
+  const fetched = queue.slice(0, MAX_PAGES).length;
+  if (fetched >= 4) {
+    for (const [domain, from] of linkedFrom) if (from.size / fetched > 0.5) findings.delete(domain);
   }
 
   // Namn utan länk: gissa domäner. Vad som helst som inte har byrån i sidfoten faller bort vid verifieringen.

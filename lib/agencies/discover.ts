@@ -90,7 +90,8 @@ export interface DiscoverDeps {
   backlinks: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">, opts: { budget: number }) => Promise<{ candidates: BacklinkCandidate[]; total: number; credits: number | null; dropped: number; creditsUsed?: number; more?: boolean }>;
   backlinksConfigured: () => boolean;
   /** Byråns egen webbplats: kundcase, kundlogotyper och sitemap, lästa av koden. */
-  site: (agency: Agency) => Promise<{ domain: string; sourceUrl: string }[]>;
+  /** `linked`: byråns sida länkar till kunden. Utan den är domänen en gissning ur ett namn. */
+  site: (agency: Agency) => Promise<{ domain: string; sourceUrl: string; linked?: boolean }[]>;
   /** Claude letar på byråns kund- och referenssidor och på webben. Får de redan funna domänerna så att den inte letar efter dem. */
   claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
@@ -159,7 +160,7 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   },
   backlinksConfigured: () => isOpenSeoConfigured(),
   async site(agency) {
-    return (await readAgencySite(agency)).findings.map((f) => ({ domain: f.domain, sourceUrl: f.sourceUrl }));
+    return (await readAgencySite(agency)).findings.map((f) => ({ domain: f.domain, sourceUrl: f.sourceUrl, linked: f.how === "case-link" }));
   },
   async claude(agency, known, ctx, report) {
     const r = await findCustomersWithClaude({ agency, known, signal: ctx.signal });
@@ -271,7 +272,8 @@ export async function runDiscoveryStep(
     case "site":
       try {
         const found = await deps.site(agency);
-        for (const f of found) add(f.domain, "site", f.sourceUrl);
+        // En kund som byråns egen sida länkar till har den sidan som belägg (portfolio). En gissad domän har inget.
+        for (const f of found) add(f.domain, "site", f.sourceUrl, f.linked ? { url: f.sourceUrl, quote: null } : undefined);
         // En webbplats som inte gav något förslag räknas inte som en fungerande källa.
         if (found.length > 0) next.externalOk++;
         else next.notes.push("Byråns webbplats gav inga kundförslag.");

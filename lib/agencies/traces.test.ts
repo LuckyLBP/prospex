@@ -26,6 +26,15 @@ describe("findTraces", () => {
     expect(kinds(`<script src="https://cdn.smartproduktion.se/app.js"></script>`)).toEqual(["resource"]);
     expect(kinds(`<a href="https://smartproduktion.se/">Vår partner</a><a href="mailto:info@smartproduktion.se">Mejla</a>`)).toEqual([]);
   });
+  it("does not count a page that only mentions the agency (real: Digipartner's false customers)", () => {
+    const dp = { name: "Digipartner Sverige AB", domain: "digipartner.se" };
+    const none = (html: string) => expect(kinds(html, dp)).toEqual([]);
+    none(`<img src="/images/Digipartner.png" alt="Digipartner">`); // searchfront.se, a competitor's page
+    none(`<img data-src="/assets/digipartner-BQ9bWCLw.png" alt="Digipartner project logo">`); // a developer's portfolio
+    none(`<img src="/media/Digipartner_Logo_black_800px.png">`); // bicfactory.se, a sibling company
+    none(`<a href="/foretag/digipartner-sverige-ab/5591414148/">Digipartner Sverige AB</a>`); // firmainfo.se, a directory
+    none(`<script type="application/json">{"link":"https://digipartner.se/","title":"Trakk.ai"}</script>`); // 20seven.xyz, a list
+  });
   it("finds a comment in the code that names the agency", () => {
     expect(findTraces(`<!-- Byggd av Smartproduktion --><body></body>`, smart, agencyBrands(smart))[0]).toMatchObject({ kind: "comment" });
   });

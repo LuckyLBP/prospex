@@ -75,3 +75,11 @@ describe("readAgencySite", () => {
     expect(d.fetched.every((u) => u.startsWith("https://capace.se/"))).toBe(true);
   });
 });
+
+describe("footerHrefs", () => {
+  it("returns only the links inside <footer>, and nothing when the page has none", async () => {
+    const { footerHrefs } = await import("./site-reader");
+    expect(footerHrefs(`<nav><a href="https://kund.se">K</a></nav><footer><a href="https://moder.com">M</a></footer>`)).toEqual(["https://moder.com"]);
+    expect(footerHrefs(`<a href="https://kund.se">K</a>`)).toEqual([]);
+  });
+});
