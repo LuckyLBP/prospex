@@ -9,6 +9,9 @@ export const DAILY_CREDIT_CAP = 1200;
 /** Claude-kronor per dygn, alla byråer. */
 export const DAILY_CLAUDE_SEK_CAP = 50;
 
+/** Kronor per dygn som webbsökningen (Brave, betalt per sökning) får ta av den gemensamma förbrukningen: cirka 100 sökningar. */
+export const DAILY_SEARCH_SEK_CAP = 5;
+
 export interface Spend {
   credits: number;
   costSek: number;
@@ -30,4 +33,5 @@ export async function spendLast24h(): Promise<Spend> {
 
 export const creditsLeftToday = (s: Spend): number => Math.max(0, DAILY_CREDIT_CAP - s.credits);
 export const claudeAllowed = (s: Spend): boolean => s.costSek < DAILY_CLAUDE_SEK_CAP;
+export const searchAllowed = (s: Spend): boolean => s.costSek < DAILY_SEARCH_SEK_CAP;
 export const overDailyCap = (s: Spend): boolean => s.credits >= DAILY_CREDIT_CAP || s.costSek >= DAILY_CLAUDE_SEK_CAP;

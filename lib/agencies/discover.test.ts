@@ -147,3 +147,28 @@ describe("learned traces", () => {
     expect(d.publicwww).toHaveBeenCalledWith(agency, ctx, []);
   });
 });
+
+describe("search step", () => {
+  const hit = { hits: [{ domain: "skogma.se", url: "https://skogma.se/om" }, { domain: "kund1.se", url: "https://kund1.se/" }], queries: 4 };
+  it("adds search candidates with the result page as hint, and books the cost", async () => {
+    const search = vi.fn(async () => hit);
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set() }, ctx, deps({ search, searchConfigured: () => true }));
+    const found = r.candidates.find((c) => c.domain === "skogma.se");
+    expect(found).toMatchObject({ via: "search", hint: { urlFrom: "https://skogma.se/om", anchor: null } });
+    expect(r.candidates.filter((c) => c.domain === "kund1.se")).toHaveLength(1); // katalogen vann
+    expect(r.usage.costSek).toBeCloseTo(0.2);
+  });
+  it("is left out without a key, and is skipped with a note once today's cap is reached", async () => {
+    const search = vi.fn(async () => hit);
+    await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set() }, ctx, deps({ search, searchConfigured: () => false }));
+    expect(search).not.toHaveBeenCalled();
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set(), spend: { credits: 0, costSek: 6 } }, ctx, deps({ search, searchConfigured: () => true }));
+    expect(search).not.toHaveBeenCalled();
+    expect(r.notes.join(" ")).toMatch(/dagens tak/);
+  });
+  it("a failing search is skipped without stopping the run", async () => {
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set() }, ctx, deps({ search: async () => { throw new Error("Brave Search svarade 429"); }, searchConfigured: () => true }));
+    expect(r.notes.join(" ")).toMatch(/429/);
+    expect(r.candidates.length).toBeGreaterThan(0);
+  });
+});

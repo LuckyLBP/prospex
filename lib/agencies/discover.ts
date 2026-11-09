@@ -5,6 +5,7 @@ import { normalizeDomain } from "@/lib/scrapers/domain";
 import { searchPublicwww } from "@/lib/scrapers/publicwww";
 import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
 import { reverseIp } from "@/lib/scrapers/hackertarget";
+import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -12,13 +13,13 @@ import { readAgencySite } from "./site-reader";
 import { triageBacklinks, type BacklinkCandidate } from "./triage";
 import { isAnthropicConfigured } from "@/lib/ai/model";
 import { AGENCY_CREDIT_BUDGET } from "./openseo";
-import { claudeAllowed, creditsLeftToday, type Spend } from "./spend";
+import { claudeAllowed, creditsLeftToday, searchAllowed, type Spend } from "./spend";
 import { creatorMatchesAgency, isSameOrSubdomain, type Agency } from "./match";
 
 // Var kandidaterna kommer ifrån. Allt här är förslag: ingenting läggs in förrän verifyCandidate (verify.ts) sett byrån
 // i kandidatens egen sidfot. Källorna körs billigast först, och en som saknar nyckel eller felar ger bara färre förslag.
 
-export type CandidateVia = "katalog" | "backlinks" | "site" | "publicwww" | "viewdns" | "claude" | "known";
+export type CandidateVia = "katalog" | "backlinks" | "site" | "publicwww" | "viewdns" | "search" | "claude" | "known";
 
 export interface Candidate {
   domain: string;
@@ -96,6 +97,9 @@ export interface DiscoverDeps {
   /** Claude letar på byråns kund- och referenssidor och på webben. Får de redan funna domänerna så att den inte letar efter dem. */
   claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
+  /** Webbsökning (Brave): sidor som nämner byrån i en kreditrad eller länkar till den. Valfri, betalas per sökning. */
+  search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number }>;
+  searchConfigured?: () => boolean;
 }
 
 export const defaultDiscoverDeps: DiscoverDeps = {
@@ -190,6 +194,8 @@ export const defaultDiscoverDeps: DiscoverDeps = {
     return r.candidates;
   },
   claudeConfigured: isAnthropicConfigured,
+  search: async (agency, ctx) => searchAgencyMentions(agency, ctx),
+  searchConfigured: () => isSearchConfigured(),
 };
 
 export interface Discovery {
@@ -203,7 +209,7 @@ export interface Discovery {
 }
 
 /** Stegen i ordning. Varje steg körs för sig, så att en körning kan stanna mellan två av dem och fortsätta senare. */
-export const STEPS = ["catalog", "backlinks", "site", "publicwww", "viewdns", "claude"] as const;
+export const STEPS = ["catalog", "backlinks", "site", "publicwww", "viewdns", "search", "claude"] as const;
 /** Claude letar bara när koden hittat så här få kandidater: för en byrå med många bakåtlänkar tillför den sällan något. */
 export const CLAUDE_BELOW = 40;
 
@@ -328,6 +334,24 @@ export async function runDiscoveryStep(
       }
       break;
 
+    case "search": {
+      if (!deps.search || !deps.searchConfigured?.()) break; // valfri källa: utan nyckel är den inte med
+      if (!searchAllowed(spend)) {
+        next.notes.push("Webbsökningen hoppades över: dagens tak är nått.");
+        break;
+      }
+      try {
+        const r = await deps.search(agency, ctx);
+        for (const h of r.hits) add(h.domain, "search", h.url, undefined, { urlFrom: h.url, anchor: null });
+        report({ costSek: r.queries * SEARCH_QUERY_SEK });
+        if (r.hits.length > 0) next.externalOk++;
+        ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter webbsökningen (${r.queries} sökningar)`);
+      } catch (e) {
+        skip("Webbsökningen", e);
+      }
+      break;
+    }
+
     case "claude": {
       if (!opts.useClaude) break;
       if (!deps.claudeConfigured()) {
@@ -364,7 +388,7 @@ export function finishDiscovery(state: DiscoveryState, max: number): Discovery {
   if (state.externalOk === 0 && state.found.length === 0) {
     throw new CollectorError(`Ingen källa gick att använda för att hitta kunder. ${state.notes.join(" ")}`.trim());
   }
-  const order: CandidateVia[] = ["katalog", "backlinks", "site", "claude", "publicwww", "viewdns"];
+  const order: CandidateVia[] = ["katalog", "backlinks", "site", "claude", "search", "publicwww", "viewdns"];
   const all = order.flatMap((via) => state.found.filter((c) => c.via === via));
   return { candidates: all.slice(0, max), truncated: state.truncated || all.length > max, notes: state.notes, usage: state.usage };
 }
