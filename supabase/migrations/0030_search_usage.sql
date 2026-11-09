@@ -1,4 +1,4 @@
--- Räknare för betalda söktjänster, så att ett tak går att hålla exakt och överleva omstarter. En rad per tjänst; `used`
+-- Räknare för betalda söktjänster, så att ett tak går att hålla exakt och överleva omstarter. En rad per tjänst och månad (nyckeln är "brave:ÅÅÅÅ-MM"); `used`
 -- räknar alla anrop som gjorts (också de som felade, eftersom tjänsten kan räkna dem). Taket ligger i koden/miljön.
 create table if not exists public.search_usage (
   provider   text primary key,
