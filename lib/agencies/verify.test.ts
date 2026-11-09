@@ -26,6 +26,13 @@ describe("verifyCandidate", () => {
     const leads = { name: "Leads Sverige AB", domain: "leads.nu" };
     expect(await verifyCandidate("kund.se", leads, deps(ok(`<html><body><a href="mailto:info@kund.se">Mejla</a><p>Kontakta offert@leads.nu</p></body></html>`)))).toEqual({ accepted: false, reason: "no-credit" });
   });
+  it("does not count the agency's mailbox on a subpage the backlink pointed to (real: vakanser.se, a job board)", async () => {
+    const jo = { name: "Jo Kommunikation", domain: "jokommunikation.se" };
+    const home = `<html><body><main>Lediga jobb</main></body></html>`;
+    const ad = `<html><body><main>Webbutvecklare</main><a href="mailto:edel@jokommunikation.se">Ansök</a></body></html>`;
+    const d: VerifyDeps = { safeFetch: vi.fn(async (url: string) => (url.includes("/jobb/") ? { ...ok(ad), finalUrl: url } : ok(home))) as unknown as VerifyDeps["safeFetch"] };
+    expect(await verifyCandidate("vakanser.se", jo, d, null, { urlFrom: "https://vakanser.se/jobb/webbutvecklare/", anchor: null })).toEqual({ accepted: false, reason: "no-credit" });
+  });
   it("rejects a credit that names another agency, and a page with no credit", async () => {
     expect(await verifyCandidate("kund.se", agency, deps(ok(withFooter(`Skapad av <a href="https://infront.se">Infront Media</a>`))))).toEqual({ accepted: false, reason: "other-agency", to: "Infront Media" });
     expect(await verifyCandidate("kund.se", agency, deps(ok(withFooter("© Kund AB"))))).toEqual({ accepted: false, reason: "no-credit" });

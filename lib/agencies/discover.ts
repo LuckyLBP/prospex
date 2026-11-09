@@ -6,6 +6,7 @@ import { searchPublicwww } from "@/lib/scrapers/publicwww";
 import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
 import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
+import { customerServerHits, MIN_CUSTOMERS_PER_SERVER } from "./customer-servers";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -97,6 +98,8 @@ export interface DiscoverDeps {
   /** Claude letar på byråns kund- och referenssidor och på webben. Får de redan funna domänerna så att den inte letar efter dem. */
   claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
+  /** Sajter på servrarna där minst två av byråns bekräftade kunder ligger (reverse IP). Förslag som verifieringen prövar. */
+  customerServers?: (agency: Agency, customers: readonly string[], ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domain: string; server: { ip: string; size: number } }[]>;
   /** Webbsökning (Brave): sidor som nämner byrån i en kreditrad eller länkar till den. Valfri, betalas per sökning. */
   search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number; limited?: boolean }>;
   searchConfigured?: () => boolean;
@@ -194,6 +197,7 @@ export const defaultDiscoverDeps: DiscoverDeps = {
     return r.candidates;
   },
   claudeConfigured: isAnthropicConfigured,
+  customerServers: (agency, customers, ctx) => customerServerHits(agency.domain, customers, ctx),
   search: async (agency, ctx) => searchAgencyMentions(agency, ctx),
   searchConfigured: () => isSearchConfigured(),
 };
@@ -237,6 +241,8 @@ export interface DiscoverOpts {
   claudeBelow?: number;
   /** Spår i koden som styrkt många av byråns kunder, att söka på i PublicWWW. */
   learned?: readonly string[];
+  /** Domänerna på byråns bekräftade kunder, för uppslaget av deras servrar. */
+  customers?: readonly string[];
 }
 
 /**
@@ -330,6 +336,17 @@ export async function runDiscoveryStep(
           ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter ViewDNS`);
         } catch (e) {
           skip("ViewDNS", e);
+        }
+        // Kundernas servrar: har minst två kunder samma server slås det upp vilka andra sajter som ligger där.
+        if (deps.customerServers && (opts.customers?.length ?? 0) >= MIN_CUSTOMERS_PER_SERVER) {
+          try {
+            const hits = await deps.customerServers(agency, opts.customers!, ctx);
+            for (const h of hits) add(h.domain, "viewdns", null, undefined, undefined, h.server);
+            if (hits.length > 0) next.externalOk++;
+            ctx.log(`Byrå ${agency.name}: ${hits.length} sajter på kundernas servrar, ${next.found.length} kandidater totalt`);
+          } catch (e) {
+            skip("Kundernas servrar", e);
+          }
         }
       }
       break;

@@ -141,10 +141,11 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
         const rejected = await deps.rejected(supplierId);
         const spend = await deps.spend();
         const learned = await (deps.learned?.(supplierId) ?? Promise.resolve([] as string[])).catch(() => [] as string[]);
+        const customers = await deps.existing(supplierId).catch(() => [] as string[]);
         let state = cursor.state;
         while (!discoveryDone(state)) {
           const before = state.usage;
-          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend, learned }, ctx, deps.discover);
+          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend, learned, customers }, ctx, deps.discover);
           // Markören skrivs efter varje steg, så att en omgång som tar slut fortsätter vid nästa steg och inte från början.
           if (!discoveryDone(state)) yield { items: [], cursor: asJson({ stage: "discover", state }), usage: { credits: state.usage.credits - before.credits, costSek: state.usage.costSek - before.costSek } };
         }

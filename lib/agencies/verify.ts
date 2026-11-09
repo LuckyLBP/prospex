@@ -51,15 +51,19 @@ export interface BacklinkHint {
 
 type PageCheck = { verdict: Verdict } | { contradicted: string } | null;
 
-/** Kontrollerar en hämtad sida. Null = inget belägg här. Ett "contradicted" betyder att sidan visar en annan byrå. */
-function checkPage(html: string, finalUrl: string, domain: string, agency: Agency): PageCheck {
+/**
+ * Kontrollerar en hämtad sida. Null = inget belägg här. Ett "contradicted" betyder att sidan visar en annan byrå.
+ * `subpage`: en undersida som bakåtlänken pekade ut. En e-postadress hos byrån räknas inte där: den kan stå i en
+ * platsannons eller en artikel (vakanser.se, en jobbsajt där byrån annonserat), och det gör inte byrån till byggare.
+ */
+function checkPage(html: string, finalUrl: string, domain: string, agency: Agency, subpage = false): PageCheck {
   const audit = auditSite(html, finalUrl);
   const creator = findCreator(html, domain, audit.credit);
   if (creatorMatchesAgency(creator, agency)) return { verdict: { accepted: true, confidence: "credit", evidenceUrl: finalUrl, evidence: `Sidfoten anger ${creator!.name}` } };
   const text = footerTextCredit(html, agency);
   if (text) return { verdict: { accepted: true, confidence: "text-credit", evidenceUrl: finalUrl, evidence: `Sidfoten: ${text}` } };
   if (footerLinksTo(html, agency.domain)) return { verdict: { accepted: true, confidence: "footer-link", evidenceUrl: finalUrl, evidence: `Sidfoten länkar till ${agency.domain}` } };
-  const mail = contactsAgency(html, agency.domain);
+  const mail = subpage ? null : contactsAgency(html, agency.domain);
   if (mail) return { verdict: { accepted: true, confidence: "contact", evidenceUrl: finalUrl, evidence: `Sidan länkar till e-postadressen ${mail}` } };
   const trace = agencyTrace(html, agency);
   if (trace) return { verdict: { accepted: true, confidence: "fingerprint", evidenceUrl: finalUrl, evidence: trace.evidence, trace: { kind: trace.kind, token: trace.token } } };
@@ -107,7 +111,7 @@ export async function verifyCandidate(domain: string, agency: Agency, deps: Veri
   if (!contradicted && hint?.urlFrom && sameSite(hint.urlFrom, domain) && normPage(hint.urlFrom) !== normPage(page.finalUrl)) {
     const other = await fetchPage(hint.urlFrom).catch(() => null);
     if (other?.html && !isInterstitial(other.html)) {
-      const found = checkPage(other.html, other.finalUrl, domain, agency);
+      const found = checkPage(other.html, other.finalUrl, domain, agency, true);
       if (found && "verdict" in found) return found.verdict;
       if (found && "contradicted" in found) contradicted = found.contradicted;
     }

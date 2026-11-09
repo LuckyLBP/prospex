@@ -172,3 +172,21 @@ describe("search step", () => {
     expect(r.candidates.length).toBeGreaterThan(0);
   });
 });
+
+describe("customer servers", () => {
+  const hit = [{ domain: "ny1.se", server: { ip: "91.201.60.108", size: 500 } }];
+  it("adds the sites on a customer server as candidates when at least two customers are known", async () => {
+    const customerServers = vi.fn(async () => hit);
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: true, rejected: new Set(), customers: ["k1.se", "k2.se"] }, ctx, deps({ customerServers }));
+    expect(customerServers).toHaveBeenCalled();
+    expect(r.candidates.find((c) => c.domain === "ny1.se")).toMatchObject({ via: "viewdns", server: { ip: "91.201.60.108", size: 500 } });
+  });
+  it("does not look when fewer than two customers are known, and a failure does not stop the run", async () => {
+    const customerServers = vi.fn(async () => hit);
+    await discoverCandidates(agency, { max: 50, useViewdns: true, rejected: new Set(), customers: ["k1.se"] }, ctx, deps({ customerServers }));
+    expect(customerServers).not.toHaveBeenCalled();
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: true, rejected: new Set(), customers: ["k1.se", "k2.se"] }, ctx, deps({ customerServers: async () => { throw new Error("HackerTarget: dagens gratiskvot är slut."); } }));
+    expect(r.notes.join(" ")).toMatch(/gratiskvot/);
+    expect(r.candidates.length).toBeGreaterThan(0);
+  });
+});
