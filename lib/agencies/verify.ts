@@ -5,7 +5,7 @@ import { PageBudget, safeFetch } from "@/lib/profile/safe-fetch";
 import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, footerLinksTo, footerTextCredit, isSameOrSubdomain, pageMentionsDomain, type Agency } from "./match";
 
 // Kontrollen som gör att ingen kund läggs in på någon annans ord: kandidatens EGEN sida hämtas, och byrån måste synas
-// där. Det gäller oavsett om kandidaten kom från bakåtlänkar, PublicWWW, ViewDNS, vår katalog eller Claude.
+// där. Det gäller oavsett om kandidaten kom från bakåtlänkar, källkodssökning, ViewDNS, vår katalog eller Claude.
 // Starkast först:
 //
 //   credit       kreditraden ("Skapad av ...") pekar ut byrån med länk, på domän eller kärnnamn

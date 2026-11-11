@@ -4,8 +4,7 @@ import { stockholmDay } from "@/lib/format";
  * Veckouppdateringen: vilka källor som står på tur i dag.
  *
  * Säljarna startar inga körningar. Varje publicerad källa hämtas i stället om
- * en gång i veckan av /api/cron/refresh, PublicWWW inräknat (sedan
- * 2026-10-05; tidigare kördes PublicWWW bara för hand för att spara kvot).
+ * en gång i veckan av /api/cron/refresh, källkodssökningarna inräknade.
  *
  * SPRITT ÖVER VECKAN, INTE ALLT PÅ EN DAG. Cronjobbet går varje dag och startar
  * som mest MAX_PER_DAY källor, de som väntat längst först. En källa är "på tur"
@@ -40,9 +39,9 @@ function dueAfterMs(method?: string): number {
 export const MAX_PER_DAY = 10;
 
 /**
- * Så många av dem som får vara PublicWWW. API:et släpper igenom två anrop per
- * trettio sekunder och kollektorn försöker som mest fyra gånger, så fler som
- * startar i samma minut hade fått ge upp. Fyra om dagen är 28 i veckan.
+ * Så många av dem som får vara källkodssökningar (SearchWebCode). Tjänsten låser
+ * nyckeln i tio minuter om den får för många anrop på kort tid, och varje sökning
+ * kostar, så få startar per dag. Fyra om dagen är 28 i veckan.
  */
 export const MAX_PUBLICWWW_PER_DAY = 4;
 
@@ -88,7 +87,7 @@ export function pickDueProfiles(
   let publicwww = 0;
   for (const profile of due) {
     if (picked.length >= limit) break;
-    // En byrå gör också ett PublicWWW-anrop, så den räknas mot samma dagstak.
+    // En byrå gör också en källkodssökning, så den räknas mot samma dagstak.
     if (profile.method === "publicwww" || profile.method === "agency") {
       if (publicwww >= publicwwwLimit) continue;
       publicwww++;

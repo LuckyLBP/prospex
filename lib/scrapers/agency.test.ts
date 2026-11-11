@@ -183,7 +183,7 @@ describe("agency collector", () => {
     expect(failing.batches.at(-1)!.note).toContain("1 svarade inte");
     const h = harness([], async (d) => accept(d));
     h.discover.publicwww = async () => { throw new Error("kvoten är slut"); };
-    await expect(runAll(createAgencyCollector(h))).rejects.toThrow(/Ingen källa.*PublicWWW hoppades över: kvoten är slut/);
+    await expect(runAll(createAgencyCollector(h))).rejects.toThrow(/Ingen källa.*SearchWebCode hoppades över: kvoten är slut/);
     const empty = await runAll(createAgencyCollector(harness([], async (d) => accept(d))));
     expect(itemsOf(empty.batches)).toEqual([]);
   });

@@ -52,21 +52,21 @@ describe("discoverCandidates", () => {
     expect(r.candidates).toHaveLength(2);
     expect(r.truncated).toBe(true);
   });
-  it("carries on without ViewDNS when it is off, unconfigured or fails, but not without PublicWWW", async () => {
+  it("carries on without ViewDNS when it is off, unconfigured or fails, but not without the code search", async () => {
     const off = deps();
     await discoverCandidates(agency, { ...opts, useViewdns: false }, ctx, off);
     expect(off.viewdns).not.toHaveBeenCalled();
     expect((await discoverCandidates(agency, opts, ctx, deps({ viewdns: vi.fn(async () => { throw new Error("nere"); }) }))).candidates.map((c) => c.domain)).toEqual(["kund1.se", "kund2.se"]);
   });
-  it("carries on without PublicWWW when its quota is gone, and says so", async () => {
+  it("carries on without the code search when its quota is gone, and says so", async () => {
     const out = deps({ publicwww: vi.fn(async () => { throw new Error("kvoten är slut"); }) });
     const r = await discoverCandidates(agency, opts, ctx, out);
     expect(r.candidates.map((c) => c.domain)).toEqual(["kund1.se", "kund3.se", "kund2.se"]);
-    expect(r.notes).toContain("PublicWWW hoppades över: kvoten är slut");
+    expect(r.notes).toContain("SearchWebCode hoppades över: kvoten är slut");
   });
   it("fails with a readable reason only when no source could be used and nothing was found", async () => {
     const broken = deps({ catalog: async () => [], publicwww: async () => { throw new Error("kvoten är slut"); }, viewdnsConfigured: () => false, claudeConfigured: () => false });
-    await expect(discoverCandidates(agency, { ...opts, useClaude: true }, ctx, broken)).rejects.toThrow(/Ingen källa.*PublicWWW hoppades över: kvoten är slut.*Claude hoppades över: ingen API-nyckel/);
+    await expect(discoverCandidates(agency, { ...opts, useClaude: true }, ctx, broken)).rejects.toThrow(/Ingen källa.*SearchWebCode hoppades över: kvoten är slut.*Claude hoppades över: ingen API-nyckel/);
     // Katalogen ensam räcker, och Claude som fallerar ger en anteckning.
     const some = deps({ publicwww: async () => { throw new Error("slut"); }, claude: async () => { throw new Error("arbetsyta saknas"); }, claudeConfigured: () => true });
     const r = await discoverCandidates(agency, { ...opts, useClaude: true }, ctx, some);
@@ -210,5 +210,14 @@ describe("patterns step", () => {
     const r = await discoverCandidates(agency, base, ctx, deps({ patterns: async () => { throw new Error("SearchWebCode: månadens tak"); }, claudeConfigured: () => true }));
     expect(r.notes.join(" ")).toMatch(/månadens tak/);
     expect(r.candidates.length).toBeGreaterThan(0);
+  });
+});
+
+describe("code search without a key", () => {
+  it("is left out quietly, with no note, like the other optional sources", async () => {
+    const publicwww = vi.fn(async () => ({ domains: [{ domain: "x.se", url: null }], truncated: false }));
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set() }, ctx, deps({ publicwww, codeSearchConfigured: () => false }));
+    expect(publicwww).not.toHaveBeenCalled();
+    expect(r.notes.join(" ")).not.toMatch(/SearchWebCode|PublicWWW/);
   });
 });

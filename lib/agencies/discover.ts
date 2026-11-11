@@ -2,7 +2,7 @@ import { pool } from "@/lib/db";
 import { agencyKey } from "@/lib/profile/creator";
 import { classifyDns, lookupDns, type DnsRecords } from "@/lib/profile/dns";
 import { normalizeDomain } from "@/lib/scrapers/domain";
-import { codeSourceName, searchCode } from "@/lib/scrapers/codesearch";
+import { CODE_SOURCE_NAME, isCodeSearchConfigured, searchCode } from "@/lib/scrapers/codesearch";
 import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
 import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
@@ -105,6 +105,8 @@ export interface DiscoverDeps {
   /** Claude läser källkoden hos några av byråns kunder och föreslår mönster de delar. Sajterna med mönstret blir kandidater. */
   patterns?: (agency: Agency, customers: readonly string[], ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domain: string; url: string | null; pattern: string }[]>;
   customerServers?: (agency: Agency, customers: readonly string[], ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domain: string; server: { ip: string; size: number } }[]>;
+  /** Finns nyckeln till källkodssökningen? Utan den hoppar steget över utan att larma: det är ett tillägg. */
+  codeSearchConfigured?: () => boolean;
   /** Webbsökning (Brave): sidor som nämner byrån i en kreditrad eller länkar till den. Valfri, betalas per sökning. */
   search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number; limited?: boolean }>;
   searchConfigured?: () => boolean;
@@ -131,7 +133,7 @@ export const defaultDiscoverDeps: DiscoverDeps = {
     for (const token of learned) {
       try {
         const more = await searchCode(`"${token}"`, 1000, ctx);
-        ctx.log(`Byrå ${agency.name}: spåret ${token} gav ${more.hits.length} sajter hos ${codeSourceName()}`);
+        ctx.log(`Byrå ${agency.name}: spåret ${token} gav ${more.hits.length} sajter hos ${CODE_SOURCE_NAME}`);
         domains.push(...more.hits);
         truncated ||= more.truncated;
       } catch (e) {
@@ -203,6 +205,7 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   claudeConfigured: isAnthropicConfigured,
   customerServers: (agency, customers, ctx) => customerServerHits(agency.domain, customers, ctx),
   patterns: (agency, customers, ctx) => customerPatternCandidates(agency, customers, ctx),
+  codeSearchConfigured: () => isCodeSearchConfigured(),
   search: async (agency, ctx) => searchAgencyMentions(agency, ctx),
   searchConfigured: () => isSearchConfigured(),
 };
@@ -244,14 +247,14 @@ export interface DiscoverOpts {
   /** Dygnets förbrukning hittills, för taken. */
   spend?: Spend;
   claudeBelow?: number;
-  /** Spår i koden som styrkt många av byråns kunder, att söka på i källkod (SearchWebCode, annars PublicWWW). */
+  /** Spår i koden som styrkt många av byråns kunder, att söka på i källkod hos SearchWebCode. */
   learned?: readonly string[];
   /** Domänerna på byråns bekräftade kunder, för uppslaget av deras servrar. */
   customers?: readonly string[];
 }
 
 /**
- * Kör nästa steg och ger det nya läget. Alla utom katalogen är tillägg som kan saknas: kvoten hos källkodssökningen (SearchWebCode eller PublicWWW) tar slut,
+ * Kör nästa steg och ger det nya läget. Alla utom katalogen är tillägg som kan saknas: kvoten hos källkodssökningen (SearchWebCode) tar slut,
  * en nyckel kan fattas, dygnets tak kan vara nått. Ett steg som hoppas över antecknas och körningen fortsätter.
  */
 export async function runDiscoveryStep(
@@ -322,14 +325,15 @@ export async function runDiscoveryStep(
       break;
 
     case "publicwww":
+      if (deps.codeSearchConfigured && !deps.codeSearchConfigured()) break;
       try {
         const pw = await deps.publicwww(agency, ctx, opts.learned ?? []);
         for (const r of pw.domains) add(r.domain, "publicwww", r.url);
         if (pw.truncated) next.truncated = true;
         next.externalOk++;
-        ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter ${codeSourceName()}`);
+        ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter ${CODE_SOURCE_NAME}`);
       } catch (e) {
-        skip(codeSourceName(), e);
+        skip(CODE_SOURCE_NAME, e);
       }
       break;
 
@@ -424,7 +428,7 @@ export async function runDiscoveryStep(
 }
 
 /**
- * Slutlistan: katalogen först, sedan bakåtlänkar, byråns egen webbplats, Claude, PublicWWW och ViewDNS, högst `max`.
+ * Slutlistan: katalogen först, sedan bakåtlänkar, byråns egen webbplats, Claude, källkodssökningen och ViewDNS, högst `max`.
  * Kastar när ingen extern källa fungerade och ingenting hittades alls.
  */
 export function finishDiscovery(state: DiscoveryState, max: number): Discovery {

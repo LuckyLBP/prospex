@@ -8,7 +8,7 @@ import { ensureAgencySupplier, getSourceByDomain, type SourceState } from "./sto
 
 // "Hitta deras kunder": ett bolag som spanat på en plattform eller byrå (offerta.se, leads.nu) ber om listan över
 // plattformens kunder. Finns den visas den. Annars skapas en opublicerad källa med byrå-metoden och en körning startar.
-// Körningen hittar kunder via bakåtlänkar, PublicWWW, byråns egna kundsidor och sökning, och varje kund kontrolleras mot
+// Körningen hittar kunder via bakåtlänkar, källkodssökning, byråns egna kundsidor och sökning, och varje kund kontrolleras mot
 // sin egen sida. När körningen är klar publiceras listan av sig själv om den har tillräckligt många (publish.ts).
 
 export const REQUESTS_PER_USER_PER_DAY = 5;

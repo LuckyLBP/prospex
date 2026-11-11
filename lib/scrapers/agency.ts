@@ -13,7 +13,7 @@ import { CollectorError, type CollectBatch, type CollectContext, type Collector,
 // Byråns kunder, i steg som överlever varandra via markören. Körningen kan stanna mellan två steg, så ingen omgång
 // behöver rymma allt:
 //
-//   discover   ett källsteg i taget (katalog, bakåtlänkar, byråns webbplats, PublicWWW, ViewDNS, Claude)
+//   discover   ett källsteg i taget (katalog, bakåtlänkar, byråns webbplats, källkodssökning, ViewDNS, Claude)
 //   server     efter kontrollen: en sajt som delar en liten server med minst två sajter som visar byrån (kredit eller e-post
 //              hos byrån) godkänns som "samma server". Gäller bara om den fortfarande ligger på servern.
 //   verify     kandidaterna kontrolleras i omgångar mot kundens EGEN sida. Bara de som visar byrån blir poster, med
