@@ -6,6 +6,7 @@ import RunPoller from "@/components/admin/RunPoller";
 import { Flash, StatusPill } from "@/components/admin/bits";
 import { btnPrimary, btnSecondary } from "@/components/admin/ui";
 import CustomerListCard from "@/components/dashboard/CustomerListCard";
+import PatternCard from "@/components/dashboard/PatternCard";
 import { getListState, displayName } from "@/lib/agencies/request";
 import { requireProfileAccess } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
@@ -62,6 +63,7 @@ export default async function TenantProfilePage({ params, searchParams }: { para
       )}
 
       {profile && <ProfileView profile={profile} pages={[]} presence={[]} fallbackName={title} actions={actions} tenant photoUrls={photoUrls} />}
+      {profile?.pattern && <PatternCard pattern={profile.pattern} />}
       {listState && row.domain && <CustomerListCard state={listState} profileId={row.id} domain={row.domain} name={displayName(profile?.company.name ?? row.name, row.domain)} />}
       {profile && <p className="mt-5 text-[12px] text-gray-400">Validerad {formatDateTime(profile.generatedAt)}</p>}
     </>

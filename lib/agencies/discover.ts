@@ -7,6 +7,7 @@ import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns"
 import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
 import { customerServerHits, MIN_CUSTOMERS_PER_SERVER } from "./customer-servers";
+import { customerPatternCandidates } from "./pattern";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -20,7 +21,7 @@ import { creatorMatchesAgency, isSameOrSubdomain, type Agency } from "./match";
 // Var kandidaterna kommer ifrån. Allt här är förslag: ingenting läggs in förrän verifyCandidate (verify.ts) sett byrån
 // i kandidatens egen sidfot. Källorna körs billigast först, och en som saknar nyckel eller felar ger bara färre förslag.
 
-export type CandidateVia = "katalog" | "backlinks" | "site" | "publicwww" | "viewdns" | "search" | "claude" | "known";
+export type CandidateVia = "katalog" | "backlinks" | "site" | "publicwww" | "viewdns" | "search" | "pattern" | "claude" | "known";
 
 export interface Candidate {
   domain: string;
@@ -31,6 +32,8 @@ export interface Candidate {
   evidence?: { url: string; quote: string | null };
   /** Bakåtlänken som gav förslaget: sidan som länkar till byrån och länktexten. Verifieringen tittar på sidan. */
   hint?: { urlFrom: string; anchor: string | null };
+  /** Mönstret i koden som kandidaten hittades på (hos de flesta av byråns kunder). Verifieringen kräver att sidan visar det. */
+  pattern?: string;
   /** Servern kandidaten delar med byrån (ett reverse IP-uppslag) och hur många domäner som ligger där. Ger inget belägg ensamt. */
   server?: { ip: string; size: number };
 }
@@ -99,6 +102,8 @@ export interface DiscoverDeps {
   claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
   /** Sajter på servrarna där minst två av byråns bekräftade kunder ligger (reverse IP). Förslag som verifieringen prövar. */
+  /** Claude läser källkoden hos några av byråns kunder och föreslår mönster de delar. Sajterna med mönstret blir kandidater. */
+  patterns?: (agency: Agency, customers: readonly string[], ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domain: string; url: string | null; pattern: string }[]>;
   customerServers?: (agency: Agency, customers: readonly string[], ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ domain: string; server: { ip: string; size: number } }[]>;
   /** Webbsökning (Brave): sidor som nämner byrån i en kreditrad eller länkar till den. Valfri, betalas per sökning. */
   search?: (agency: Agency, ctx: Pick<CollectContext, "signal" | "log">) => Promise<{ hits: { domain: string; url: string }[]; queries: number; limited?: boolean }>;
@@ -197,6 +202,7 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   },
   claudeConfigured: isAnthropicConfigured,
   customerServers: (agency, customers, ctx) => customerServerHits(agency.domain, customers, ctx),
+  patterns: (agency, customers, ctx) => customerPatternCandidates(agency, customers, ctx),
   search: async (agency, ctx) => searchAgencyMentions(agency, ctx),
   searchConfigured: () => isSearchConfigured(),
 };
@@ -212,7 +218,7 @@ export interface Discovery {
 }
 
 /** Stegen i ordning. Varje steg körs för sig, så att en körning kan stanna mellan två av dem och fortsätta senare. */
-export const STEPS = ["catalog", "backlinks", "site", "publicwww", "viewdns", "search", "claude"] as const;
+export const STEPS = ["catalog", "backlinks", "site", "publicwww", "viewdns", "patterns", "search", "claude"] as const;
 /** Claude letar bara när koden hittat så här få kandidater: för en byrå med många bakåtlänkar tillför den sällan något. */
 export const CLAUDE_BELOW = 40;
 
@@ -259,11 +265,11 @@ export async function runDiscoveryStep(
   const next: DiscoveryState = { ...state, step: state.step + 1, found: [...state.found], notes: [...state.notes], usage: { ...state.usage } };
   const seen = new Set(next.found.map((c) => c.domain));
   const spend = opts.spend ?? { credits: 0, costSek: 0 };
-  const add = (raw: string | null | undefined, via: CandidateVia, sourceUrl: string | null = null, evidence?: Candidate["evidence"], hint?: Candidate["hint"], server?: Candidate["server"]) => {
+  const add = (raw: string | null | undefined, via: CandidateVia, sourceUrl: string | null = null, evidence?: Candidate["evidence"], hint?: Candidate["hint"], server?: Candidate["server"], pattern?: string) => {
     const domain = normalizeDomain(raw);
     if (!domain || seen.has(domain) || isSameOrSubdomain(domain, agency.domain) || opts.rejected.has(domain)) return;
     seen.add(domain);
-    next.found.push({ domain, via, sourceUrl, ...(evidence ? { evidence } : {}), ...(hint ? { hint } : {}), ...(server ? { server } : {}) });
+    next.found.push({ domain, via, sourceUrl, ...(evidence ? { evidence } : {}), ...(hint ? { hint } : {}), ...(server ? { server } : {}), ...(pattern ? { pattern } : {}) });
   };
   const skip = (source: string, e: unknown) => {
     const why = e instanceof Error ? e.message : String(e);
@@ -350,6 +356,26 @@ export async function runDiscoveryStep(
       }
       break;
 
+    case "patterns": {
+      // Claude läser källkoden hos några av byråns bekräftade kunder och föreslår mönster de delar. Kräver Claude, en
+      // källkodssökning och minst tre kunder. Varje träff prövas mot sin egen sida i verifieringen.
+      if (!opts.useClaude || !deps.patterns || (opts.customers?.length ?? 0) < 3) break;
+      if (!claudeAllowed(spend)) {
+        next.notes.push("Mönstersökningen hoppades över: dagens tak för Claude är nått.");
+        break;
+      }
+      try {
+        const found = await deps.patterns(agency, opts.customers!, ctx);
+        for (const c of found) add(c.domain, "pattern", c.url, undefined, undefined, undefined, c.pattern);
+        report({ costSek: 0.2 });
+        if (found.length > 0) next.externalOk++;
+        ctx.log(`Byrå ${agency.name}: ${found.length} sajter med byråns mönster, ${next.found.length} kandidater totalt`);
+      } catch (e) {
+        skip("Mönstersökningen", e);
+      }
+      break;
+    }
+
     case "search": {
       if (!deps.search || !deps.searchConfigured?.()) break; // valfri källa: utan nyckel är den inte med
       if (!searchAllowed(spend)) {
@@ -405,7 +431,7 @@ export function finishDiscovery(state: DiscoveryState, max: number): Discovery {
   if (state.externalOk === 0 && state.found.length === 0) {
     throw new CollectorError(`Ingen källa gick att använda för att hitta kunder. ${state.notes.join(" ")}`.trim());
   }
-  const order: CandidateVia[] = ["katalog", "backlinks", "site", "claude", "search", "publicwww", "viewdns"];
+  const order: CandidateVia[] = ["katalog", "backlinks", "site", "claude", "search", "pattern", "publicwww", "viewdns"];
   const all = order.flatMap((via) => state.found.filter((c) => c.via === via));
   return { candidates: all.slice(0, max), truncated: state.truncated || all.length > max, notes: state.notes, usage: state.usage };
 }

@@ -5,6 +5,7 @@ import { findCompanyById, upsertCompany } from "@/lib/companies/upsert";
 import { agencyModel, agencyModelId, estimateCostSek, isAiConfigured, isAnthropicConfigured } from "@/lib/ai/model";
 import { maybeStartAgency, maybeStartCreatorProfile } from "@/lib/agencies/auto";
 import { adoptSupplierLogo, getAgencyByDomain } from "@/lib/agencies/store";
+import { analyseSitePattern, type PatternAnalysis } from "@/lib/agencies/pattern";
 import { linkServerToAgencyDomain, recordSiteIps } from "@/lib/agencies/server-guess";
 import { runAgent, type AgentContext } from "./agent";
 import { assembleProfile } from "./assemble";
@@ -41,6 +42,8 @@ export interface BuildDeps {
   maybeStartCreatorProfile?: typeof maybeStartCreatorProfile;
   /** Kontaktpersoner ur sidorna. Utbytbar så att tester inte når modellen. */
   extractPeople?: (pages: ReturnType<typeof condensePage>[], company: { name: string | null; domain: string | null }) => Promise<PeopleResult>;
+  /** Claude läser startsidans källkod efter spår efter byggaren. Utbytbar så att tester inte når modellen eller sökningen. */
+  analysePattern?: typeof analyseSitePattern;
 }
 
 const defaultDeps: BuildDeps = { resolveInput, gather, runAgent, aiConfigured: isAiConfigured, buildNetwork };
@@ -149,6 +152,14 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
     // Servern minns vi för nästa gång: varje profil gör uppslaget "vilka sajter ligger på samma server" billigare.
     if (gathered.site.status === "ok") await recordSiteIps(gathered.siteDomain, gathered.ips);
 
+    // 4b. Mönster i källkoden: Claude läser startsidans källkod efter spår efter byggaren, och koden kontrollerar och söker upp
+    //     dem. Startar här och väntas in efter AI-steget, så att spaningen inte blir långsammare. Ett fel ger inget mönster.
+    const patternDomain = gathered.site.status === "ok" ? gathered.siteDomain : null;
+    const homeSource = patternDomain ? gathered.peoplePages[0]?.html ?? null : null;
+    const patternPromise: Promise<PatternAnalysis | null> = patternDomain && homeSource
+      ? (deps.analysePattern ?? analyseSitePattern)(patternDomain, homeSource, { signal: abort.signal, log: (m) => console.log(`[profil ${id}] ${m}`) }).catch(() => null)
+      : Promise.resolve(null);
+
     // 5. AI.
     const book = FactBook.from(gathered.facts);
     presenceFacts(book, network.presence);
@@ -184,6 +195,8 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
       }
     }
 
+    const pattern = await patternPromise;
+
     // 6. Granska, sätt ihop och spara.
     await setStage(id, "save");
     const facts = book.all();
@@ -193,6 +206,8 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
       resolved, gathered, companyId, model: model?.output ?? null, texts: ctx.texts, place, jobs, people, facts, creator: network.creator, companyLogoPath: network.companyLogoPath, platformLinks: network.platformLinks,
       meta: { model: model?.model ?? null, inputTokens: model?.inputTokens ?? 0, outputTokens: model?.outputTokens ?? 0, steps: model?.steps ?? 0, toolPages: modelPages, durationMs, costEstimateSek: model ? estimateCostSek(model.model, model.inputTokens, model.outputTokens) : null, aiStatus },
     });
+
+    if (pattern) profile.pattern = { ...pattern, checkedAt: new Date().toISOString() };
 
     // Kontaktuppgifterna från webbplatsen fyller på katalogens post, utan att skriva över något känt.
     await upsertCompany({ dedupeKey: resolved.catalog?.dedupe_key ?? key, domain: resolved.domain, name, phone: gathered.contact.phones[0] ?? null, email: gathered.contact.emails[0] ?? null });

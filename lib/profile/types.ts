@@ -1,3 +1,4 @@
+import type { PatternAnalysis } from "@/lib/agencies/pattern";
 import { z } from "zod";
 
 // Typer som delas mellan profilens moduler. Klientsäkra och utan beroenden utöver zod.
@@ -160,6 +161,9 @@ export interface ProfilePlatformLink {
 
 export type WebsiteSourceKind = "input" | "catalog" | "places" | "none";
 
+/** Vad Claude och koden fann i källkoden (lib/agencies/pattern.ts). */
+export type PatternSection = PatternAnalysis & { checkedAt: string };
+
 export interface CompanyProfile {
   version: 1;
   generatedAt: string;
@@ -178,6 +182,8 @@ export interface CompanyProfile {
   platformLinks?: ProfilePlatformLink[];
   /** Öppna platsannonser, när företaget har några. Äldre profiler saknar dem. */
   jobs?: JobsSection | null;
+  /** Spår i startsidans källkod som visar vem som byggt sajten, och hur många andra sajter som delar dem. Äldre profiler saknar det. */
+  pattern?: PatternSection | null;
   facts: Fact[];
   meta: {
     model: string | null;

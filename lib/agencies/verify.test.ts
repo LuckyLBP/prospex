@@ -124,3 +124,25 @@ describe("verifyCandidate", () => {
   });
 });
 
+
+describe("verifyCandidate with a pattern from the customers' code", () => {
+  const robin = { name: "TeamRobin", domain: "teamrobin.com" };
+  const PATTERN = "site-assets.cdnmns.com";
+  const page = (html: string) => deps(ok(`<html><body><main>Hej</main>${html}</body></html>`));
+
+  it("accepts a page that shows the pattern and no other agency, as the weaker pattern proof", async () => {
+    const v = await verifyCandidate("kund.se", robin, page(`<link href="https://${PATTERN}/x/main.css">`), null, null, PATTERN);
+    expect(v).toMatchObject({ accepted: true, confidence: "pattern" });
+    expect((v as { evidence: string }).evidence).toContain(PATTERN);
+  });
+  it("does not accept a page that lacks the pattern, or one that credits another agency", async () => {
+    expect(await verifyCandidate("kund.se", robin, page(`<p>ingenting</p>`), null, null, PATTERN)).toEqual({ accepted: false, reason: "no-credit" });
+    const other = deps(ok(withFooter(`Skapad av <a href="https://infront.se">Infront Media</a><link href="https://${PATTERN}/x.css">`)));
+    expect(await verifyCandidate("kund.se", robin, other, null, null, PATTERN)).toEqual({ accepted: false, reason: "other-agency", to: "Infront Media" });
+  });
+  it("lets a real credit win over the pattern, and does nothing without a pattern", async () => {
+    const credited = deps(ok(withFooter(`Skapad av <a href="https://teamrobin.com">TeamRobin</a><link href="https://${PATTERN}/x.css">`)));
+    expect(await verifyCandidate("kund.se", robin, credited, null, null, PATTERN)).toMatchObject({ accepted: true, confidence: "credit" });
+    expect(await verifyCandidate("kund.se", robin, page(`<link href="https://${PATTERN}/x.css">`))).toEqual({ accepted: false, reason: "no-credit" });
+  });
+});

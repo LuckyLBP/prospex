@@ -190,3 +190,25 @@ describe("customer servers", () => {
     expect(r.candidates.length).toBeGreaterThan(0);
   });
 });
+
+describe("patterns step", () => {
+  const found = [{ domain: "ny1.se", url: "https://ny1.se/", pattern: "site-assets.cdnmns.com" }, { domain: "kund1.se", url: null, pattern: "site-assets.cdnmns.com" }];
+  const base = { max: 50, useViewdns: false, useClaude: true, rejected: new Set<string>(), customers: ["a.se", "b.se", "c.se"] };
+
+  it("adds the sites that share a pattern as candidates carrying the pattern, behind the other sources", async () => {
+    const patterns = vi.fn(async () => found);
+    const r = await discoverCandidates(agency, base, ctx, deps({ patterns, claudeConfigured: () => true }));
+    expect(patterns).toHaveBeenCalled();
+    expect(r.candidates.find((c) => c.domain === "ny1.se")).toMatchObject({ via: "pattern", pattern: "site-assets.cdnmns.com" });
+    expect(r.candidates.filter((c) => c.domain === "kund1.se")).toHaveLength(1); // katalogen vann
+  });
+  it("does not run without Claude enabled or with fewer than three known customers, and a failure is only noted", async () => {
+    const patterns = vi.fn(async () => found);
+    await discoverCandidates(agency, { ...base, useClaude: false }, ctx, deps({ patterns }));
+    await discoverCandidates(agency, { ...base, customers: ["a.se", "b.se"] }, ctx, deps({ patterns, claudeConfigured: () => true }));
+    expect(patterns).not.toHaveBeenCalled();
+    const r = await discoverCandidates(agency, base, ctx, deps({ patterns: async () => { throw new Error("SearchWebCode: månadens tak"); }, claudeConfigured: () => true }));
+    expect(r.notes.join(" ")).toMatch(/månadens tak/);
+    expect(r.candidates.length).toBeGreaterThan(0);
+  });
+});

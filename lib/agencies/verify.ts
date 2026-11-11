@@ -15,6 +15,9 @@ import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, f
 //   fingerprint  inget synligt, men koden bär byråns namn: generator-tagg, tema eller resurser från byråns domän
 //   portfolio    byråns EGEN sida (som vi hämtat själva, inte Claudes referat) listar kunden, och kundens sida visar
 //                inte en annan byrå
+//   pattern      sidan visar ett spår i koden (en CDN, ett tema, en variabel) som de flesta av byråns kunder har, och ingen annan
+//                byrå står som byggare. Ett förslag ur en källkodssökning, svagare än en kredit: samma spår kan också
+//                tillhöra en plattform som flera byråer använder
 //   backlink     kundens sida släpper inte in oss, men en bakåtlänk med en tydlig kredittext pekar ut den. Svagast.
 
 /**
@@ -23,7 +26,7 @@ import { agencyTrace, anchorNamesAgency, contactsAgency, creatorMatchesAgency, f
  */
 export const VERIFY_RULES = 4;
 
-export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "portfolio" | "backlink";
+export type Confidence = "credit" | "text-credit" | "footer-link" | "contact" | "fingerprint" | "pattern" | "portfolio" | "backlink";
 
 export type Verdict =
   | { accepted: true; confidence: Confidence; evidenceUrl: string; evidence: string; /** Vilket spår i koden som styrkte kunden (bara för "fingerprint"), så att det går att söka efter fler. */ trace?: { kind: string; token: string } }
@@ -77,7 +80,7 @@ function checkPage(html: string, finalUrl: string, domain: string, agency: Agenc
  */
 const PAGE_BYTES = 2_000_000;
 
-export async function verifyCandidate(domain: string, agency: Agency, deps: VerifyDeps = defaultVerifyDeps, proof?: PortfolioProof | null, hint?: BacklinkHint | null): Promise<Verdict> {
+export async function verifyCandidate(domain: string, agency: Agency, deps: VerifyDeps = defaultVerifyDeps, proof?: PortfolioProof | null, hint?: BacklinkHint | null, pattern?: string | null): Promise<Verdict> {
   if (isSameOrSubdomain(domain, agency.domain)) return { accepted: false, reason: "own-domain" };
   const fetchPage = (url: string) => deps.safeFetch(url, domain, new PageBudget(1, 0), "code", { maxBytes: PAGE_BYTES });
 
@@ -117,6 +120,10 @@ export async function verifyCandidate(domain: string, agency: Agency, deps: Veri
     }
   }
 
+  // Ett mönster ur källkodssökningen räknas bara när sidan själv visar det och ingen annan byrå står som byggare.
+  if (!contradicted && pattern && page.html.includes(pattern)) {
+    return { accepted: true, confidence: "pattern", evidenceUrl: page.finalUrl, evidence: `Samma spår i koden som byråns kunder: ${pattern.slice(0, 80)}`, trace: { kind: "pattern", token: pattern.slice(0, 100) } };
+  }
   if (!contradicted && portfolioListsCustomer(proof, domain, agency)) return portfolioVerdict(proof!, agency);
   return contradicted ? { accepted: false, reason: "other-agency", to: contradicted } : { accepted: false, reason: "no-credit" };
 }

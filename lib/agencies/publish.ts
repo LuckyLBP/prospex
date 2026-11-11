@@ -3,7 +3,8 @@ import { invalidateCatalogue } from "@/lib/catalogue-tag";
 import { pool } from "@/lib/db";
 
 // Publicerar en byrås kundlista när en körning som ett bolag bett om blivit klar. Varje kund i listan har redan klarat
-// kontrollen mot sin egen sida (verify.ts), men en tom eller nästan tom lista ska aldrig nå kunderna.
+// kontrollen mot sin egen sida (verify.ts), men en tom eller nästan tom lista ska aldrig nå kunderna. Kunder som bara har
+// "samma spår i koden" räknas inte med: ett spår är en ledtråd, så listan måste hålla på kreditrader och liknande belägg.
 
 /** Så många verifierade kunder krävs för att listan publiceras av sig själv. */
 export const MIN_PUBLISH_CUSTOMERS = 5;
@@ -15,7 +16,7 @@ export async function autoPublishRequested(supplierId: string): Promise<boolean>
       `update suppliers s set published = true, updated_at = now()
        where s.id = $1 and s.method = 'agency' and not s.published
          and exists (select 1 from list_requests r where r.supplier_id = s.id)
-         and (select count(*) from company_signals cs where cs.supplier_id = s.id) >= $2
+         and (select count(*) from company_signals cs where cs.supplier_id = s.id and coalesce(cs.raw->>'confidence', '') <> 'pattern') >= $2
        returning s.slug, s.name, s.kind, (select count(*)::int from company_signals cs where cs.supplier_id = s.id) as customers`,
       [supplierId, MIN_PUBLISH_CUSTOMERS],
     );

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { RotateCw } from "@/components/brand/icons";
 import { ChevronLeft } from "@/components/brand/icons";
 import ProfileView from "@/components/admin/profile/ProfileView";
+import PatternCard from "@/components/dashboard/PatternCard";
 import RunPoller from "@/components/admin/RunPoller";
 import { Flash, StatusPill } from "@/components/admin/bits";
 import { btnPrimary, btnSecondary } from "@/components/admin/ui";
@@ -78,6 +79,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pr
       )}
 
       {profile && <ProfileView profile={profile} pages={pages} presence={presence} fallbackName={title} actions={actions} agency={creatorAgency} returnTo={`/admin/foretagsprofil/${row.id}`} profileId={row.id} photoUrls={photoUrls} />}
+      {profile?.pattern && <PatternCard pattern={profile.pattern} />}
 
       {!agency && row.status === "done" && row.domain && (
         <section className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white px-6 py-5">

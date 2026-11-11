@@ -48,7 +48,7 @@ type Cursor =
 export interface AgencyDeps {
   discover: DiscoverDeps;
   rejected: (supplierId: string) => Promise<ReadonlySet<string>>;
-  verify: (domain: string, agency: Agency, proof?: PortfolioProof | null, hint?: BacklinkHint | null) => Promise<Verdict>;
+  verify: (domain: string, agency: Agency, proof?: PortfolioProof | null, hint?: BacklinkHint | null, pattern?: string | null) => Promise<Verdict>;
   /** Hämtar en av byråns egna sidor (Claudes belägg) som text, eller null. Gränsen är byråns domän. */
   fetchProof: (url: string, agency: Agency) => Promise<string | null>;
   /** Domänerna på byråns nuvarande kunder. */
@@ -72,7 +72,7 @@ export interface AgencyDeps {
 const defaultDeps = (): AgencyDeps => ({
   discover: defaultDiscoverDeps,
   rejected: rejectedDomains,
-  verify: (domain, agency, proof, hint) => verifyCandidate(domain, agency, undefined, proof, hint),
+  verify: (domain, agency, proof, hint, pattern) => verifyCandidate(domain, agency, undefined, proof, hint, pattern),
   async fetchProof(url, agency) {
     const page = await safeFetch(url, agency.domain, new PageBudget(1, 0));
     return page.html;
@@ -190,7 +190,7 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
         const chunk = verify.queue.slice(verify.index, verify.index + VERIFY_CHUNK);
         const verdicts = await mapWithConcurrency(chunk, VERIFY_CONCURRENCY, async (c) => {
           await deps.pause(Math.floor(Math.random() * JITTER_MS));
-          const verdict = await deps.verify(c.domain, agency, await proofFor(c), c.hint ?? null).catch((): Verdict => ({ accepted: false, reason: "unreachable" }));
+          const verdict = await deps.verify(c.domain, agency, await proofFor(c), c.hint ?? null, c.pattern ?? null).catch((): Verdict => ({ accepted: false, reason: "unreachable" }));
           return { c, verdict };
         });
 
