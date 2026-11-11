@@ -7,6 +7,8 @@ export type Filters = {
   supplier?: string;
   city?: string;
   phoneOnly?: boolean;
+  /** Bara företag som lagts till hos leverantören eller listan de senaste RECENT_DAYS dygnen. */
+  recentOnly?: boolean;
   q?: string;
   orgId?: string;
   /** "active" (standard): dölj arkiverade. "archived": bara arkiverade. "all": båda. */
@@ -134,6 +136,7 @@ function where(f: Filters) {
   if (f.supplier) { args.push(f.supplier); cond.push(`s.slug = $${args.length}`); }
   if (f.city) { args.push(`%${f.city}%`); cond.push(`c.registry->'organisation'->'address'->>'city' ilike $${args.length}`); }
   if (f.phoneOnly) cond.push(`c.phone is not null`);
+  if (f.recentOnly) { args.push(RECENT_DAYS); cond.push(`cs.first_seen_at > now() - make_interval(days => $${args.length})`); }
   const needle = f.q ? buildSearchNeedle(f.q) : null;
   if (needle) { args.push(needle); cond.push(`c.search_text like $${args.length}`); }
   if (f.orgId) {

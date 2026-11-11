@@ -13,7 +13,7 @@ import { LIMIT_MESSAGE } from "@/lib/access/limits";
 
 const PAGE_SIZE = 25;
 
-export type ListSP = { supplier?: string; city?: string; phone?: string; q?: string; page?: string };
+export type ListSP = { supplier?: string; city?: string; phone?: string; new?: string; q?: string; page?: string };
 
 /** Postlista med filter och (valfritt) arkivläge. Delas av leverantörs- och listsidorna. Ingen export, och inga telefonnummer eller org.nr i tabellen: de visas bara på företagets egen sida och i ringläget, där gränserna gäller (lib/access). */
 export default async function ListView({
@@ -23,7 +23,7 @@ export default async function ListView({
   const rate = await checkRate({ userId: who.user.id, orgId: orgId, isAdmin: who.isAdmin }, "list");
   if (!rate.ok) return <div className="rounded-3xl bg-white p-6 text-[14px] text-gray-700">{LIMIT_MESSAGE.minute}</div>;
   const supplier = fixedSupplier ?? (sp.supplier || undefined);
-  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
+  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", recentOnly: sp.new === "1", q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
   // Sidor kräver att en admin öppnat bläddringen för bolaget. Utan det ignoreras ?page= och bara första sidan visas.
   const paged = who.listAccess || who.isAdmin;
   const wanted = paged ? Math.max(1, Math.floor(Number(sp.page)) || 1) : 1;
@@ -37,7 +37,7 @@ export default async function ListView({
   const rows = await searchCompanies(filters, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const name = source?.name ?? null;
   const namesBrand = source ? (source.kind === "supplier" || source.category?.names_brand === true) : false;
-  const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, q: sp.q }).filter(([, v]) => v) as [string, string][];
+  const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, new: sp.new, q: sp.q }).filter(([, v]) => v) as [string, string][];
   const qs = new URLSearchParams(params).toString();
   const ringQs = new URLSearchParams(params.filter(([k]) => k === "supplier" || k === "city")).toString();
   const field = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
@@ -63,10 +63,16 @@ export default async function ListView({
         <label className="text-[12px] font-medium text-gray-500">Ort
           <input name="city" defaultValue={sp.city ?? ""} placeholder="t.ex. Göteborg" className={`mt-1 ${field}`} />
         </label>
-        <label className="flex items-center gap-2 pb-2.5 text-[14px] text-gray-800">
-          <input type="checkbox" name="phone" value="1" defaultChecked={sp.phone === "1"} className="h-4 w-4 accent-accent" />
-          Bara med telefon
-        </label>
+        <div className="flex flex-col gap-1 pb-1.5 text-[14px] text-gray-800">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="phone" value="1" defaultChecked={sp.phone === "1"} className="h-4 w-4 accent-accent" />
+            Bara med telefon
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" name="new" value="1" defaultChecked={sp.new === "1"} className="h-4 w-4 accent-accent" />
+            Bara nya
+          </label>
+        </div>
         <button className="rounded-full bg-ink px-6 py-3 text-[14px] font-semibold text-white">Filtrera</button>
       </form>
 
