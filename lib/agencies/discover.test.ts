@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { chooseHistoryIps, chooseViewdnsLookups, discoverCandidates, readableReason, type DiscoverDeps } from "./discover";
+import { chooseHistoryIps, chooseViewdnsLookups, claudeTimeout, discoverCandidates, FUNCTION_GRACE_MS, MIN_CLAUDE_MS, readableReason, type DiscoverDeps } from "./discover";
 
 const agency = { name: "Conseo Webb", domain: "conseo.se" };
 const ctx = { signal: new AbortController().signal, log: () => {} };
@@ -235,5 +235,27 @@ describe("readableReason", () => {
     const r = await discoverCandidates(agency, { max: 50, useViewdns: false, useClaude: true, rejected: new Set() }, ctx, deps({ claude: async () => { throw new Error("The operation was aborted due to timeout"); }, claudeConfigured: () => true }));
     expect(r.notes.join(" ")).toContain("Claude hoppades över: tog för lång tid och avbröts. Nästa körning provar igen.");
     expect(r.notes.join(" ")).not.toContain("The operation was aborted");
+  });
+});
+
+describe("claude time limit (4 minutes, but never past the function's own limit)", () => {
+  const now = 1_000_000;
+  it("gives the full 4 minutes without a deadline, and as much as fits before the function is killed otherwise", () => {
+    expect(claudeTimeout(undefined, now)).toBe(240_000);
+    expect(claudeTimeout(now + 150_000, now)).toBe(240_000); // plenty of time left
+    expect(claudeTimeout(now + 100_000, now)).toBe(100_000 + FUNCTION_GRACE_MS); // 190 s fits
+    expect(claudeTimeout(now - 80_000, now)).toBe(FUNCTION_GRACE_MS - 80_000); // late in the invocation: 10 s
+    expect(claudeTimeout(now - 500_000, now)).toBe(0);
+  });
+  it("passes the limit to Claude, and waits for the next leg when too little time is left", async () => {
+    const claude = vi.fn(async () => []);
+    const base = { max: 50, useViewdns: false, useClaude: true, rejected: new Set<string>() };
+    await discoverCandidates(agency, { ...base, deadline: Date.now() + 150_000 }, ctx, deps({ claude, claudeConfigured: () => true }));
+    expect(claude).toHaveBeenCalledWith(agency, expect.any(Array), expect.anything(), expect.any(Function), { timeoutMs: 240_000 });
+    const late = vi.fn(async () => []);
+    const r = await discoverCandidates(agency, { ...base, deadline: Date.now() - 100_000 }, ctx, deps({ claude: late, claudeConfigured: () => true }));
+    expect(late).not.toHaveBeenCalled();
+    expect(r.notes.join(" ")).toContain("för lite tid kvar i den här omgången");
+    expect(MIN_CLAUDE_MS).toBeLessThan(240_000);
   });
 });

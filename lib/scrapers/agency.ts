@@ -145,7 +145,7 @@ export function createAgencyCollector(deps: AgencyDeps = defaultDeps()): Collect
         let state = cursor.state;
         while (!discoveryDone(state)) {
           const before = state.usage;
-          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend, learned, customers }, ctx, deps.discover);
+          state = await runDiscoveryStep(state, agency, { max: config.maxCandidates, useViewdns: config.useViewdns, useClaude: config.useClaude, rejected, spend, learned, customers, deadline: ctx.deadline }, ctx, deps.discover);
           // Markören skrivs efter varje steg, så att en omgång som tar slut fortsätter vid nästa steg och inte från början.
           if (!discoveryDone(state)) yield { items: [], cursor: asJson({ stage: "discover", state }), usage: { credits: state.usage.credits - before.credits, costSek: state.usage.costSek - before.costSek } };
         }

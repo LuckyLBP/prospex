@@ -8,6 +8,7 @@ import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
 import { customerServerHits, MIN_CUSTOMERS_PER_SERVER } from "./customer-servers";
 import { customerPatternCandidates } from "./pattern";
+import { CLAUDE_TIMEOUT_MS } from "./agent";
 import { CollectorError, type CollectContext } from "@/lib/scrapers/types";
 import { findCustomersWithClaude } from "./agent";
 import { fetchBacklinks, isOpenSeoConfigured } from "./openseo";
@@ -93,6 +94,17 @@ export function readableReason(e: unknown): string {
   return raw;
 }
 
+/** Så länge efter omgångens slut (WORKER BUDGET) lever funktionen: gränsen är 300 s och omgången slutar efter 200 s, minus marginal. */
+export const FUNCTION_GRACE_MS = 90_000;
+/** Mindre tid än så här räcker inte till en Claude-sökning: den väntar då till nästa omgång. */
+export const MIN_CLAUDE_MS = 45_000;
+
+/** Hur länge Claude får ta i den här omgången. Utan en gräns (tester, skript) är det hela tiden. Ren. */
+export function claudeTimeout(deadline: number | undefined, now: number = Date.now()): number {
+  if (deadline === undefined) return CLAUDE_TIMEOUT_MS;
+  return Math.max(0, Math.min(CLAUDE_TIMEOUT_MS, deadline + FUNCTION_GRACE_MS - now));
+}
+
 /** Vad ett steg kostade. */
 export interface Usage {
   credits?: number;
@@ -113,7 +125,7 @@ export interface DiscoverDeps {
   /** `linked`: byråns sida länkar till kunden. Utan den är domänen en gissning ur ett namn. */
   site: (agency: Agency) => Promise<{ domain: string; sourceUrl: string; linked?: boolean }[]>;
   /** Claude letar på byråns kund- och referenssidor och på webben. Får de redan funna domänerna så att den inte letar efter dem. */
-  claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
+  claude: (agency: Agency, known: string[], ctx: Pick<CollectContext, "signal" | "log">, report?: (u: Usage) => void, limits?: { timeoutMs?: number }) => Promise<{ domain: string; evidenceUrl: string; evidenceQuote: string | null }[]>;
   claudeConfigured: () => boolean;
   /** Sajter på servrarna där minst två av byråns bekräftade kunder ligger (reverse IP). Förslag som verifieringen prövar. */
   /** Claude läser källkoden hos några av byråns kunder och föreslår mönster de delar. Sajterna med mönstret blir kandidater. */
@@ -210,8 +222,8 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   async site(agency) {
     return (await readAgencySite(agency)).findings.map((f) => ({ domain: f.domain, sourceUrl: f.sourceUrl, linked: f.how === "case-link" }));
   },
-  async claude(agency, known, ctx, report) {
-    const r = await findCustomersWithClaude({ agency, known, signal: ctx.signal });
+  async claude(agency, known, ctx, report, limits) {
+    const r = await findCustomersWithClaude({ agency, known, signal: ctx.signal, ...(limits?.timeoutMs ? { timeoutMs: limits.timeoutMs } : {}) });
     report?.({ costSek: r.costSek ?? 0 });
     ctx.log(`Byrå ${agency.name}: Claude gav ${r.candidates.length} förslag (${r.model}, ${r.inputTokens} in, ${r.outputTokens} ut, ${r.webSearches} sökningar, cirka ${r.costSek === null ? "okänd kostnad" : `${r.costSek.toFixed(2)} kr`})`);
     return r.candidates;
@@ -265,6 +277,8 @@ export interface DiscoverOpts {
   learned?: readonly string[];
   /** Domänerna på byråns bekräftade kunder, för uppslaget av deras servrar. */
   customers?: readonly string[];
+  /** När omgången slutar starta nytt arbete (epoch ms). Claude-anropet anpassas så att det ryms före plattformens gräns. */
+  deadline?: number;
 }
 
 /**
@@ -427,9 +441,15 @@ export async function runDiscoveryStep(
         next.notes.push("Claude hoppades över: dagens tak för Claude är nått.");
         break;
       }
+      const timeoutMs = claudeTimeout(opts.deadline);
+      if (timeoutMs < MIN_CLAUDE_MS) {
+        // Det finns för lite tid kvar i den här omgången: stegen före den kördes klart, men Claude behöver minuter.
+        next.notes.push("Claude hoppades över: för lite tid kvar i den här omgången. Nästa körning provar igen.");
+        break;
+      }
       try {
         const known = [...seen];
-        for (const c of await deps.claude(agency, known, ctx, report)) add(c.domain, "claude", c.evidenceUrl, { url: c.evidenceUrl, quote: c.evidenceQuote });
+        for (const c of await deps.claude(agency, known, ctx, report, { timeoutMs })) add(c.domain, "claude", c.evidenceUrl, { url: c.evidenceUrl, quote: c.evidenceQuote });
         next.externalOk++;
         ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter Claude`);
       } catch (e) {

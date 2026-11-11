@@ -13,7 +13,8 @@ import { isSameOrSubdomain, type Agency } from "./match";
 
 const MAX_STEPS = 14;
 const MAX_OUTPUT_TOKENS = 6000;
-const TIMEOUT_MS = 120_000;
+/** Så länge får Claudes sökning ta: sökningar och sidhämtningar hos Anthropic kan ta flera minuter. */
+export const CLAUDE_TIMEOUT_MS = 240_000;
 const MAX_SEARCHES = 6;
 const MAX_FETCHES = 6;
 const MAX_CANDIDATES = 60;
@@ -66,6 +67,8 @@ export interface AgencyAgentInput {
   /** Domäner koden redan har som kandidater, så att Claude inte lägger tid på dem. */
   known: readonly string[];
   signal?: AbortSignal;
+  /** Hur länge anropet får ta, högst CLAUDE_TIMEOUT_MS: kortare när omgången har lite tid kvar. */
+  timeoutMs?: number;
   /** För test: ersätter själva modellanropet. */
   generate?: typeof generateText;
 }
@@ -83,7 +86,7 @@ export function cleanCandidates(raw: AgencyAgentOutput["candidates"], agency: Ag
   return out;
 }
 
-export async function findCustomersWithClaude({ agency, known, signal, generate = generateText }: AgencyAgentInput): Promise<AgencyAgentResult> {
+export async function findCustomersWithClaude({ agency, known, signal, timeoutMs = CLAUDE_TIMEOUT_MS, generate = generateText }: AgencyAgentInput): Promise<AgencyAgentResult> {
   if (!isAnthropicConfigured()) throw new Error("ANTHROPIC_API_KEY saknas.");
   const modelId = agencyModelId();
 
@@ -105,7 +108,7 @@ export async function findCustomersWithClaude({ agency, known, signal, generate 
     stopWhen: isStepCount(MAX_STEPS),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     abortSignal: signal,
-    timeout: TIMEOUT_MS,
+    timeout: timeoutMs,
   });
 
   const inputTokens = result.totalUsage.inputTokens ?? 0;

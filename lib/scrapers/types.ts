@@ -64,6 +64,11 @@ export interface CollectContext {
   cursor: Json | null;
   /** Times out the whole collection pass along with the invocation. */
   signal: AbortSignal;
+  /**
+   * When this invocation stops starting new work (epoch ms). The platform kills the function a while after that, so a
+   * long step (a Claude call) must fit before `deadline + FUNCTION_GRACE_MS`. Absent when there is no such limit.
+   */
+  deadline?: number;
   log: (message: string) => void;
 }
 

@@ -127,6 +127,7 @@ async function runCollectStage(
     runId,
     cursor: state.cursor,
     signal: controller.signal,
+    deadline,
     log: (message: string) => console.log(`[run ${runId}] ${message}`),
   };
 
