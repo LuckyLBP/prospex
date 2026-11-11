@@ -9,8 +9,8 @@ import { isSameOrSubdomain, type Agency } from "./match";
 
 const KUND_PATH = /kund|referens|case|portfolio|projekt|arbete|work/i;
 const MAX_PAGES = 40;
-/** Sidor som listar alla kundcase. */
-const LISTING_PATH = /^\/(?:kundcase|referenser|referens|kunder|cases?|portfolio|projekt)\/?$/i;
+/** Sidor som listar alla kundcase, med eller utan språkprefix: /kunder, /sv/vara-kunder. */
+const LISTING_PATH = /^(?:\/[a-z]{2})?\/(?:våra-kunder|vara-kunder|kundcase|referenser|referens|kunder|cases?|portfolio|projekt)\/?$/i;
 /** Länkar som aldrig är en kund: sociala medier, kartor, betygsmärken, verktyg och byråns egna adresser. */
 const NOT_CUSTOMER = /(?:^|\.)(?:facebook|instagram|linkedin|youtube|twitter|x|tiktok|pinterest|google|goo|gstatic|googleapis|cloudflare|cloudflare|wordpress|w|schema|uc|cookiebot|usercentrics|gmpg|fonts|jsdelivr|unpkg|bit|maps|apple|microsoft|trustpilot|reco)\.(?:com|se|org|net|ly|gl|app)$/i;
 /** Alt-texter som beskriver bilder och märken, inte en kund. */

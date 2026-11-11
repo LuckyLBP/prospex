@@ -83,3 +83,26 @@ describe("footerHrefs", () => {
     expect(footerHrefs(`<a href="https://kund.se">K</a>`)).toEqual([]);
   });
 });
+
+describe("readAgencySite with a language prefix (real: teamrobin.com/sv/vara-kunder)", () => {
+  const robin = { name: "TeamRobin", domain: "teamrobin.com" };
+  const map = {
+    "https://teamrobin.com/": `<html><body><a href="/sv/vara-kunder">Våra kunder</a><a href="/sv/vara-kunder/mums">Mums</a><a href="/sv/om-robin">Om</a><footer><a href="https://enirogroup.com/">Eniro Group</a></footer></body></html>`,
+    "https://teamrobin.com/sv/vara-kunder": `<html><body><a href="/sv/vara-kunder/mums">Mums</a><a href="/sv/vara-kunder/hantverkshuset">Hantverkshuset</a><a href="/sv/vara-kunder/welcome-hotel">Welcome</a><a href="/sv/om-robin">Om</a><footer><a href="https://enirogroup.com/">Eniro Group</a></footer></body></html>`,
+    "https://teamrobin.com/sv/vara-kunder/mums": CASE("https://mumsshop.dk"),
+    "https://teamrobin.com/sv/vara-kunder/hantverkshuset": CASE("https://hantverkshuset.se"),
+    "https://teamrobin.com/sv/vara-kunder/welcome-hotel": CASE("https://welcomehotel.se"),
+    "https://teamrobin.com/sv/om-robin": `<html><body><a href="https://pickanagency.com">partner</a></body></html>`,
+  };
+  it("expands the customer list page behind a language prefix and reads every case page", async () => {
+    const r = await readAgencySite(robin, deps(map));
+    const linked = r.findings.filter((f) => f.how === "case-link").map((f) => f.domain).sort();
+    expect(linked).toEqual(["hantverkshuset.se", "mumsshop.dk", "welcomehotel.se"]);
+  });
+  it("does not treat the footer's parent company or an ordinary page's links as customers", async () => {
+    const r = await readAgencySite(robin, deps(map));
+    const domains = r.findings.map((f) => f.domain);
+    expect(domains).not.toContain("enirogroup.com");
+    expect(domains).not.toContain("pickanagency.com");
+  });
+});
