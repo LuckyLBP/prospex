@@ -79,6 +79,20 @@ export function chooseHistoryIps(history: readonly IpRecord[], currentIps: reado
   return [...new Set(history.map((h) => h.ip))].filter((ip) => !current.has(ip)).slice(0, limit);
 }
 
+/**
+ * Skälet till att en källa hoppades över, på svenska och utan att låta som ett haveri. Felmeddelanden från biblioteken är på
+ * engelska ("The operation was aborted due to timeout"), och en anteckning som den ser ut som att något gått sönder, fast
+ * källan bara var långsam eller upptagen och försöks igen vid nästa körning. Okända fel visas som de är. Ren.
+ */
+export function readableReason(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  if (/aborted due to timeout|TimeoutError|timed out|timeout/i.test(raw) && !/[åäö]/i.test(raw)) return "tog för lång tid och avbröts. Nästa körning provar igen.";
+  if (/overloaded/i.test(raw)) return "tjänsten var överbelastad just nu. Nästa körning provar igen.";
+  if (/rate.?limit|too many requests/i.test(raw) && !/[åäö]/i.test(raw)) return "tjänsten hann inte med just nu. Nästa körning provar igen.";
+  if (/not scoped to a workspace/i.test(raw)) return "nyckeln saknar arbetsyta (ANTHROPIC_WORKSPACE_ID).";
+  return raw;
+}
+
 /** Vad ett steg kostade. */
 export interface Usage {
   credits?: number;
@@ -275,7 +289,7 @@ export async function runDiscoveryStep(
     next.found.push({ domain, via, sourceUrl, ...(evidence ? { evidence } : {}), ...(hint ? { hint } : {}), ...(server ? { server } : {}), ...(pattern ? { pattern } : {}) });
   };
   const skip = (source: string, e: unknown) => {
-    const why = e instanceof Error ? e.message : String(e);
+    const why = readableReason(e);
     next.notes.push(`${source} hoppades över: ${why}`);
     ctx.log(`Byrå ${agency.name}: ${source} hoppades över (${why})`);
   };

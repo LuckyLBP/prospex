@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { chooseHistoryIps, chooseViewdnsLookups, discoverCandidates, type DiscoverDeps } from "./discover";
+import { chooseHistoryIps, chooseViewdnsLookups, discoverCandidates, readableReason, type DiscoverDeps } from "./discover";
 
 const agency = { name: "Conseo Webb", domain: "conseo.se" };
 const ctx = { signal: new AbortController().signal, log: () => {} };
@@ -219,5 +219,21 @@ describe("code search without a key", () => {
     const r = await discoverCandidates(agency, { max: 50, useViewdns: false, rejected: new Set() }, ctx, deps({ publicwww, codeSearchConfigured: () => false }));
     expect(publicwww).not.toHaveBeenCalled();
     expect(r.notes.join(" ")).not.toMatch(/SearchWebCode|PublicWWW/);
+  });
+});
+
+describe("readableReason", () => {
+  it("turns library errors into calm Swedish, and leaves our own messages alone", () => {
+    expect(readableReason(new Error("The operation was aborted due to timeout"))).toMatch(/tog för lång tid.*provar igen/);
+    expect(readableReason(new Error("529 overloaded_error"))).toMatch(/överbelastad/);
+    expect(readableReason(new Error("rate limit exceeded"))).toMatch(/hann inte med/);
+    expect(readableReason(new Error("This API key is not scoped to a workspace, so this request must include"))).toMatch(/arbetsyta/);
+    expect(readableReason(new Error("SearchWebCode: för många anrop, försök igen om 10 min."))).toBe("SearchWebCode: för många anrop, försök igen om 10 min.");
+    expect(readableReason(new Error("kvoten är slut"))).toBe("kvoten är slut");
+  });
+  it("shows a Claude timeout in the run notes as a normal skipped source", async () => {
+    const r = await discoverCandidates(agency, { max: 50, useViewdns: false, useClaude: true, rejected: new Set() }, ctx, deps({ claude: async () => { throw new Error("The operation was aborted due to timeout"); }, claudeConfigured: () => true }));
+    expect(r.notes.join(" ")).toContain("Claude hoppades över: tog för lång tid och avbröts. Nästa körning provar igen.");
+    expect(r.notes.join(" ")).not.toContain("The operation was aborted");
   });
 });
