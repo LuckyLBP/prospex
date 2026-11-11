@@ -3,6 +3,7 @@ import { Archive, ArchiveRestore, ArrowUpRight, PhoneCall } from "@/components/b
 import OutcomeCell from "./OutcomeCell";
 import SupplierFilter from "./SupplierFilter";
 import SupplierLogo from "@/components/ui/SupplierLogo";
+import { NewCompanyBadge } from "@/components/ui/NewBadge";
 import { getSourceCached, getSourcesCached } from "@/lib/cached";
 import { countCompanies, searchCompanies, type Filters } from "@/lib/queries";
 import { archiveAction } from "@/app/app/actions";
@@ -94,7 +95,7 @@ export default async function ListView({
           <tbody>
             {rows.map((r) => (
               <tr key={`${r.id}-${r.supplier}`} className="border-b border-gray-50 last:border-0">
-                <td className="max-w-[240px] truncate px-5 py-3 font-medium text-ink"><Link href={`/app/foretag/${r.id}`} className="hover:underline">{r.name ?? "-"}</Link></td>
+                <td className="px-5 py-3 font-medium text-ink"><span className="flex max-w-[300px] items-center gap-2"><Link href={`/app/foretag/${r.id}`} className="truncate hover:underline">{r.name ?? "-"}</Link><NewCompanyBadge supplier={r.supplier} addedAt={r.added_at} /></span></td>
                 <td className="px-5 py-3 text-gray-600">{r.city ?? "-"}</td>
                 <td className="px-5 py-3 text-gray-900"><span className="flex items-center gap-2"><SupplierLogo name={r.supplier} logo={r.supplier_logo} size={24} />{r.supplier}</span></td>
                 <td className="px-5 py-3"><OutcomeCell companyId={r.id} outcome={r.outcome as never} /></td>

@@ -24,6 +24,8 @@ export type CompanyRow = {
   supplier: string;
   supplier_logo: string | null;
   source_url: string | null;
+  /** När företaget lades till hos leverantören eller listan. */
+  added_at: Date | null;
   outcome: string | null;
   archived_at: Date | null;
 };
@@ -169,7 +171,7 @@ export async function searchCompanies(f: Filters, limit: number, offset = 0) {
   const { rows } = await pool.query(
     `select c.id, c.name, c.orgnr, c.phone, c.email, c.website,
             c.registry->'organisation'->'address'->>'city' as city,
-            s.name as supplier, s.logo_path as supplier_logo, cs.source_url,
+            s.name as supplier, s.logo_path as supplier_logo, cs.source_url, cs.first_seen_at as added_at,
             ${f.orgId ? "k.outcome, k.archived_at" : "null::text as outcome, null::timestamptz as archived_at"}
      ${fr} ${w.sql}
      order by c.name nulls last, c.id
