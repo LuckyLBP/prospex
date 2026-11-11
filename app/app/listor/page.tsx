@@ -2,6 +2,7 @@ import Link from "next/link";
 import Header from "@/components/dashboard/Header";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";
+import NewBadge from "@/components/ui/NewBadge";
 import { requireMember } from "@/lib/auth";
 import { getListsCached } from "@/lib/cached";
 
@@ -35,7 +36,10 @@ export default async function ListsPage() {
                 <Link key={l.slug} href={`/app/listor/${l.slug}`} className="group flex items-start gap-4 rounded-3xl bg-white p-5 transition-shadow hover:shadow-md">
                   <SupplierLogo name={l.name} logo={l.logo} size={40} fallback={<CategoryIcon icon={c.icon} size={20} />} />
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-[15px] font-semibold text-ink group-hover:underline">{l.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="truncate text-[15px] font-semibold text-ink group-hover:underline">{l.name}</h3>
+                      <NewBadge count={l.recent} />
+                    </div>
                     {l.description && <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-gray-500">{l.description}</p>}
                     <p className="mt-2 text-[12px] text-gray-500"><span className="font-semibold text-ink">{sv(l.n)}</span> företag · {sv(l.with_phone)} med telefon</p>
                   </div>

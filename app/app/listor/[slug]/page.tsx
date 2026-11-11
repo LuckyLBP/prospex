@@ -4,6 +4,7 @@ import Header from "@/components/dashboard/Header";
 import ListView, { type ListSP } from "@/components/dashboard/ListView";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";
+import NewBadge from "@/components/ui/NewBadge";
 import { requireMember } from "@/lib/auth";
 import { getSourceCached } from "@/lib/cached";
 
@@ -24,7 +25,8 @@ export default async function ListPage({ params, searchParams }: { params: Promi
       <div className="mb-4 flex gap-2 text-[13px]">
         <span className="rounded-full bg-ink px-4 py-1.5 font-medium text-white">Lista</span>
         <Link href={`/app/listor/${slug}/arkiv`} className="rounded-full bg-white px-4 py-1.5 font-medium text-gray-700 hover:bg-gray-100">Arkiv</Link>
-        <Link href="/app/listor" className="ml-auto rounded-full px-4 py-1.5 font-medium text-gray-500 hover:bg-white">Alla listor</Link>
+        <NewBadge count={source.recent} className="ml-auto self-center" />
+        <Link href="/app/listor" className="rounded-full px-4 py-1.5 font-medium text-gray-500 hover:bg-white">Alla listor</Link>
       </div>
       <ListView orgId={m.org.id} sp={await searchParams} basePath={`/app/listor/${slug}`} fixedSupplier={slug} />
     </>

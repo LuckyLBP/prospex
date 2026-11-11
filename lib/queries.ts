@@ -1,5 +1,6 @@
 import { pool } from "./db";
 import { buildSearchNeedle } from "./records/search";
+import { RECENT_DAYS } from "./recent";
 
 /** Katalogfilter. Med `orgId` läggs bolagets egen status (utfall, arkiv) på raderna. */
 export type Filters = {
@@ -52,7 +53,8 @@ export type SourceKind = "supplier" | "list";
 export async function getSuppliers(kind: SourceKind = "supplier") {
   const { rows } = await pool.query(
     `
-    select s.slug, s.name, s.logo_path as logo, count(cs.id)::int as n, count(c.phone)::int as with_phone
+    select s.slug, s.name, s.logo_path as logo, count(cs.id)::int as n, count(c.phone)::int as with_phone,
+           (count(cs.id) filter (where cs.first_seen_at > now() - make_interval(days => $2)))::int as recent
     from suppliers s
     left join company_signals cs on cs.supplier_id = s.id
     left join companies c on c.id = cs.company_id
@@ -60,12 +62,12 @@ export async function getSuppliers(kind: SourceKind = "supplier") {
     group by s.slug, s.name, s.logo_path
     order by n desc, s.name
   `,
-    [kind],
+    [kind, RECENT_DAYS],
   );
-  return rows as { slug: string; name: string; logo: string | null; n: number; with_phone: number }[];
+  return rows as { slug: string; name: string; logo: string | null; n: number; with_phone: number; recent: number }[];
 }
 
-export type ListSummary = { slug: string; name: string; description: string | null; logo: string | null; n: number; with_phone: number };
+export type ListSummary = { slug: string; name: string; description: string | null; logo: string | null; n: number; with_phone: number; /** Företag som lagts till de senaste RECENT_DAYS dygnen. */ recent: number };
 export type ListCategory = { slug: string; name: string; description: string | null; icon: string | null; names_brand: boolean; lists: ListSummary[] };
 
 /** Publicerade listor med minst ett företag, grupperade per kategori. Tomma listor och kategorier syns inte för kunderna. */
@@ -73,7 +75,8 @@ export async function getLists(): Promise<ListCategory[]> {
   const { rows } = await pool.query(`
     select k.slug as category_slug, k.name as category_name, k.description as category_description, k.icon, k.names_brand, k.sort as category_sort,
            s.slug, s.name, s.description, s.logo_path as logo, s.sort,
-           count(cs.id)::int as n, count(c.phone)::int as with_phone
+           count(cs.id)::int as n, count(c.phone)::int as with_phone,
+           (count(cs.id) filter (where cs.first_seen_at > now() - make_interval(days => $1)))::int as recent
     from list_categories k
     join suppliers s on s.category_id = k.id and s.kind = 'list' and s.published
     left join company_signals cs on cs.supplier_id = s.id
@@ -81,31 +84,32 @@ export async function getLists(): Promise<ListCategory[]> {
     group by k.id, s.id
     having count(cs.id) > 0
     order by k.sort, k.name, s.sort, n desc, s.name
-  `);
+  `, [RECENT_DAYS]);
   const map = new Map<string, ListCategory>();
   for (const r of rows) {
     const cat: ListCategory = map.get(r.category_slug) ?? { slug: r.category_slug, name: r.category_name, description: r.category_description, icon: r.icon, names_brand: r.names_brand, lists: [] };
-    cat.lists.push({ slug: r.slug, name: r.name, description: r.description, logo: r.logo, n: r.n, with_phone: r.with_phone });
+    cat.lists.push({ slug: r.slug, name: r.name, description: r.description, logo: r.logo, n: r.n, with_phone: r.with_phone, recent: r.recent });
     map.set(r.category_slug, cat);
   }
   return [...map.values()];
 }
 
-export type Source = { slug: string; name: string; logo: string | null; kind: SourceKind; description: string | null; category: { slug: string; name: string; icon: string | null; names_brand: boolean } | null };
+export type Source = { slug: string; name: string; logo: string | null; kind: SourceKind; description: string | null; recent: number; category: { slug: string; name: string; icon: string | null; names_brand: boolean } | null };
 
 /** En publicerad källa (leverantör eller lista) med sin kategori. */
 export async function getSource(slug: string): Promise<Source | null> {
   const { rows } = await pool.query(
     `select s.slug, s.name, s.logo_path as logo, s.kind, s.description,
+            (select count(*) from company_signals cs where cs.supplier_id = s.id and cs.first_seen_at > now() - make_interval(days => $2))::int as recent,
             k.slug as cat_slug, k.name as cat_name, k.icon as cat_icon, k.names_brand as cat_brand
      from suppliers s left join list_categories k on k.id = s.category_id
      where s.slug = $1 and s.published`,
-    [slug],
+    [slug, RECENT_DAYS],
   );
   const r = rows[0];
   if (!r) return null;
   return {
-    slug: r.slug, name: r.name, logo: r.logo, kind: r.kind, description: r.description,
+    slug: r.slug, name: r.name, logo: r.logo, kind: r.kind, description: r.description, recent: r.recent,
     category: r.cat_slug ? { slug: r.cat_slug, name: r.cat_name, icon: r.cat_icon, names_brand: r.cat_brand } : null,
   };
 }

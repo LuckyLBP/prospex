@@ -5,6 +5,7 @@ import ListView, { type ListSP } from "@/components/dashboard/ListView";
 import { requireMember } from "@/lib/auth";
 import { getSourceCached } from "@/lib/cached";
 import SupplierLogo from "@/components/ui/SupplierLogo";
+import NewBadge from "@/components/ui/NewBadge";
 
 export default async function SupplierPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<ListSP> }) {
   const { slug } = await params;
@@ -19,6 +20,7 @@ export default async function SupplierPage({ params, searchParams }: { params: P
       <div className="mb-4 flex gap-2 text-[13px]">
         <span className="rounded-full bg-ink px-4 py-1.5 font-medium text-white">Lista</span>
         <Link href={`/app/leverantorer/${slug}/arkiv`} className="rounded-full bg-white px-4 py-1.5 font-medium text-gray-700 hover:bg-gray-100">Arkiv</Link>
+        <NewBadge count={supplier.recent} className="ml-auto self-center" />
       </div>
       <ListView orgId={m.org.id} sp={await searchParams} basePath={`/app/leverantorer/${slug}`} fixedSupplier={slug} />
     </>
