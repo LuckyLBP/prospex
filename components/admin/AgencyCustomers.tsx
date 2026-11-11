@@ -16,7 +16,7 @@ const CONFIDENCE: Record<string, { label: string; tone: "green" | "amber" }> = {
   portfolio: { label: "Byråns portfölj", tone: "amber" },
   backlink: { label: "Bakåtlänk (sajten blockerar oss)", tone: "amber" },
 };
-const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "PublicWWW", viewdns: "ViewDNS", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
+const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "Källkodssökning", viewdns: "ViewDNS", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
 const WEAK = ["backlink", "portfolio", "fingerprint", "same-server"];
 const VERDICT: Record<string, { label: string; tone: "gray" | "amber" | "red" }> = {
   "no-credit": { label: "Utan kredit", tone: "amber" },

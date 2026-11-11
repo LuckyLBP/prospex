@@ -1,19 +1,35 @@
 import { describe, expect, it, vi } from "vitest";
-import { countSwc, domainsFromResponse, fromPublicwww, searchSwc } from "./searchwebcode";
+import { anchorWord, countSwc, domainsFromResponse, fromPublicwww, searchSwc } from "./searchwebcode";
 
 const ctx = { signal: new AbortController().signal };
 const nosleep = async () => {};
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 
 describe("fromPublicwww", () => {
-  it("turns a phrase with site:se into a phrase with tld=se", () => {
-    expect(fromPublicwww('"wp-content/themes/Divi" site:se')).toEqual({ q: '"wp-content/themes/Divi"', tld: "se" });
+  it("turns a phrase with site:se into a phrase with tld=se, led by its most distinctive word", () => {
+    expect(fromPublicwww('"wp-content/themes/Divi" site:se')).toEqual({ q: 'Divi AND "wp-content/themes/Divi"', tld: "se" });
   });
-  it("keeps a plain quoted phrase as it is", () => {
-    expect(fromPublicwww('"files.addictive.cloud"')).toEqual({ q: '"files.addictive.cloud"' });
+  it("narrows a domain phrase with the domain's name (real: swedags.se had 189,534 candidates, the word alone 19)", () => {
+    expect(fromPublicwww('"swedags.se"')).toEqual({ q: 'swedags AND "swedags.se"' });
+    expect(fromPublicwww('"files.addictive.cloud"')).toEqual({ q: 'addictive AND "files.addictive.cloud"' });
   });
-  it("quotes a query that contains quotes itself and escapes them", () => {
-    expect(fromPublicwww('href="https://vaning18.se"')).toEqual({ q: '"href=\\"https://vaning18.se\\""' });
+  it("quotes a query that contains quotes itself, escapes them, and still adds the word", () => {
+    expect(fromPublicwww('href="https://vaning18.se"')).toEqual({ q: 'vaning18 AND "href=\\"https://vaning18.se\\""' });
+  });
+  it("leaves a single word and a phrase with no distinctive word as they are", () => {
+    expect(fromPublicwww('"hello-swapi"')).toEqual({ q: '"hello-swapi"' });
+    expect(fromPublicwww('"a.b/c"')).toEqual({ q: '"a.b/c"' });
+  });
+});
+
+describe("anchorWord", () => {
+  it("picks the longest word that is not a common one", () => {
+    expect(anchorWord("https://www.example-agency.se/wp-content/")).toBe("example-agency");
+    expect(anchorWord("wp-content/plugins")).toBeNull();
+    expect(anchorWord("singleword")).toBeNull();
+    // Ett ord efter streck hör till ett längre ord i koden (real: No Sleep, --mht-header-bar-height, 0 träffar med ordet).
+    expect(anchorWord("--mht-header-bar-height")).toBeNull();
+    expect(anchorWord("a_agency.se")).toBe("a_agency");
   });
 });
 
@@ -28,6 +44,20 @@ describe("countSwc", () => {
     const f = vi.fn(async () => json({ total: 17350, count_kind: "partial" })) as unknown as typeof fetch;
     expect(await countSwc({ q: '"x"', tld: "se" }, ctx, { fetch: f, apiKey: "k", sleep: nosleep })).toEqual({ total: 17350, kind: "partial" });
     expect(String((f as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0])).toContain("counts_only=true");
+  });
+});
+
+describe("searchSwc keeps scanning through windows without a match", () => {
+  it("goes on past an empty page when the response points at a next window (a rare string among many candidates)", async () => {
+    const pages = [
+      json({ total: 39572, next_offset: 256, results: [] }),
+      json({ total: 39572, next_offset: 512, results: [] }),
+      json({ total: 39572, next_offset: null, results: [{ domain: "kund.se", url: "https://kund.se/" }] }),
+    ];
+    const f = vi.fn(async () => pages.shift()!) as unknown as typeof fetch;
+    const r = await searchSwc({ q: '"x"' }, 100, ctx, { fetch: f, apiKey: "k", sleep: nosleep });
+    expect(r.domains).toEqual(["kund.se"]);
+    expect(r.pages).toBe(3);
   });
 });
 
@@ -67,6 +97,6 @@ describe("rate limits", () => {
     await countSwc({ q: '"x"' }, ctx, { fetch: f, apiKey: "k", sleep: async (ms) => { sleeps.push(ms); } });
     await countSwc({ q: '"x"' }, ctx, { fetch: f, apiKey: "k", sleep: async (ms) => { sleeps.push(ms); } });
     expect(sleeps.length).toBeGreaterThan(0);
-    expect(sleeps.every((ms) => ms > 0 && ms <= 2000)).toBe(true);
+    expect(sleeps.every((ms) => ms > 0 && ms <= 3000)).toBe(true);
   });
 });

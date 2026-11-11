@@ -2,7 +2,7 @@ import { pool } from "@/lib/db";
 import { agencyKey } from "@/lib/profile/creator";
 import { classifyDns, lookupDns, type DnsRecords } from "@/lib/profile/dns";
 import { normalizeDomain } from "@/lib/scrapers/domain";
-import { searchPublicwww } from "@/lib/scrapers/publicwww";
+import { codeSourceName, searchCode } from "@/lib/scrapers/codesearch";
 import { ipHistory, reverseLookup, type IpRecord } from "@/lib/scrapers/viewdns";
 import { reverseIp } from "@/lib/scrapers/hackertarget";
 import { isSearchConfigured, searchAgencyMentions, SEARCH_QUERY_SEK } from "./search";
@@ -118,18 +118,17 @@ export const defaultDiscoverDeps: DiscoverDeps = {
       .map((r) => r.domain as string);
   },
   async publicwww(agency, ctx, learned = []) {
-    const body = await searchPublicwww(`"${agency.domain}"`, 1000, ctx);
-    const domains = (body.results ?? []).map((r) => ({ domain: r.domain ?? r.url ?? "", url: r.url ?? null }));
-    let truncated = body.truncated === true;
+    const main = await searchCode(`"${agency.domain}"`, 1000, ctx);
+    const domains = [...main.hits];
+    let truncated = main.truncated;
     // Spår som redan styrkt många av byråns kunder: sök på dem i källkod. Det hittar kunder som aldrig länkat till byrån.
     // Ett fel här (kvoten tar slut) ger bara färre förslag.
     for (const token of learned) {
       try {
-        const more = await searchPublicwww(`"${token}"`, 1000, ctx);
-        const hits = (more.results ?? []).map((r) => ({ domain: r.domain ?? r.url ?? "", url: r.url ?? null }));
-        ctx.log(`Byrå ${agency.name}: spåret ${token} gav ${hits.length} sajter hos PublicWWW`);
-        domains.push(...hits);
-        truncated ||= more.truncated === true;
+        const more = await searchCode(`"${token}"`, 1000, ctx);
+        ctx.log(`Byrå ${agency.name}: spåret ${token} gav ${more.hits.length} sajter hos ${codeSourceName()}`);
+        domains.push(...more.hits);
+        truncated ||= more.truncated;
       } catch (e) {
         ctx.log(`Byrå ${agency.name}: sökningen på spåret ${token} hoppades över: ${e instanceof Error ? e.message : "okänt fel"}`);
       }
@@ -239,14 +238,14 @@ export interface DiscoverOpts {
   /** Dygnets förbrukning hittills, för taken. */
   spend?: Spend;
   claudeBelow?: number;
-  /** Spår i koden som styrkt många av byråns kunder, att söka på i PublicWWW. */
+  /** Spår i koden som styrkt många av byråns kunder, att söka på i källkod (SearchWebCode, annars PublicWWW). */
   learned?: readonly string[];
   /** Domänerna på byråns bekräftade kunder, för uppslaget av deras servrar. */
   customers?: readonly string[];
 }
 
 /**
- * Kör nästa steg och ger det nya läget. Alla utom katalogen är tillägg som kan saknas: kvoten hos PublicWWW tar slut,
+ * Kör nästa steg och ger det nya läget. Alla utom katalogen är tillägg som kan saknas: kvoten hos källkodssökningen (SearchWebCode eller PublicWWW) tar slut,
  * en nyckel kan fattas, dygnets tak kan vara nått. Ett steg som hoppas över antecknas och körningen fortsätter.
  */
 export async function runDiscoveryStep(
@@ -322,9 +321,9 @@ export async function runDiscoveryStep(
         for (const r of pw.domains) add(r.domain, "publicwww", r.url);
         if (pw.truncated) next.truncated = true;
         next.externalOk++;
-        ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter PublicWWW`);
+        ctx.log(`Byrå ${agency.name}: ${next.found.length} kandidater efter ${codeSourceName()}`);
       } catch (e) {
-        skip("PublicWWW", e);
+        skip(codeSourceName(), e);
       }
       break;
 

@@ -8,7 +8,7 @@ import { isSameOrSubdomain, type Agency } from "./match";
 // Claude letar efter byråns kunder där koden inte kommer åt dem: på byråns egna sidor för kunder, referenser och case,
 // och i sökträffar på "skapad av ...". Claude FÖRESLÅR bara domäner med en källa. Ingenting läggs in på dess ord:
 // varje förslag kontrolleras av verifyCandidate (verify.ts) mot kundens egen sida, eller mot byråns sida som vi själva
-// hämtar. PublicWWW och ViewDNS har redan körts av koden (discover.ts), så Claude får inte de verktygen: det skulle
+// hämtar. Källkodssökningen och ViewDNS har redan körts av koden (discover.ts), så Claude får inte de verktygen: det skulle
 // bara dubblera betalda anrop.
 
 const MAX_STEPS = 14;

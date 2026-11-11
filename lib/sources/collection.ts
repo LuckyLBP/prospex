@@ -8,7 +8,7 @@ export const METHODS = ["publicwww", "viewdns", "googleplaces", "domainlist", "s
 export type Method = (typeof METHODS)[number];
 
 export const METHOD_INFO: Record<Method, { label: string; hint: string }> = {
-  publicwww: { label: "PublicWWW", hint: "Söker i webbplatsers källkod efter ett spår, till exempel en byrås signatur. Ett anrop per körning." },
+  publicwww: { label: "Källkodssökning", hint: "Söker i webbplatsers källkod efter ett spår, till exempel en byrås signatur. Använder SearchWebCode, och PublicWWW om nyckeln till SearchWebCode saknas. En sökning per körning." },
   viewdns: { label: "ViewDNS", hint: "Domäner på samma server, namnserver eller ägare. Upp till 5 sidor per körning." },
   googleplaces: { label: "Google Places", hint: "Söktermer gånger orter. Kostar anrop, och gratisnivån är 1 000 i månaden." },
   domainlist: { label: "Domänlista", hint: "En inklistrad lista med domäner, en per rad." },

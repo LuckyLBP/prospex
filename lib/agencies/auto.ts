@@ -47,7 +47,7 @@ export interface AutoInput {
 }
 
 /**
- * På som standard, men bara när kundsökningen kan fungera: Claude måste vara konfigurerat. PublicWWW är ett tillägg som
+ * På som standard, men bara när kundsökningen kan fungera: Claude måste vara konfigurerat. Källkodssökningen (SearchWebCode, annars PublicWWW) är ett tillägg som
  * kan saknas (kvoten tar slut) utan att körningen faller. AGENCY_AUTOSTART=off stänger av.
  */
 export const autoEnabled = (): boolean => process.env.AGENCY_AUTOSTART !== "off" && isAnthropicConfigured();

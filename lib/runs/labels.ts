@@ -1,6 +1,6 @@
 // Klientsäker: svenska namn på insamlingsmetoderna.
 export const METHOD_LABEL: Record<string, string> = {
-  publicwww: "PublicWWW",
+  publicwww: "Källkodssökning",
   viewdns: "ViewDNS",
   script: "Skript",
   domainlist: "Domänlista",

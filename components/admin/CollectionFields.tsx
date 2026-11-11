@@ -26,7 +26,7 @@ export default function CollectionFields({ method: m0, config, enrichSites }: { 
 
       {method === "publicwww" && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_180px]">
-          <Field label="Sökfråga" hint="Samma syntax som på publicwww.com, till exempel &quot;hello-swapi&quot;."><Input name="pww_query" required defaultValue={d.pww_query} /></Field>
+          <Field label="Sökfråga" hint="En fras i citattecken, till exempel &quot;hello-swapi&quot;. Lägg till site:se för att bara få svenska sajter."><Input name="pww_query" required defaultValue={d.pww_query} /></Field>
           <Field label="Högst antal träffar" hint="1 till 5 000."><Input name="pww_max" type="number" min={1} max={5000} defaultValue={d.pww_max} /></Field>
         </div>
       )}

@@ -60,7 +60,7 @@ export default async function CollectionPage({ searchParams }: { searchParams: P
           { l: "Körs nu", v: running },
           { l: "Försenade", v: late },
           { l: "Senaste körning misslyckades", v: failed },
-          { l: `Schemalagda i dag, av ${MAX_PER_DAY} (PublicWWW ${today.publicwww} av ${MAX_PUBLICWWW_PER_DAY})`, v: today.total },
+          { l: `Schemalagda i dag, av ${MAX_PER_DAY} (källkodssökning ${today.publicwww} av ${MAX_PUBLICWWW_PER_DAY})`, v: today.total },
         ].map((k) => (
           <div key={k.l} className="rounded-3xl bg-white p-5"><p className="text-[28px] font-semibold leading-none text-ink">{k.v}</p><p className="mt-2 text-[13px] text-gray-500">{k.l}</p></div>
         ))}

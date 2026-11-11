@@ -18,7 +18,7 @@ export const PAGE_SIZE = 256;
 /** Så många sidor hämtas som mest per sökning, så att allt ryms i den ena krediten (frågan + 25 sidanrop). */
 export const MAX_PAGES = 25;
 /** Uppehåll mellan två anrop. API:et svarar 429 med Retry-After: 600 när det körs för tätt, och räknar också count-anrop. */
-export const MIN_GAP_MS = 2000;
+export const MIN_GAP_MS = 3000;
 
 export interface SwcResponse {
   count_kind?: string;
@@ -51,9 +51,34 @@ export interface SwcQuery {
   tld?: string;
 }
 
+/** Ord som finns på nästan varje sajt och därför inte kan snäva in kandidaterna. */
+const COMMON = new Set(["http", "https", "www", "com", "html", "href", "src", "content", "themes", "plugins", "wp-content", "wp-includes", "assets", "static", "script", "style", "image", "images", "files", "file", "link", "type", "text", "data", "class", "this", "that", "with", "from", "jquery", "google", "facebook"]);
+
+/**
+ * Det mest utmärkande ordet i en fras: det längsta ordet (bokstäver, siffror, - och _) som inte är vanligt, minst fyra
+ * tecken. Null när frasen saknar ett sådant ord eller bara består av ett ord. Ren.
+ */
+export function anchorWord(phrase: string): string | null {
+  if (/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(phrase)) return null; // ett ord: matchas redan som helt ord
+  const words: string[] = [];
+  for (const m of phrase.matchAll(/[A-Za-z0-9][A-Za-z0-9_-]*/g)) {
+    // Ett ord som sitter ihop med streck eller understreck framför sig (--mht-header-bar-height) hör till ett längre ord
+    // i källkoden, och som helt ord finns det inte där. Då används det inte.
+    const before = phrase[(m.index ?? 0) - 1];
+    if (before === "-" || before === "_") continue;
+    words.push(m[0].replace(/[-_]+$/, ""));
+  }
+  const best = words.filter((w) => w.length >= 4 && !COMMON.has(w.toLowerCase())).sort((a, b) => b.length - a.length)[0];
+  return best ?? null;
+}
+
 /**
  * En PublicWWW-fråga som SearchWebCode-fråga: `"x" site:se` blir frasen "x" med tld=se. En fras med citattecken inuti
- * (href="https://a.se") citeras som en helhet, med citattecknen skyddade. Ren.
+ * (href="https://a.se") citeras som en helhet, med citattecknen skyddade.
+ *
+ * Frasen får dessutom sitt mest utmärkande ord framför sig (`swedags AND "swedags.se"`). Motorn väljer kandidater ur ett
+ * index över hela ord, och en fras som "swedags.se" ger 189 534 kandidater (alla sajter med .se) för 27 riktiga träffar,
+ * medan ordet ensamt ger 19. Ordet snäver in kandidaterna, och frasen avgör ändå vad som räknas som träff. Ren.
  */
 export function fromPublicwww(query: string): SwcQuery {
   let q = query.trim();
@@ -64,19 +89,24 @@ export function fromPublicwww(query: string): SwcQuery {
     q = q.slice(0, site.index).trim();
   }
   const simple = q.length >= 2 && q.startsWith('"') && q.endsWith('"') && !q.slice(1, -1).includes('"');
-  if (!simple) q = `"${q.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-  return { q, ...(tld ? { tld } : {}) };
+  const inner = simple ? q.slice(1, -1) : q;
+  const phrase = simple ? q : `"${q.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  const anchor = anchorWord(inner);
+  return { q: anchor ? `${anchor} AND ${phrase}` : phrase, ...(tld ? { tld } : {}) };
 }
 
-/** Domänerna ur ett svar, utan dubbletter och med www borttaget. Ren. */
-export function domainsFromResponse(body: SwcResponse): string[] {
-  const out = new Set<string>();
+/** Träffarna ur ett svar: domänen (utan www) och sidan, en per domän. Ren. */
+export function hitsFromResponse(body: SwcResponse): { domain: string; url: string | null }[] {
+  const out = new Map<string, string | null>();
   for (const r of body.results ?? []) {
     const d = normalizeDomain(r.domain ?? r.url);
-    if (d) out.add(d);
+    if (d && !out.has(d)) out.set(d, r.url ?? null);
   }
-  return [...out];
+  return [...out].map(([domain, url]) => ({ domain, url }));
 }
+
+/** Bara domänerna ur ett svar, utan dubbletter. Ren. */
+export const domainsFromResponse = (body: SwcResponse): string[] => hitsFromResponse(body).map((h) => h.domain);
 
 function errorText(body: SwcResponse): string {
   const e = body.error;
@@ -122,8 +152,8 @@ export async function searchSwc(
   maxResults: number,
   ctx: { signal: AbortSignal; log?: (m: string) => void },
   deps: SwcDeps = defaultSwcDeps(),
-): Promise<{ domains: string[]; total: number | null; truncated: boolean; cents: number; pages: number }> {
-  const seen = new Set<string>();
+): Promise<{ domains: string[]; hits: { domain: string; url: string | null }[]; total: number | null; truncated: boolean; cents: number; pages: number }> {
+  const seen = new Map<string, string | null>();
   let offset = 0;
   let total: number | null = null;
   let cents = 0;
@@ -134,11 +164,14 @@ export async function searchSwc(
     pages++;
     total = b.total ?? total;
     cents += b.charged_cents ?? 0;
-    for (const d of domainsFromResponse(b)) seen.add(d);
+    for (const h of hitsFromResponse(b)) if (!seen.has(h.domain)) seen.set(h.domain, h.url);
     ctx.log?.(`SearchWebCode: sida ${pages}, ${seen.size} domäner hittills`);
+    // Motorn kontrollerar kandidater i fönster om 256. Ett fönster utan en enda riktig träff är ingen sista sida: en sällsynt
+    // sträng har många kandidater men få träffar, så bläddringen fortsätter så länge svaret pekar på ett nästa fönster.
     const next = b.next_offset;
-    more = typeof next === "number" && next > offset && (b.results?.length ?? 0) > 0;
+    more = typeof next === "number" && next > offset;
     if (more) offset = next as number;
   }
-  return { domains: [...seen].slice(0, maxResults), total, truncated: more || (total !== null && total > seen.size), cents, pages };
+  const hits = [...seen].slice(0, maxResults).map(([domain, url]) => ({ domain, url }));
+  return { domains: hits.map((h) => h.domain), hits, total, truncated: more || (total !== null && total > hits.length), cents, pages };
 }

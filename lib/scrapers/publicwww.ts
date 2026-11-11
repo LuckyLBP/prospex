@@ -1,6 +1,7 @@
 import { CollectorError, type CollectBatch, type Collector, type CollectContext } from "./types";
 import { normalizeDomain, websiteUrl } from "./domain";
 import { publicwwwConfigSchema, type PublicwwwConfig } from "@/lib/sources/schema";
+import { searchCode } from "./codesearch";
 
 // PublicWWW: "which sites have this string in their source code".
 //
@@ -175,7 +176,9 @@ export function createPublicwwwCollector(deps: PublicwwwDeps = defaultDeps()): C
     },
 
     async *collect(config: PublicwwwConfig, ctx: CollectContext) {
-      yield itemsFromResponse(await searchPublicwww(config.query, config.maxResults, ctx, deps));
+      // SearchWebCode när nyckeln finns, annars PublicWWW. Frågan är densamma och skrivs i PublicWWW-syntax.
+      const r = await searchCode(config.query, config.maxResults, ctx, { publicwww: deps });
+      yield itemsFromResponse({ results: r.hits, truncated: r.truncated });
     },
   };
 }
