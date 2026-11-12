@@ -187,10 +187,15 @@ export async function recordChecked(supplierId: string, rows: { domain: string; 
   }
 }
 
-/** Domänerna på byråns nuvarande kunder, för att kontrollera att de fortfarande visar byrån. */
+/**
+ * Domänerna på byråns nuvarande kunder, för att kontrollera att de fortfarande visar byrån. Profiler som lagts in för hand
+ * (confidence "profile", till exempel företagsprofilerna på Offerta) är inga kunder med kredit och kontrolleras inte om:
+ * de skulle annars tas bort som "tappade" vid nästa körning.
+ */
 export async function existingCustomerDomains(supplierId: string): Promise<string[]> {
   const { rows } = await pool.query(
-    `select c.domain from company_signals cs join companies c on c.id = cs.company_id where cs.supplier_id = $1 and c.domain is not null`,
+    `select c.domain from company_signals cs join companies c on c.id = cs.company_id
+     where cs.supplier_id = $1 and c.domain is not null and coalesce(cs.raw->>'confidence', '') <> 'profile'`,
     [supplierId],
   );
   return rows.map((r) => r.domain as string);

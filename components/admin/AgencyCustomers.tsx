@@ -14,10 +14,11 @@ const CONFIDENCE: Record<string, { label: string; tone: "green" | "amber" }> = {
   "same-server": { label: "Samma server som byråns kunder", tone: "amber" },
   fingerprint: { label: "Fingeravtryck i koden", tone: "amber" },
   pattern: { label: "Samma spår i koden som kunderna", tone: "amber" },
+  profile: { label: "Profil på plattformen", tone: "green" },
   portfolio: { label: "Byråns portfölj", tone: "amber" },
   backlink: { label: "Bakåtlänk (sajten blockerar oss)", tone: "amber" },
 };
-const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "Källkodssökning", viewdns: "ViewDNS", pattern: "Mönster i koden", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
+const VIA: Record<string, string> = { katalog: "Vår katalog", publicwww: "Källkodssökning", viewdns: "ViewDNS", pattern: "Mönster i koden", profil: "Profilsida", claude: "Claude", backlinks: "Bakåtlänkar", site: "Byråns webbplats" };
 const WEAK = ["backlink", "portfolio", "fingerprint", "pattern", "same-server"];
 const VERDICT: Record<string, { label: string; tone: "gray" | "amber" | "red" }> = {
   "no-credit": { label: "Utan kredit", tone: "amber" },
