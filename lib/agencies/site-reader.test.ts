@@ -106,3 +106,12 @@ describe("readAgencySite with a language prefix (real: teamrobin.com/sv/vara-kun
     expect(domains).not.toContain("pickanagency.com");
   });
 });
+
+describe("readAgencySite with a blocked home page (real: connectd.se answers 403 from its firewall)", () => {
+  const blocked = (status: number): SiteReaderDeps => ({ safeFetch: vi.fn(async (url: string) => ({ url, finalUrl: url, status, html: null, headers: {}, problem: null }) as SafePage) as unknown as SiteReaderDeps["safeFetch"] });
+  it("reports the block so the run can say so, and stays quiet for an ordinary missing page", async () => {
+    expect(await readAgencySite(capace, blocked(403))).toEqual({ findings: [], pages: 0, blocked: 403 });
+    expect(await readAgencySite(capace, blocked(429))).toMatchObject({ blocked: 429 });
+    expect(await readAgencySite(capace, blocked(404))).toEqual({ findings: [], pages: 0 });
+  });
+});

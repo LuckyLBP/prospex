@@ -74,16 +74,19 @@ export function guessDomains(name: string): string[] {
  * Läser byråns webbplats och ger kundförslag. Hämtar startsidan, kundsidor den länkar till och sitemappens
  * kundcase, högst MAX_PAGES sidor. Fel på en sida hoppas över.
  */
-export async function readAgencySite(agency: Agency, deps: SiteReaderDeps = defaultSiteReaderDeps): Promise<{ findings: SiteFinding[]; pages: number }> {
+/** `blocked`: webbplatsen svarade med en spärr (401, 403, 429, 503) på startsidan, så inget gick att läsa. */
+export async function readAgencySite(agency: Agency, deps: SiteReaderDeps = defaultSiteReaderDeps): Promise<{ findings: SiteFinding[]; pages: number; blocked?: number }> {
   const budget = new PageBudget(MAX_PAGES + 3, 0);
   const base = `https://${agency.domain}/`;
+  let homeStatus = 0;
   const fetchHtml = async (url: string): Promise<{ html: string; finalUrl: string } | null> => {
     const p = await deps.safeFetch(url, agency.domain, budget).catch(() => null);
+    if (url === base) homeStatus = p?.status ?? 0;
     return p?.html ? { html: p.html, finalUrl: p.finalUrl } : null;
   };
 
   const home = await fetchHtml(base);
-  if (!home) return { findings: [], pages: 0 };
+  if (!home) return { findings: [], pages: 0, ...([401, 403, 429, 503].includes(homeStatus) ? { blocked: homeStatus } : {}) };
 
   // Kundsidor: länkar på startsidan som ser ut som kunder eller case, och sitemappens motsvarigheter.
   const pages = new Set<string>();

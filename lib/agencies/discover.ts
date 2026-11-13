@@ -220,7 +220,10 @@ export const defaultDiscoverDeps: DiscoverDeps = {
   },
   backlinksConfigured: () => isOpenSeoConfigured(),
   async site(agency) {
-    return (await readAgencySite(agency)).findings.map((f) => ({ domain: f.domain, sourceUrl: f.sourceUrl, linked: f.how === "case-link" }));
+    const r = await readAgencySite(agency);
+    // En spärrad startsida är något att säga högt: annars ser det ut som att byrån saknar kundsidor.
+    if (r.blocked) throw new Error(`den blockerar våra anrop (HTTP ${r.blocked}), så dess kundsidor gick inte att läsa`);
+    return r.findings.map((f) => ({ domain: f.domain, sourceUrl: f.sourceUrl, linked: f.how === "case-link" }));
   },
   async claude(agency, known, ctx, report, limits) {
     const r = await findCustomersWithClaude({ agency, known, signal: ctx.signal, ...(limits?.timeoutMs ? { timeoutMs: limits.timeoutMs } : {}) });
