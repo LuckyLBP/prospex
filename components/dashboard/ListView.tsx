@@ -7,13 +7,14 @@ import { NewCompanyBadge } from "@/components/ui/NewBadge";
 import { getSourceCached, getSourcesCached } from "@/lib/cached";
 import { countCompanies, searchCompanies, type Filters } from "@/lib/queries";
 import { archiveAction } from "@/app/app/actions";
+import { OUTCOME_FILTER_OPTIONS, parseOutcomeFilter } from "@/lib/calls/outcome-filter";
 import { getAccess } from "@/lib/auth";
 import { checkRate } from "@/lib/access/meter";
 import { LIMIT_MESSAGE } from "@/lib/access/limits";
 
 const PAGE_SIZE = 25;
 
-export type ListSP = { supplier?: string; city?: string; phone?: string; new?: string; q?: string; page?: string };
+export type ListSP = { supplier?: string; city?: string; phone?: string; new?: string; utfall?: string; q?: string; page?: string };
 
 /** Postlista med filter och (valfritt) arkivläge. Delas av leverantörs- och listsidorna. Ingen export, och inga telefonnummer eller org.nr i tabellen: de visas bara på företagets egen sida och i ringläget, där gränserna gäller (lib/access). */
 export default async function ListView({
@@ -23,7 +24,7 @@ export default async function ListView({
   const rate = await checkRate({ userId: who.user.id, orgId: orgId, isAdmin: who.isAdmin }, "list");
   if (!rate.ok) return <div className="rounded-3xl bg-white p-6 text-[14px] text-gray-700">{LIMIT_MESSAGE.minute}</div>;
   const supplier = fixedSupplier ?? (sp.supplier || undefined);
-  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", recentOnly: sp.new === "1", q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
+  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", recentOnly: sp.new === "1", outcome: parseOutcomeFilter(sp.utfall), q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
   // Sidor kräver att en admin öppnat bläddringen för bolaget. Utan det ignoreras ?page= och bara första sidan visas.
   const paged = who.listAccess || who.isAdmin;
   const wanted = paged ? Math.max(1, Math.floor(Number(sp.page)) || 1) : 1;
@@ -37,7 +38,7 @@ export default async function ListView({
   const rows = await searchCompanies(filters, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const name = source?.name ?? null;
   const namesBrand = source ? (source.kind === "supplier" || source.category?.names_brand === true) : false;
-  const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, new: sp.new, q: sp.q }).filter(([, v]) => v) as [string, string][];
+  const params = Object.entries({ supplier, city: sp.city, phone: sp.phone, new: sp.new, utfall: parseOutcomeFilter(sp.utfall), q: sp.q }).filter(([, v]) => v) as [string, string][];
   const qs = new URLSearchParams(params).toString();
   const ringQs = new URLSearchParams(params.filter(([k]) => k === "supplier" || k === "city")).toString();
   const field = "w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[14px] outline-none focus:border-accent";
@@ -51,7 +52,7 @@ export default async function ListView({
 
   return (
     <>
-      <form className="mb-5 grid grid-cols-1 items-end gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1.2fr_1fr_1fr_auto_auto]">
+      <form className="mb-5 grid grid-cols-1 items-end gap-4 rounded-3xl bg-white p-6 md:grid-cols-[1.2fr_1fr_1fr_1fr_auto_auto]">
         {fixedSupplier ? <input type="hidden" name="supplier" value={fixedSupplier} /> : (
           <div className="text-[12px] font-medium text-gray-500">Leverantör eller lista
             <div className="mt-1"><SupplierFilter value={sp.supplier ?? ""} suppliers={suppliers.map((s) => ({ slug: s.slug, name: s.name, n: s.n, logo: s.logo, kind: s.kind, category: s.category }))} /></div>
@@ -62,6 +63,11 @@ export default async function ListView({
         </label>
         <label className="text-[12px] font-medium text-gray-500">Ort
           <input name="city" defaultValue={sp.city ?? ""} placeholder="t.ex. Göteborg" className={`mt-1 ${field}`} />
+        </label>
+        <label className="text-[12px] font-medium text-gray-500">Utfall
+          <select name="utfall" defaultValue={parseOutcomeFilter(sp.utfall) ?? ""} className={`mt-1 ${field}`}>
+            {OUTCOME_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </label>
         <div className="flex flex-col gap-1 pb-1.5 text-[14px] text-gray-800">
           <label className="flex items-center gap-2">

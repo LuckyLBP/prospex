@@ -1,6 +1,7 @@
 import { pool } from "./db";
 import { buildSearchNeedle } from "./records/search";
 import { RECENT_DAYS } from "./recent";
+import { outcomeCondition } from "./calls/outcome-filter";
 
 /** Katalogfilter. Med `orgId` läggs bolagets egen status (utfall, arkiv) på raderna. */
 export type Filters = {
@@ -9,6 +10,8 @@ export type Filters = {
   phoneOnly?: boolean;
   /** Bara företag som lagts till hos leverantören eller listan de senaste RECENT_DAYS dygnen. */
   recentOnly?: boolean;
+  /** Utfallsfilter för bolagets egen status: "att-ringa", "ej-ringd", "ej-svar" eller ett utfall. Kräver orgId. */
+  outcome?: string;
   q?: string;
   orgId?: string;
   /** "active" (standard): dölj arkiverade. "archived": bara arkiverade. "all": båda. */
@@ -140,6 +143,11 @@ function where(f: Filters) {
   const needle = f.q ? buildSearchNeedle(f.q) : null;
   if (needle) { args.push(needle); cond.push(`c.search_text like $${args.length}`); }
   if (f.orgId) {
+    const oc = outcomeCondition(f.outcome, args.length + 1);
+    if (oc) {
+      args.push(...oc.args);
+      cond.push(oc.sql);
+    }
     const mode = f.archive ?? "active";
     if (mode === "active") cond.push(`k.archived_at is null`);
     else if (mode === "archived") cond.push(`k.archived_at is not null`);
