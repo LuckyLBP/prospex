@@ -12,6 +12,9 @@ export const SWC_PROVIDER = "searchwebcode";
 /** SearchWebCode kostar cirka 0,05 USD per sökning: 300 i månaden är cirka 15 USD. Höj med SEARCHWEBCODE_MONTHLY_LIMIT. */
 export const DEFAULT_SWC_LIMIT = 300;
 
+export const PLACES_AUTOCOMPLETE_PROVIDER = "places-autocomplete";
+/** Autocomplete i en session som avslutas med ett gratis Place Details (bara id) kostar inget. Taket ligger under de 10 000 gratis anropen om faktureringen ändå skulle räkna dem. */
+export const DEFAULT_PLACES_AUTOCOMPLETE_LIMIT = 8000;
 export const PLACES_ENT_PROVIDER = "places-enterprise";
 /** Enterprise-nivån (med webbadress och telefon) har bara 1 000 gratis i månaden, och insamlingen delar den. Kontrollen tar högst så här många. */
 export const DEFAULT_PLACES_ENT_LIMIT = 400;
@@ -29,6 +32,7 @@ const limitFrom = (env: string | undefined, fallback: number): number => {
 
 export const searchLimit = (): number => limitFrom(process.env.BRAVE_SEARCH_LIMIT, DEFAULT_SEARCH_LIMIT);
 export const swcLimit = (): number => limitFrom(process.env.SEARCHWEBCODE_MONTHLY_LIMIT, DEFAULT_SWC_LIMIT);
+export const placesAutocompleteLimit = (): number => limitFrom(process.env.GMB_AUTOCOMPLETE_MONTHLY_LIMIT, DEFAULT_PLACES_AUTOCOMPLETE_LIMIT);
 export const placesEntLimit = (): number => limitFrom(process.env.GMB_CONFIRM_MONTHLY_LIMIT, DEFAULT_PLACES_ENT_LIMIT);
 export const placesProLimit = (): number => limitFrom(process.env.GMB_CHECK_MONTHLY_LIMIT, DEFAULT_PLACES_PRO_LIMIT);
 
@@ -52,6 +56,7 @@ export async function reserveQuery(provider: string, limit: number, now: Date = 
 }
 
 export const reserveSearchQuery = (limit = searchLimit(), now: Date = new Date()): Promise<boolean> => reserveQuery(SEARCH_PROVIDER, limit, now);
+export const reservePlacesAutocomplete = (limit = placesAutocompleteLimit(), now: Date = new Date()): Promise<boolean> => reserveQuery(PLACES_AUTOCOMPLETE_PROVIDER, limit, now);
 export const reservePlacesEnt = (limit = placesEntLimit(), now: Date = new Date()): Promise<boolean> => reserveQuery(PLACES_ENT_PROVIDER, limit, now);
 export const reservePlacesPro = (limit = placesProLimit(), now: Date = new Date()): Promise<boolean> => reserveQuery(PLACES_PRO_PROVIDER, limit, now);
 export const reserveSwcSearch = (limit = swcLimit(), now: Date = new Date()): Promise<boolean> => reserveQuery(SWC_PROVIDER, limit, now);

@@ -1,22 +1,27 @@
 // Går igenom företagen och kontrollerar om de har en Google-profil. Resultatet sparas i gmb_checks, och listan
 // "Företag utan Google-profil" byggs av dem som saknar en.
 //
-//   npx tsx scripts/gmb-check.mts --limit 300            kontrollera upp till 300 nya företag
+//   npx tsx scripts/gmb-check.mts --limit 300            kontrollera upp till 300 nya företag, helt gratis (standard)
+//   npx tsx scripts/gmb-check.mts --limit 300 --paid     använd i stället Googles betalda nivåer (Pro och Enterprise, 5 000 + 400 gratis i månaden)
 //   npx tsx scripts/gmb-check.mts --limit 300 --supplier wix     bara företag ur en källa (slug)
 //   npx tsx scripts/gmb-check.mts --sync                 bygg bara om listan ur det som redan kontrollerats
 //   npx tsx scripts/gmb-check.mts --resort               sortera om "saknar" som visar sig ha ett platshållarnamn, utan nya anrop
 //
-// Gratis kvoter för Google Places per månad skyddas av hårda tak (GMB_CHECK_MONTHLY_LIMIT, GMB_CONFIRM_MONTHLY_LIMIT).
+// Standardläget (lib/gmb/free.ts) använder bara Googles kostnadsfria nivåer: autocomplete i en session som avslutas med ett
+// Place Details bara på id, och textsökning bara på id. Taket GMB_AUTOCOMPLETE_MONTHLY_LIMIT skyddar mot fakturering om en
+// session mot förmodan inte skulle räknas som gratis. Det betalda läget har egna tak (GMB_CHECK_MONTHLY_LIMIT, GMB_CONFIRM_MONTHLY_LIMIT).
 import { pool } from "../lib/db";
 import { PageBudget, safeFetch } from "../lib/profile/safe-fetch";
 import { checkCompany, looksLikeBusinessName, searchEnterprise, searchPro } from "../lib/gmb/check";
+import { checkCompanyFree, defaultFreeDeps } from "../lib/gmb/free";
 import { syncNoProfileList } from "../lib/gmb/list";
-import { reservePlacesEnt, reservePlacesPro, usedThisMonth, PLACES_ENT_PROVIDER, PLACES_PRO_PROVIDER, placesEntLimit, placesProLimit } from "../lib/agencies/search-usage";
+import { reservePlacesAutocomplete, reservePlacesEnt, reservePlacesPro, usedThisMonth, PLACES_AUTOCOMPLETE_PROVIDER, PLACES_ENT_PROVIDER, PLACES_PRO_PROVIDER, placesAutocompleteLimit, placesEntLimit, placesProLimit } from "../lib/agencies/search-usage";
 
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const LIMIT = Math.max(1, Math.min(5000, Number(arg("limit") ?? 300)));
 const SUPPLIER = arg("supplier");
+const PAID = flag("paid");
 
 if (!process.env.GOOGLE_PLACES_API_KEY && !flag("sync")) throw new Error("GOOGLE_PLACES_API_KEY saknas");
 
@@ -52,8 +57,11 @@ if (!flag("sync") && !flag("resort")) {
      limit $1`,
     [LIMIT, SUPPLIER ?? null],
   );
-  console.log(`kontrollerar ${rows.length} företag${SUPPLIER ? ` ur ${SUPPLIER}` : ""} (Pro ${await usedThisMonth(PLACES_PRO_PROVIDER)}/${placesProLimit()}, andra titt ${await usedThisMonth(PLACES_ENT_PROVIDER)}/${placesEntLimit()} i månaden)`);
+  console.log(PAID
+    ? `kontrollerar ${rows.length} företag${SUPPLIER ? ` ur ${SUPPLIER}` : ""} med de BETALDA nivåerna (Pro ${await usedThisMonth(PLACES_PRO_PROVIDER)}/${placesProLimit()}, andra titt ${await usedThisMonth(PLACES_ENT_PROVIDER)}/${placesEntLimit()} i månaden)`
+    : `kontrollerar ${rows.length} företag${SUPPLIER ? ` ur ${SUPPLIER}` : ""} helt gratis (autocomplete ${await usedThisMonth(PLACES_AUTOCOMPLETE_PROVIDER)}/${placesAutocompleteLimit()} som skydd)`);
 
+  const free = defaultFreeDeps();
   const tally: Record<string, number> = {};
   let i = 0, stopped = false, failed = 0;
   const homepage = async (domain: string) => (await safeFetch(`https://${domain}`, domain, new PageBudget(1, 0), "code", { maxBytes: 800_000 }).catch(() => null))?.html ?? null;
@@ -61,11 +69,18 @@ if (!flag("sync") && !flag("resort")) {
     while (i < rows.length && !stopped) {
       const c = rows[i++];
       let capHit = false;
-      const r = await checkCompany({ name: c.name, domain: c.domain, phone: c.phone, city: c.city }, {
-        search: async (q) => { if (!(await reservePlacesPro())) { capHit = true; return null; } return searchPro(q); },
-        confirm: async (q) => ((await reservePlacesEnt()) ? searchEnterprise(q) : null),
-        homepage,
-      });
+      const company = { name: c.name, domain: c.domain, phone: c.phone, city: c.city };
+      const r = PAID
+        ? await checkCompany(company, {
+            search: async (q) => { if (!(await reservePlacesPro())) { capHit = true; return null; } return searchPro(q); },
+            confirm: async (q) => ((await reservePlacesEnt()) ? searchEnterprise(q) : null),
+            homepage,
+          })
+        : await checkCompanyFree(company, {
+            ...free,
+            autocomplete: async (q, session) => { if (!(await reservePlacesAutocomplete())) { capHit = true; return null; } return free.autocomplete(q, session); },
+            homepage,
+          });
       if (capHit) { stopped = true; break; }
       if (!r) { failed++; continue; }
       tally[r.state] = (tally[r.state] ?? 0) + 1;

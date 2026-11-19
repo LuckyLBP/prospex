@@ -201,7 +201,7 @@ export function placeIsCompany(places: readonly RawPlace[], company: { domain?: 
 
 export interface GmbResult {
   state: GmbState;
-  via: "places" | "site-link" | "website" | "phone";
+  via: "places" | "site-link" | "website" | "phone" | "autocomplete" | "website-id";
   placeId: string | null;
   placeName: string | null;
   mapsUrl: string | null;
