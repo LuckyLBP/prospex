@@ -6,19 +6,22 @@ import { btnPrimary, btnSecondary } from "@/components/admin/ui";
 import SupplierLogo from "@/components/ui/SupplierLogo";
 import CategoryIcon from "@/components/ui/CategoryIcon";
 import Link from "next/link";
-import { getSourceAdmin, listCategories } from "@/lib/lists-admin";
+import { getSourceAdmin, listCategories, listCompaniesAdmin } from "@/lib/lists-admin";
+import ListCompanies from "@/components/admin/ListCompanies";
 import { methodLabel } from "@/lib/runs/labels";
 import { formatDate } from "@/lib/time";
 import RunPanel from "@/components/admin/RunPanel";
 import { updateSourceAction } from "../actions";
 
-export default async function ListAdminPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ ok?: string; error?: string }> }) {
+export default async function ListAdminPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ ok?: string; error?: string; q?: string; sida?: string }> }) {
   const { slug } = await params;
   const sp = await searchParams;
   const [source, categories] = await Promise.all([getSourceAdmin(slug), listCategories()]);
   if (!source) notFound();
   if (source.kind === "supplier") redirect(`/admin/leverantorer/${slug}`);
   const cat = categories.find((c) => c.id === source.category_id);
+  const q = (sp.q ?? "").trim();
+  const companies = await listCompaniesAdmin(source.id, { q: q || null, page: Number(sp.sida) || 1 });
 
   return (
     <>
@@ -35,6 +38,7 @@ export default async function ListAdminPage({ params, searchParams }: { params: 
       />
       <Flash ok={sp.ok} error={sp.error} />
       <RunPanel source={source} returnTo={`/admin/listor/${slug}`} lastSeen={source.last_seen} />
+      <ListCompanies basePath={`/admin/listor/${slug}`} rows={companies.rows} total={companies.total} page={companies.page} pages={companies.pages} q={q} />
       <SourceForm formId="source-form" action={updateSourceAction} source={source} categories={categories} kind="list" returnTo={`/admin/listor/${slug}`} />
     </>
   );

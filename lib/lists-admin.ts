@@ -1,6 +1,7 @@
 import { invalidateCatalogue } from "./catalogue-tag";
 import { pool } from "./db";
 import { slugify } from "./slug";
+import { buildSearchNeedle } from "./records/search";
 import type { Method } from "./sources/collection";
 
 // Plattformsadmin: kategorier, listor och leverantörers metadata, inklusive insamlingsmetod och inställningar.
@@ -29,6 +30,33 @@ const SOURCE_SELECT = `
   from suppliers s left join list_categories k on k.id = s.category_id left join company_signals cs on cs.supplier_id = s.id`;
 
 const toSource = (r: Record<string, unknown>): AdminSource => ({ ...(r as unknown as AdminSource), last_seen: r.last_seen ? new Date(r.last_seen as string).toISOString() : null });
+
+export type AdminListCompany = {
+  id: string; name: string | null; domain: string | null; website: string | null; phone: string | null; email: string | null;
+  source_url: string | null; first_seen_at: string | null; raw: Record<string, unknown> | null;
+};
+
+/**
+ * Företagen i en lista eller källa, för plattformsadmin: även när den är opublicerad, med telefon och med det som sparats vid
+ * posten (belägg, vad som söktes, när det kontrollerades). Sökning på namn, domän, telefon och e-post. Sidor om `pageSize`.
+ */
+export async function listCompaniesAdmin(supplierId: string, opts: { q?: string | null; page?: number; pageSize?: number } = {}): Promise<{ rows: AdminListCompany[]; total: number; page: number; pages: number }> {
+  const pageSize = Math.min(200, Math.max(10, opts.pageSize ?? 50));
+  const needle = opts.q ? buildSearchNeedle(opts.q) : null;
+  const args: unknown[] = [supplierId];
+  let where = `cs.supplier_id = $1`;
+  if (needle) { args.push(needle); where += ` and c.search_text like $${args.length}`; }
+  const total = (await pool.query(`select count(*)::int n from company_signals cs join companies c on c.id = cs.company_id where ${where}`, args)).rows[0].n as number;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const page = Math.min(Math.max(1, Math.floor(opts.page ?? 1)), pages);
+  const { rows } = await pool.query(
+    `select c.id, c.name, c.domain, c.website, c.phone, c.email, cs.source_url, cs.first_seen_at, cs.raw
+     from company_signals cs join companies c on c.id = cs.company_id where ${where}
+     order by c.name nulls last, c.id limit ${pageSize} offset ${(page - 1) * pageSize}`,
+    args,
+  );
+  return { rows: rows.map((r) => ({ ...r, first_seen_at: r.first_seen_at ? new Date(r.first_seen_at).toISOString() : null })) as AdminListCompany[], total, page, pages };
+}
 
 /** Alla källor, även opublicerade. Företagsantal och senast hämtad räknas ur signalerna. */
 export async function listSources(): Promise<AdminSource[]> {

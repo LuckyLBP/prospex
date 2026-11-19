@@ -19,7 +19,7 @@ import { reservePlacesAutocomplete, reservePlacesEnt, reservePlacesPro, usedThis
 
 const arg = (name: string) => { const i = process.argv.indexOf(`--${name}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const flag = (name: string) => process.argv.includes(`--${name}`);
-const LIMIT = Math.max(1, Math.min(5000, Number(arg("limit") ?? 300)));
+const LIMIT = Math.max(1, Math.min(10000, Number(arg("limit") ?? 300)));
 const SUPPLIER = arg("supplier");
 const PAID = flag("paid");
 
