@@ -4,11 +4,14 @@ import { ALL_OUTCOME_VALUES, OUTCOMES } from "./outcomes";
 // Värdena går i adressen (?utfall=...) och släpps bara igenom om de står här, så inget ur adressen hamnar i SQL.
 
 /** Inte ringd = bolaget har inget loggat utfall hos er. "Att ringa" = inte ringd eller ej svar, det säljaren oftast söker. */
-const SPECIAL = ["att-ringa", "ej-ringd", "ej-svar"] as const;
+const SPECIAL = ["alla", "att-ringa", "ej-ringd", "ej-svar"] as const;
+
+/** Standard i listorna: bolag som är ringda och har ett utfall utöver "ej svar"/"upptaget" döljs för alla säljare. Vill man se dem väljer man "Alla utfall". */
+export const DEFAULT_OUTCOME_FILTER = "att-ringa";
 
 export const OUTCOME_FILTER_OPTIONS: readonly { value: string; label: string }[] = [
-  { value: "", label: "Alla utfall" },
-  { value: "att-ringa", label: "Inte ringd eller ej svar" },
+  { value: "alla", label: "Alla utfall" },
+  { value: "att-ringa", label: "Att ringa (inte ringd, ej svar, upptaget)" },
   { value: "ej-ringd", label: "Inte ringd" },
   { value: "ej-svar", label: "Ej svar" },
   ...OUTCOMES.filter((o) => o.value !== "no_answer").map((o) => ({ value: o.value as string, label: o.label })),
@@ -22,16 +25,22 @@ export function parseOutcomeFilter(raw: string | null | undefined): string | und
   return (ALL_OUTCOME_VALUES as readonly string[]).includes(v) ? v : undefined;
 }
 
+/** Filtret som gäller: det valda, annars standard. "Alla utfall" ger inget filter alls. Ren. */
+export function effectiveOutcomeFilter(raw: string | null | undefined): string | undefined {
+  const v = parseOutcomeFilter(raw) ?? DEFAULT_OUTCOME_FILTER;
+  return v === "alla" ? undefined : v;
+}
+
 /**
  * Villkoret för ett filter, mot kolumnen `k.outcome` (bolagets egen status). `index` är numret på nästa parameter. Äldre
  * värden som visas som "Kasta" (not_customer, no_website) räknas dit. Ren.
  */
 export function outcomeCondition(value: string | undefined, index: number): { sql: string; args: string[] } | null {
   const v = parseOutcomeFilter(value);
-  if (!v) return null;
+  if (!v || v === "alla") return null;
   if (v === "ej-ringd") return { sql: "k.outcome is null", args: [] };
   if (v === "ej-svar") return { sql: "k.outcome = 'no_answer'", args: [] };
-  if (v === "att-ringa") return { sql: "(k.outcome is null or k.outcome = 'no_answer')", args: [] };
+  if (v === "att-ringa") return { sql: "(k.outcome is null or k.outcome in ('no_answer', 'busy'))", args: [] };
   if (v === "not_relevant") return { sql: "k.outcome in ('not_relevant', 'not_customer', 'no_website')", args: [] };
   return { sql: `k.outcome = $${index}`, args: [v] };
 }

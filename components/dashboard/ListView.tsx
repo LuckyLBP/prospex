@@ -7,7 +7,7 @@ import { NewCompanyBadge } from "@/components/ui/NewBadge";
 import { getSourceCached, getSourcesCached } from "@/lib/cached";
 import { countCompanies, searchCompanies, type Filters } from "@/lib/queries";
 import { archiveAction } from "@/app/app/actions";
-import { OUTCOME_FILTER_OPTIONS, parseOutcomeFilter } from "@/lib/calls/outcome-filter";
+import { OUTCOME_FILTER_OPTIONS, DEFAULT_OUTCOME_FILTER, effectiveOutcomeFilter, parseOutcomeFilter } from "@/lib/calls/outcome-filter";
 import { getAccess } from "@/lib/auth";
 import { checkRate } from "@/lib/access/meter";
 import { LIMIT_MESSAGE } from "@/lib/access/limits";
@@ -24,7 +24,7 @@ export default async function ListView({
   const rate = await checkRate({ userId: who.user.id, orgId: orgId, isAdmin: who.isAdmin }, "list");
   if (!rate.ok) return <div className="rounded-3xl bg-white p-6 text-[14px] text-gray-700">{LIMIT_MESSAGE.minute}</div>;
   const supplier = fixedSupplier ?? (sp.supplier || undefined);
-  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", recentOnly: sp.new === "1", outcome: parseOutcomeFilter(sp.utfall), q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
+  const filters: Filters = { orgId, supplier, city: sp.city?.trim() || undefined, phoneOnly: sp.phone === "1", recentOnly: sp.new === "1", outcome: archived ? parseOutcomeFilter(sp.utfall) : effectiveOutcomeFilter(sp.utfall), q: sp.q?.trim() || undefined, archive: archived ? "archived" : "active" };
   // Sidor kräver att en admin öppnat bläddringen för bolaget. Utan det ignoreras ?page= och bara första sidan visas.
   const paged = who.listAccess || who.isAdmin;
   const wanted = paged ? Math.max(1, Math.floor(Number(sp.page)) || 1) : 1;
@@ -65,7 +65,7 @@ export default async function ListView({
           <input name="city" defaultValue={sp.city ?? ""} placeholder="t.ex. Göteborg" className={`mt-1 ${field}`} />
         </label>
         <label className="text-[12px] font-medium text-gray-500">Utfall
-          <select name="utfall" defaultValue={parseOutcomeFilter(sp.utfall) ?? ""} className={`mt-1 ${field}`}>
+          <select name="utfall" defaultValue={archived ? (parseOutcomeFilter(sp.utfall) ?? "alla") : (parseOutcomeFilter(sp.utfall) ?? DEFAULT_OUTCOME_FILTER)} className={`mt-1 ${field}`}>
             {OUTCOME_FILTER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </label>
