@@ -18,7 +18,12 @@ describe("outcomeCondition", () => {
   it("not called means no logged outcome, no answer means no_answer, and the combined one is either", () => {
     expect(outcomeCondition("ej-ringd", 3)).toEqual({ sql: "k.outcome is null", args: [] });
     expect(outcomeCondition("ej-svar", 3)).toEqual({ sql: "k.outcome = 'no_answer'", args: [] });
-    expect(outcomeCondition("att-ringa", 3)).toEqual({ sql: "(k.outcome is null or k.outcome in ('no_answer', 'busy'))", args: [] });
+    expect(outcomeCondition("att-ringa", 3)).toEqual({ sql: "(k.outcome is null or k.outcome in ('no_answer', 'busy', 'callback', 'meeting_booked'))", args: [] });
+  });
+  it("keeps ring igen and meeting visible by default, and hides the red and finished outcomes", () => {
+    const sql = outcomeCondition("att-ringa", 1)!.sql;
+    for (const o of ["callback", "meeting_booked", "no_answer", "busy"]) expect(sql).toContain(`'${o}'`);
+    for (const o of ["not_interested", "not_relevant", "wrong_number", "customer", "existing_customer", "skip_number"]) expect(sql).not.toContain(`'${o}'`);
   });
   it("binds a specific outcome as a parameter at the given position", () => {
     expect(outcomeCondition("busy", 4)).toEqual({ sql: "k.outcome = $4", args: ["busy"] });
