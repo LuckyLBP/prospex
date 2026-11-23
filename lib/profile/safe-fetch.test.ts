@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { guardedLookup, PageBudget, readBytesCapped, safeFetch, safeFetchBytes } from "./safe-fetch";
+import { guardedLookup, PageBudget, readBytesCapped, redirectTarget, safeFetch, safeFetchBytes } from "./safe-fetch";
+
+describe("redirectTarget", () => {
+  // Så läser Node ett Location-huvud som servern skickade som rå UTF-8.
+  const asNodeReadsIt = (s: string) => Buffer.from(s, "utf8").toString("latin1");
+
+  it("repairs a UTF-8 host that Node read as Latin-1", () => {
+    const want = new URL("https://www.byggföretagidre.se/").toString();
+    expect(redirectTarget(asNodeReadsIt("https://www.byggföretagidre.se/"), "https://xn--byggfretagidre-zpb.se/")).toBe(want);
+    expect(want).toContain("xn--byggfretagidre-zpb");
+  });
+  it("leaves plain ASCII and relative targets alone", () => {
+    expect(redirectTarget("https://www.example.se/a", "https://example.se/")).toBe("https://www.example.se/a");
+    expect(redirectTarget("/kontakt", "https://example.se/start")).toBe("https://example.se/kontakt");
+  });
+  it("keeps a header that is not valid UTF-8", () => {
+    expect(redirectTarget("https://example.se/café", "https://example.se/")).toContain("example.se/caf");
+  });
+  it("returns null for something that is not an address", () => {
+    expect(redirectTarget("http://", "not a url")).toBeNull();
+  });
+});
 
 describe("PageBudget", () => {
   it("allows eight pages in all and four chosen by the model", () => {

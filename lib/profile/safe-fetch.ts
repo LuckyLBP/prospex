@@ -66,6 +66,28 @@ export interface SafePage {
 const miss = (url: string, problem: string, status = 0, finalUrl = url): SafePage => ({ url, finalUrl, status, html: null, headers: {}, problem });
 
 /**
+ * Målet för en omdirigering som en adress, eller null när den inte går att tolka.
+ *
+ * Node läser HTTP-huvuden som Latin-1, men servrar skickar ofta Location som rå UTF-8. En domän med å, ä eller ö
+ * (xn--byggfretagidre-zpb.se leder till www.byggföretagidre.se) blev då "byggfÃ¶retagidre", fick fel punycode
+ * och gick inte att slå upp, så sajten räknades som onåbar fast den fungerar i en webbläsare. Webbläsare läser
+ * huvudet som UTF-8. Här görs det om bara när bytena är giltig UTF-8, annars lämnas värdet som det är. Exporterad för test.
+ */
+export function redirectTarget(location: string, base: string): string | null {
+  let value = location;
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0080-ÿ]/.test(location) && !/[^\u0000-ÿ]/.test(location)) {
+    const decoded = Buffer.from(location, "latin1").toString("utf8");
+    if (!decoded.includes("�")) value = decoded;
+  }
+  try {
+    return new URL(value, base).toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Hämtar en sida inom `boundary`. Kastar aldrig: allt som går fel blir en `problem`. `maxBytes` höjer taket på 512 kB
  * för den som behöver slutet av sidan, där sidfoten ligger.
  */
@@ -98,12 +120,8 @@ export async function safeFetch(url: string, boundary: string, budget: PageBudge
       const location = response.headers.get("location");
       await response.body?.cancel().catch(() => {});
       if (!location) return { url, finalUrl: current, status: response.status, html: null, headers, problem: "Omdirigering utan mål." };
-      let next: string;
-      try {
-        next = new URL(location, current).toString();
-      } catch {
-        return { url, finalUrl: current, status: response.status, html: null, headers, problem: "Ogiltig omdirigering." };
-      }
+      const next = redirectTarget(location, current);
+      if (!next) return { url, finalUrl: current, status: response.status, html: null, headers, problem: "Ogiltig omdirigering." };
       if (!isAllowedUrl(next, boundary)) return { url, finalUrl: next, status: response.status, html: null, headers, problem: "Omdirigeringen leder utanför företagets webbplats." };
       current = next;
       continue;
@@ -184,11 +202,9 @@ export async function safeFetchBytes(url: string, opts: { maxBytes?: number; typ
       const location = response.headers.get("location");
       await response.body?.cancel().catch(() => {});
       if (!location) return bad(url, "Omdirigering utan mål.", current);
-      try {
-        current = new URL(location, current).toString();
-      } catch {
-        return bad(url, "Ogiltig omdirigering.", current);
-      }
+      const next = redirectTarget(location, current);
+      if (!next) return bad(url, "Ogiltig omdirigering.", current);
+      current = next;
       continue;
     }
     if (!response.ok) {
