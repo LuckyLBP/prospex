@@ -16,6 +16,7 @@ type Props = {
   /** Öppna menyn för att byta utfall. */
   onChangeOutcome: () => void;
   meetingRef: RefObject<HTMLInputElement>;
+  callbackRef: RefObject<HTMLDivElement>;
 };
 
 const FIELD = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[14px] outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-accent/20";
@@ -24,7 +25,7 @@ const FIELD = "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 
  * Samtalsstatusen på sidan: vilket utfall som är valt och det som hör till det (ring igen, mötestid, arkivera).
  * Utfallen väljs i menyn bakom "Logga samtal" i nedre fältet. Utan val visas ingenting.
  */
-export default function CallPanel({ form, onChange, onClear, onChangeOutcome, meetingRef }: Props) {
+export default function CallPanel({ form, onChange, onClear, onChangeOutcome, meetingRef, callbackRef }: Props) {
   const info = OUTCOMES.find((o) => o.value === form.outcome) ?? null;
   const quick = quickCallbackDates();
   if (!info) return null;
@@ -43,7 +44,7 @@ export default function CallPanel({ form, onChange, onClear, onChangeOutcome, me
       </div>
 
       {info.callback && (
-        <div className="rounded-2xl bg-white p-3.5">
+        <div ref={callbackRef} className="rounded-2xl bg-white p-3.5">
           <p className="mb-2 text-[12px] font-medium text-gray-600">Ring igen (valfritt)</p>
           <div className="flex flex-wrap gap-1.5">
             {quick.map((q) => (
@@ -62,7 +63,7 @@ export default function CallPanel({ form, onChange, onClear, onChangeOutcome, me
             <label className="text-[11px] font-medium text-gray-500">Datum<input type="date" value={form.cbDate} onChange={(e) => onChange({ cbDate: e.target.value })} className={FIELD} /></label>
             <label className="text-[11px] font-medium text-gray-500">Klockslag<input type="time" value={form.cbTime} disabled={!form.cbDate} onChange={(e) => onChange({ cbTime: e.target.value })} className={`${FIELD} disabled:opacity-40`} /></label>
           </div>
-          <p className="mt-2 text-[12px] leading-snug text-gray-500">{form.cbDate ? "Företaget blir ditt att ringa upp den dagen." : "Utan datum går företaget tillbaka till den gemensamma kön imorgon."}</p>
+          <p className="mt-2 text-[12px] leading-snug text-gray-500">{form.cbDate ? "Företaget blir ditt att ringa upp den dagen." : info.value === "callback" ? "Utan datum ligger företaget kvar under Mina och kommer inte upp i ringkön igen." : "Utan datum går företaget tillbaka till den gemensamma kön imorgon."}</p>
         </div>
       )}
 

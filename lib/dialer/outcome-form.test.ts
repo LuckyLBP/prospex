@@ -3,13 +3,15 @@ import { OUTCOMES } from "@/lib/calls/outcomes";
 import { canSaveForm, EMPTY_FORM, menuChoice, withOutcome } from "./outcome-form";
 
 describe("menuChoice", () => {
-  it("saves every outcome straight away except those that need a meeting time", () => {
+  it("saves every outcome straight away except a meeting and a call back, which ask for a date first", () => {
     const select = OUTCOMES.filter((o) => menuChoice(o.value) === "select").map((o) => o.value);
-    expect(select).toEqual(OUTCOMES.filter((o) => o.meeting).map((o) => o.value));
-    expect(select).toContain("meeting_booked");
+    expect(select).toEqual(["callback", "meeting_booked"]);
     expect(menuChoice("no_answer")).toBe("save");
-    expect(menuChoice("callback")).toBe("save");
+    expect(menuChoice("busy")).toBe("save");
     expect(menuChoice("customer")).toBe("save");
+  });
+  it("lets a call back be saved without a date", () => {
+    expect(canSaveForm(withOutcome(EMPTY_FORM, "callback"))).toBe(true);
   });
 });
 

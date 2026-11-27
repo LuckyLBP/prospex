@@ -80,6 +80,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
   const inflight = useRef(new Set<string>());
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const meetingRef = useRef<HTMLInputElement>(null);
+  const callbackRef = useRef<HTMLDivElement>(null);
   const toastSeq = useRef(0);
 
   const tokenOf = useCallback((id: string) => `${id}.${init.macs[id] ?? ""}`, [init.macs]);
@@ -173,6 +174,8 @@ export default function Dialer({ init }: { init: DialerInit }) {
     setForm((f) => withOutcome(f, o));
     setMenuOpen(false);
     if (i.meeting) setTimeout(() => meetingRef.current?.focus(), 0);
+    // Datumvalen för "Ring igen" ska synas även när man har rullat längre ner på sidan, till exempel i telefonen.
+    else if (o === "callback") setTimeout(() => callbackRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }), 0);
   }, []);
 
   // Sparar samtalet. Med `override` sparas det utfallet direkt, utan att först väljas i formuläret (valet i menyn).
@@ -205,7 +208,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
     refreshCard(snapshot.id);
   }, [card, form, draft, index, go, say, refreshCard, setDraft, init.single]);
 
-  // Ett val i menyn sparar och går vidare direkt. Ett möte kräver en tid, så det väljs bara och tiden fylls i först.
+  // Ett val i menyn sparar och går vidare direkt. Möte och "Ring igen" väljs bara, så att tid och datum fylls i först.
   const choose = useCallback((o: CallOutcome) => {
     setMenuOpen(false);
     if (menuChoice(o) === "select") pick(o);
@@ -366,7 +369,7 @@ export default function Dialer({ init }: { init: DialerInit }) {
           {warning && <div className="mb-4 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">{warning}</div>}
           {card ? (
             <div key={card.id} className="dialer-in flex flex-col">
-              <CompanyPanel card={card} mode={init.scope.mode} me={init.me} copied={copied} onCopy={copy} draft={draft} onDraft={(v) => setDraft(card.id, v)} onSendNote={sendNote} composerRef={composerRef} onShowRegistry={() => setRegistryOpen(true)} onScanDone={() => refreshCard(card.id)} onNotice={say} outcome={<CallPanel form={form} onChange={patch} onClear={() => setForm(EMPTY)} onChangeOutcome={() => setMenuOpen(true)} meetingRef={meetingRef} />} />
+              <CompanyPanel card={card} mode={init.scope.mode} me={init.me} copied={copied} onCopy={copy} draft={draft} onDraft={(v) => setDraft(card.id, v)} onSendNote={sendNote} composerRef={composerRef} onShowRegistry={() => setRegistryOpen(true)} onScanDone={() => refreshCard(card.id)} onNotice={say} outcome={<CallPanel form={form} onChange={patch} onClear={() => setForm(EMPTY)} onChangeOutcome={() => setMenuOpen(true)} meetingRef={meetingRef} callbackRef={callbackRef} />} />
             </div>
           ) : limitMsg ? (
             <div className="py-6 text-center" role="status">

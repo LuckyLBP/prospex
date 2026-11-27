@@ -28,7 +28,11 @@ export function canSaveForm(f: CallFormState): boolean {
   return !outcomeInfo(f.outcome).meeting || MEETING_OK.test(f.meeting);
 }
 
-/** Ett val i menyn: spara direkt, eller bara välja (ett möte behöver en tid först). */
+/**
+ * Ett val i menyn: spara direkt, eller bara välja. Ett möte behöver en tid först, och "Ring igen" ska ge chansen att sätta
+ * ett datum: sparas det direkt hoppar ringläget vidare, och utan datum kommer företaget aldrig upp i ringkön igen.
+ * "Ej svar" och "Upptaget" kan också få ett datum men sparas direkt, eftersom de går tillbaka till kön av sig själva.
+ */
 export function menuChoice(o: CallOutcome): "save" | "select" {
-  return outcomeInfo(o).meeting ? "select" : "save";
+  return outcomeInfo(o).meeting || o === "callback" ? "select" : "save";
 }
