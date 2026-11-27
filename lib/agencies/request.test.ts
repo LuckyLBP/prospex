@@ -58,12 +58,21 @@ describe("getListState", () => {
 });
 
 describe("requestCustomerList", () => {
+  it("marks a click as manual and a scouting search as automatic", async () => {
+    const clicked = deps();
+    await requestCustomerList(input(), clicked);
+    expect(clicked.record).toHaveBeenCalledWith(expect.objectContaining({ auto: false }));
+    const scouted = deps();
+    await requestCustomerList(input({ auto: true }), scouted);
+    expect(scouted.record).toHaveBeenCalledWith(expect.objectContaining({ auto: true }));
+  });
+
   it("starts a search for an unknown domain with a clean name, and records who asked", async () => {
     const d = deps();
     expect(await requestCustomerList(input(), d)).toEqual({ state: "searching" });
     expect(d.create).toHaveBeenCalledWith({ name: "Leads Sverige AB", domain: "leads.nu" });
     expect(d.start).toHaveBeenCalledWith("new-id");
-    expect(d.record).toHaveBeenCalledWith({ domain: "leads.nu", supplierId: "new-id", orgId: "org1", userId: "u1", profileId: "p1" });
+    expect(d.record).toHaveBeenCalledWith({ domain: "leads.nu", supplierId: "new-id", orgId: "org1", userId: "u1", profileId: "p1", auto: false });
   });
   it("does nothing when switched off, and for a domain that is not one", async () => {
     const d = deps({ enabled: () => false });

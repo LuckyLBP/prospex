@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessRequestEmail, invitationEmail, loginCodeEmail } from "./templates";
+import { accessRequestEmail, invitationEmail, listPublishedEmail, loginCodeEmail } from "./templates";
 
 describe("loginCodeEmail", () => {
   it("shows the six digit code unbroken, first in the subject, and in html and text", () => {
@@ -40,5 +40,19 @@ describe("invitationEmail", () => {
     const all = [loginCodeEmail("111111"), accessRequestEmail({ name: "A", email: "a@b.se", company: "C", message: "M", adminUrl: "u" }), invitationEmail({ orgName: "X", role: "member", inviter: "Y", loginUrl: "u" })]
       .flatMap((m) => [m.subject, m.html.replace(/<[^>]+>/g, ""), m.text]).join(" ");
     expect(all).not.toMatch(/[–—]/);
+  });
+});
+
+describe("listPublishedEmail", () => {
+  const m = listPublishedEmail({ name: "Sam", list: "A&B <Byrå>", domain: "byran.se", customers: 42, url: "https://prospex.se/app/leverantorer/byran" });
+  it("names the list, the count and links to it", () => {
+    expect(m.subject).toContain("A&B <Byrå>");
+    expect(m.text).toContain("42 företag");
+    expect(m.text).toContain("https://prospex.se/app/leverantorer/byran");
+  });
+  it("escapes the list name in the HTML and uses no dashes in the text", () => {
+    expect(m.html).not.toContain("<Byrå>");
+    expect(m.html).toContain("&lt;Byrå&gt;");
+    expect([m.subject, m.text].join(" ")).not.toMatch(/[–—]/);
   });
 });

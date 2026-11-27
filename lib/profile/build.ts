@@ -4,6 +4,7 @@ import type { CompanyRegistry } from "@/lib/bolagsverket/types";
 import { findCompanyById, upsertCompany } from "@/lib/companies/upsert";
 import { agencyModel, agencyModelId, estimateCostSek, isAiConfigured, isAnthropicConfigured } from "@/lib/ai/model";
 import { maybeStartAgency, maybeStartCreatorProfile } from "@/lib/agencies/auto";
+import { searchOwnCustomers } from "@/lib/agencies/self";
 import { adoptSupplierLogo, getAgencyByDomain } from "@/lib/agencies/store";
 import { analyseSitePattern, type PatternAnalysis } from "@/lib/agencies/pattern";
 import { linkServerToAgencyDomain, recordSiteIps } from "@/lib/agencies/server-guess";
@@ -44,6 +45,8 @@ export interface BuildDeps {
   extractPeople?: (pages: ReturnType<typeof condensePage>[], company: { name: string | null; domain: string | null }) => Promise<PeopleResult>;
   /** Claude läser startsidans källkod efter spår efter byggaren. Utbytbar så att tester inte når modellen eller sökningen. */
   analysePattern?: typeof analyseSitePattern;
+  /** Är det spanade företaget självt en byrå söks dess kunder. Utbytbar så att tester inte når modellen eller sökningen. */
+  searchOwnCustomers?: typeof searchOwnCustomers;
 }
 
 const defaultDeps: BuildDeps = { resolveInput, gather, runAgent, aiConfigured: isAiConfigured, buildNetwork };
@@ -219,6 +222,9 @@ export async function buildProfile(id: string, opts: { orgnr?: string | null } =
       companyId, name: profile.company.name, orgnr: resolved.orgnrDisplay, domain: profile.company.domain, profile, facts, pages: gathered.pages,
       model: model?.model ?? null, inputTokens: model?.inputTokens ?? null, outputTokens: model?.outputTokens ?? null, steps: model?.steps ?? null, durationMs, warnings: profile.meta.warnings,
     });
+
+    // Spaningen är sparad. Är företaget självt en byrå startar sökningen efter dess kunder (kastar aldrig).
+    await (deps.searchOwnCustomers ?? searchOwnCustomers)(id);
   } catch (e) {
     console.error(`[profil ${id}] bygget misslyckades:`, e);
     await failProfile(id, `Oväntat fel: ${e instanceof Error ? e.message : "okänt"}`);

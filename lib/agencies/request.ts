@@ -51,6 +51,8 @@ export interface RequestInput {
   orgId: string;
   userId: string;
   profileId: string | null;
+  /** Skapad av spaningen själv (self.ts), inte av ett klick. Publiceras först vid fler kunder (publish.ts). */
+  auto?: boolean;
 }
 
 export interface RequestDeps {
@@ -61,7 +63,7 @@ export interface RequestDeps {
   userRequestsToday: (userId: string) => Promise<number>;
   create: (a: { name: string; domain: string }) => Promise<string>;
   start: (supplierId: string) => Promise<void>;
-  record: (r: { domain: string; supplierId: string; orgId: string; userId: string; profileId: string | null }) => Promise<void>;
+  record: (r: { domain: string; supplierId: string; orgId: string; userId: string; profileId: string | null; auto: boolean }) => Promise<void>;
   now: () => number;
 }
 
@@ -95,8 +97,10 @@ export const defaultRequestDeps: RequestDeps = {
   },
   async record(r) {
     await pool.query(
-      `insert into list_requests (domain, supplier_id, org_id, requested_by, profile_id) values ($1,$2,$3,$4,$5) on conflict (domain, org_id) do nothing`,
-      [r.domain, r.supplierId, r.orgId, r.userId, r.profileId],
+      // Ett klick efter en automatisk begäran gör den till en vanlig begäran (lägre gräns för publicering), aldrig tvärtom.
+      `insert into list_requests (domain, supplier_id, org_id, requested_by, profile_id, auto) values ($1,$2,$3,$4,$5,$6)
+       on conflict (domain, org_id) do update set auto = list_requests.auto and excluded.auto`,
+      [r.domain, r.supplierId, r.orgId, r.userId, r.profileId, r.auto],
     );
   },
   now: Date.now,
@@ -116,7 +120,7 @@ export async function requestCustomerList(i: RequestInput, deps: RequestDeps = d
 
   const existing = await deps.find(domain);
   const current = stateOf(existing);
-  const link = (supplierId: string) => deps.record({ domain, supplierId, orgId: i.orgId, userId: i.userId, profileId: i.profileId });
+  const link = (supplierId: string) => deps.record({ domain, supplierId, orgId: i.orgId, userId: i.userId, profileId: i.profileId, auto: i.auto ?? false });
 
   // Vi har den, eller någon söker redan: koppla bolaget till samma källa i stället för att starta en till.
   if (existing && (current.state === "have" || current.state === "searching")) {

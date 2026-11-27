@@ -107,3 +107,19 @@ export function callbackReminderEmail(o: { name: string; total: number; items: R
   return { subject, html, text };
 }
 
+/** Till den som spanade: byråns lista är publicerad. */
+export function listPublishedEmail(o: { name: string; list: string; domain: string; customers: number; url: string }): Email {
+  const n = o.customers.toLocaleString("sv-SE");
+  const subject = `Listan för ${o.list} är klar`;
+  return {
+    subject,
+    html: shell(
+      `${n} företag kopplade till ${o.list}`,
+      `<h1 style="margin:0 0 8px;font-size:22px;letter-spacing:-0.02em;">${escapeHtml(subject)}</h1>
+       <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:${BODY};">Hej ${escapeHtml(o.name)}. Vi har hittat ${n} företag kopplade till ${escapeHtml(o.list)}, och listan finns nu i Prospex.</p>
+       <a href="${escapeHtml(o.url)}" style="display:inline-block;background:${INK};color:#fff;text-decoration:none;font-weight:600;font-size:14px;border-radius:999px;padding:13px 26px;">Öppna listan</a>`,
+      `Du får det här mejlet för att du spanade på ${escapeHtml(o.domain)} i Prospex.`,
+    ),
+    text: `${subject}\n\nHej ${o.name}. Vi har hittat ${n} företag kopplade till ${o.list}, och listan finns nu i Prospex.\n\nÖppna listan: ${o.url}\n\nDu får det här mejlet för att du spanade på ${o.domain} i Prospex.`,
+  };
+}

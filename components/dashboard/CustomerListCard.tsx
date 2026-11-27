@@ -38,7 +38,7 @@ export default function CustomerListCard({ state, profileId, domain, name }: { s
     );
   }
   const text: Record<"searching" | "too-few" | "failed" | "later", [string, string]> = {
-    searching: [`Vi letar efter företag kopplade till ${name}`, "Det kan ta några minuter. Sidan uppdateras av sig själv."],
+    searching: [`Vi letar efter företag kopplade till ${name}`, "Det kan ta några minuter. Sidan uppdateras av sig själv, och du får ett mejl om listan publiceras."],
     "too-few": ["Vi hittade för få företag för att visa en lista", "Vi hittar företag genom länkar och krediter på deras webbplatser, och den här verksamheten syns sällan hos sina kunder."],
     failed: ["Sökningen lyckades inte", "Försök igen om ett dygn."],
     later: ["Vi kan inte starta fler sökningar just nu", "Försök igen senare."],

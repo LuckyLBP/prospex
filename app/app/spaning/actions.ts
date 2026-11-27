@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireProfileAccess } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { requestCustomerList } from "@/lib/agencies/request";
+import { searchOwnCustomers } from "@/lib/agencies/self";
 import { parseProfileInput } from "@/lib/profile/input";
 import { failProfile, getOrgProfile, grantOrgAccess, ProfileStartError, requeueProfile, startProfile, sweepDeadProfiles } from "@/lib/profile/store";
 import { triggerProfileBuild } from "@/lib/profile/trigger";
@@ -29,6 +31,8 @@ export async function createProfileAction(raw: string): Promise<StartResult> {
   try {
     const started = await startProfile(parsed, { id: m.user.id, orgId: m.org.id });
     id = started.id;
+    // En klar spaning som återanvänds byggs inte om, så kundsökningen för en byrå prövas här, efter svaret.
+    if (started.reused) after(() => searchOwnCustomers(started.id, { userId: m.user.id, orgId: m.org.id }));
     if (!started.reused) {
       try {
         await triggerProfileBuild(id, { orgnr: parsed.kind === "orgnr" && parsed.soleTrader ? parsed.orgnr : null });
@@ -114,6 +118,7 @@ export async function scanCompanyAction(companyId: string, pick?: { buildFrom: s
 
   try {
     const started = await startProfile(parsed, { id: m.user.id, orgId: m.org.id }, { targetCompanyId: company.id });
+    if (started.reused) after(() => searchOwnCustomers(started.id, { userId: m.user.id, orgId: m.org.id }));
     if (!started.reused) {
       try {
         await triggerProfileBuild(started.id, { orgnr: parsed.kind === "orgnr" && parsed.soleTrader ? parsed.orgnr : null });
